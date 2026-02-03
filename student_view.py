@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb  3 21:04:35 2026
-
-@author: YYYNÇİGGGİİÜÜÜÜĞĞĞ
-"""
-
 import streamlit as st
 from openai import OpenAI
 import os
@@ -115,7 +108,7 @@ def get_data_from_ai(prompt):
         return "Hata: API Key bulunamadı."
     try:
         response = client.chat.completions.create(
-            model="grok-beta",
+            model="grok-4-1-fast-reasoning",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0
         )
@@ -186,17 +179,23 @@ def app():
     <style>
         .stButton > button { width: 100%; border-radius: 10px; height: 50px; font-weight: 600; }
         [data-testid="column"] div.stButton > button { height: 60px; font-size: 22px; margin: 1px; }
+        .success-box { background-color: #dcfce7; padding: 20px; border-radius: 10px; border: 1px solid #16a34a; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
     # Session State
     if "page" not in st.session_state: st.session_state.page = "home"
     if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
+    if "test_finished" not in st.session_state: st.session_state.test_finished = False
 
-    # 1. LIMIT KONTROLÜ
-    if not check_daily_limit(st.session_state.student_id):
-        st.error("⚠️ Günlük test çözme limitinize ulaştınız. Yarın tekrar bekleriz.")
-        return
+    # 1. LIMIT KONTROLÜ (Test bitince tekrar kontrol edilmeli)
+    if st.session_state.page == "home":
+        if not check_daily_limit(st.session_state.student_id):
+            st.error("⚠️ Günlük test çözme limitinize (2 adet) ulaştınız. Yarın tekrar bekleriz.")
+            if st.button("🚪 Çıkış Yap", type="secondary"):
+                st.session_state.clear()
+                st.rerun()
+            return
 
     # 2. SAYFA: HOME (Test Seçimi)
     if st.session_state.page == "home":
@@ -216,6 +215,7 @@ def app():
 
                 st.session_state.selected_test = selected_test
                 st.session_state.intro_passed = False
+                st.session_state.test_finished = False
                 
                 with st.spinner("Test hazırlanıyor..."):
                     if "d2" in selected_test.lower():
@@ -249,7 +249,31 @@ def app():
                 st.session_state.page = "test"
                 st.rerun()
 
-    # 3. SAYFA: TEST EKRANI
+    # 3. SAYFA: TEST BİTİŞ EKRANI (Yeni Özellik)
+    elif st.session_state.page == "success_screen":
+        st.markdown("""
+        <div class="success-box">
+            <h1>🎉 Tebrikler!</h1>
+            <p>Testi başarıyla tamamladınız.</p>
+            <p>Sonuçlarınız analiz edilmek üzere öğretmeninize iletildi.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### Ne yapmak istersiniz?")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🏠 Ana Sayfaya Dön (Yeni Test)", type="primary"):
+                st.session_state.page = "home"
+                st.session_state.test_finished = False
+                st.rerun()
+                
+        with col2:
+            if st.button("🚪 Çıkış Yap"):
+                st.session_state.clear()
+                st.rerun()
+
+    # 4. SAYFA: TEST EKRANI
     elif st.session_state.page == "test":
         test_name = st.session_state.selected_test
         
@@ -335,9 +359,7 @@ def app():
                                 )
 
                                 if success:
-                                    st.success("Test başarıyla tamamlandı. Sonuçlarınız öğretmeninize iletildi.")
-                                    st.session_state.page = "home"
-                                    time.sleep(3)
+                                    st.session_state.page = "success_screen"
                                     st.rerun()
                                 else:
                                     st.error("Kayıt sırasında hata oluştu.")
@@ -384,9 +406,7 @@ def app():
                         prompt = TEK_RAPOR_PROMPT.format(test_adi="d2 Dikkat Testi", cevaplar_json=json.dumps(stats))
                         report = get_data_from_ai(prompt)
                         save_test_result_to_db(st.session_state.student_id, test_name, {"isaretlenen_idleri": list(sel)}, stats, report)
-                        st.success("Test Tamamlandı.")
-                        st.session_state.page = "home"
-                        time.sleep(3)
+                        st.session_state.page = "success_screen"
                         st.rerun()
                 else:
                     d2_row_timer()
@@ -395,12 +415,13 @@ def app():
                     current_items = questions[start_idx:start_idx + 47]
                     d2_grid_view(current_items)
 
-            # --- TİP 3: BURDON TESTİ ---
+            # --- TİP 3: BURDON TESTİ (DÜZELTİLDİ) ---
             elif q_type == "burdon":
                 CHUNK_SIZE = 50
                 total = (len(questions) // CHUNK_SIZE) + 1
                 LIMIT = st.session_state.burdon_limit
                 
+                # Timer Fragment (Sadece süreyi yönetir)
                 @st.fragment(run_every=1)
                 def burdon_timer():
                     if not st.session_state.get("test_bitti", False):
@@ -411,22 +432,12 @@ def app():
                             st.rerun()
                         st.metric("Kalan Süre", f"{int(rem)} sn")
 
-                @st.fragment
-                def burdon_grid(seg):
-                    if st.session_state.get("test_bitti", False): return
-                    st.info(f"HEDEFLER: {', '.join(st.session_state.burdon_targets)}")
-                    rows = [seg[i:i+10] for i in range(0, len(seg), 10)]
-                    curr = st.session_state.current_chunk
-                    sel = st.session_state.burdon_isaretlenen.get(curr, set())
-                    for row in rows:
-                        cols = st.columns(len(row))
-                        for c, item in enumerate(row):
-                            is_sel = item['id'] in sel
-                            cols[c].button(item['char'], key=f"b_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_burdon_selection, args=(item['id'], curr))
-
+                # Timer'ı Göster
                 burdon_timer()
                 
+                # Test Bitti Mi Kontrolü
                 if st.session_state.get("test_bitti", False):
+                    # BİTİŞ İŞLEMLERİ
                     all_sel = set()
                     for chunk in st.session_state.burdon_isaretlenen.values():
                         all_sel.update(chunk)
@@ -440,20 +451,43 @@ def app():
                         prompt = TEK_RAPOR_PROMPT.format(test_adi="Burdon Dikkat Testi", cevaplar_json=json.dumps(stats))
                         report = get_data_from_ai(prompt)
                         save_test_result_to_db(st.session_state.student_id, test_name, {"isaretlenen_idleri": list(all_sel)}, stats, report)
-                        st.success("Test Tamamlandı.")
-                        st.session_state.page = "home"
-                        time.sleep(3)
+                        st.session_state.page = "success_screen"
                         st.rerun()
+                
                 else:
+                    # GRID GÖRÜNÜMÜ (Artık fragment değil, normal Streamlit akışı)
+                    # Böylece buton tıklamaları sayfayı yeniler ve yeni veriyi getirir
                     start = st.session_state.current_chunk * CHUNK_SIZE
-                    burdon_grid(questions[start:start + CHUNK_SIZE])
+                    current_items = questions[start:start + CHUNK_SIZE]
                     
+                    st.info(f"HEDEFLER: {', '.join(st.session_state.burdon_targets)}")
+                    
+                    # Grid Oluşturma
+                    cols_count = 10
+                    rows = [current_items[i:i+cols_count] for i in range(0, len(current_items), cols_count)]
+                    
+                    for row in rows:
+                        cols = st.columns(cols_count)
+                        for c, item in enumerate(row):
+                            is_sel = item['id'] in st.session_state.burdon_isaretlenen.get(st.session_state.current_chunk, set())
+                            # Seçim butonu
+                            cols[c].button(
+                                item['char'], 
+                                key=f"b_{item['id']}", 
+                                type="primary" if is_sel else "secondary", 
+                                on_click=toggle_burdon_selection, 
+                                args=(item['id'], st.session_state.current_chunk)
+                            )
+
+                    st.markdown("---")
                     c1, c2 = st.columns([1, 4])
+                    
+                    # Navigasyon Butonları
                     if st.session_state.current_chunk < total - 1:
-                        if c2.button("SONRAKİ ➡️"):
+                        if c2.button("SONRAKİ SAYFA ➡️", type="primary"):
                             st.session_state.current_chunk += 1
                             st.rerun()
                     else:
-                        if c2.button("BİTİR 🏁", type="primary"):
+                        if c2.button("TESTİ BİTİR 🏁", type="primary"):
                             st.session_state.test_bitti = True
                             st.rerun()
