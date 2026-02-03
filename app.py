@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb  3 21:05:24 2026
-
-@author: YYYNÇİGGGİİÜÜÜÜĞĞĞ
-"""
-
 import streamlit as st
 from database import init_db
 from db_utils import get_or_create_student
@@ -20,15 +13,16 @@ st.set_page_config(
 # Veritabanını Başlat
 init_db()
 
-# CSS
+# CSS İyileştirmeleri
 st.markdown("""
 <style>
     .big-font { font-size: 20px !important; }
     .stButton>button { border-radius: 10px; height: 3em; }
+    div[data-testid="stForm"] { border: 2px solid #f0f2f6; padding: 20px; border-radius: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
-# Session State
+# Session State Başlangıç
 if 'role' not in st.session_state: st.session_state.role = None
 if 'student_id' not in st.session_state: st.session_state.student_id = None
 if 'student_name' not in st.session_state: st.session_state.student_name = None
@@ -40,32 +34,43 @@ def login_page():
     
     col1, col2 = st.columns(2)
     
-    # ÖĞRENCİ GİRİŞİ
+    # --- SOL: ÖĞRENCİ GİRİŞİ ---
     with col1:
         st.header("🎓 Öğrenci Girişi")
+        st.info("Testlere başlamak için Adınızı ve Soyadınızı giriniz.")
+        
         with st.form("student_login"):
             name_input = st.text_input("Adınız Soyadınız:", placeholder="Örn: Ahmet Yılmaz")
             submitted = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
             
             if submitted:
-                if len(name_input) < 3:
-                    st.error("Lütfen geçerli bir isim giriniz.")
+                # Temizle ve Baş Harfleri Büyüt
+                clean_name = name_input.strip().title()
+                
+                # KONTROL: En az 2 kelime (Ad + Soyad) var mı?
+                if len(clean_name.split()) < 2:
+                    st.error("⚠️ Lütfen hem Adınızı hem de Soyadınızı tam giriniz. (Örn: Ali Kaya)")
+                elif len(clean_name) < 5: # Çok kısa isim kontrolü
+                    st.error("⚠️ Lütfen geçerli bir isim giriniz.")
                 else:
-                    s_id, s_name = get_or_create_student(name_input.strip())
+                    # Giriş Başarılı
+                    s_id, s_name = get_or_create_student(clean_name)
                     st.session_state.role = "student"
                     st.session_state.student_id = s_id
                     st.session_state.student_name = s_name
                     st.rerun()
 
-    # ÖĞRETMEN GİRİŞİ
+    # --- SAĞ: ÖĞRETMEN GİRİŞİ ---
     with col2:
         st.header("👨‍🏫 Öğretmen Girişi")
+        st.info("Yönetim paneli erişimi.")
+        
         with st.form("teacher_login"):
             password_input = st.text_input("Yönetici Şifresi:", type="password")
             submitted_t = st.form_submit_button("Yönetim Paneline Git", type="secondary", use_container_width=True)
             
             if submitted_t:
-                # Şifre kontrolü: Önce st.secrets (Cloud için), yoksa 'admin123'
+                # Şifre kontrolü: Önce st.secrets (Cloud), yoksa 'admin123'
                 secret_pass = "admin123"
                 if "teacher_password" in st.secrets:
                     secret_pass = st.secrets["teacher_password"]
@@ -74,9 +79,9 @@ def login_page():
                     st.session_state.role = "teacher"
                     st.rerun()
                 else:
-                    st.error("Hatalı şifre.")
+                    st.error("⛔ Hatalı şifre.")
 
-# --- YÖNLENDİRME ---
+# --- SAYFA YÖNLENDİRME ---
 if st.session_state.role is None:
     login_page()
 
