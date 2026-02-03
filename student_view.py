@@ -5,9 +5,8 @@ from dotenv import load_dotenv
 import json
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime
-import random
 import time
+import random
 from db_utils import check_daily_limit, check_test_completed, save_test_result_to_db
 
 # --- API VE AYARLAR ---
@@ -19,7 +18,346 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- SABİT VERİLER ---
+# --- YENİ PROMPTLAR (ENTEGRE EDİLDİ) ---
+
+SORU_URETIM_PROMPT = """
+Sen dünyanın en iyi Türk psikometrik test tasarımcısı, çocuk/ergen psikolojisi uzmanı ve ölçme-değerlendirme otoritesisin.
+
+GÖREV: Sadece belirtilen test için, orijinal testin soru sayısı, yapısı ve ölçek tipine %100 sadık kalarak, tamamen özgün, yeni ve benzersiz sorular üret.
+
+ZORUNLU GENEL KURALLAR (ASLA İHLAL ETME):
+- Tüm sorular kusursuz, akıcı ve doğal Türkçe olsun. Cümleler kısa, net ve sade olsun.
+- Ortaokul-lise öğrencisinin rahatça anlayabileceği dil kullan; karmaşık kelimelerden kaçın.
+- Sorular tamamen tarafsız, objektif ve yargısız olsun. Hiçbir yönlendirme, duygu yüklemesi veya değer yargısı içermesin.
+- Her soru, psikolojik derinlik taşıyarak üst düzey analizlere olanak tanısın ama anlaşılırlığı asla feda etme.
+- Tüm sorular 5'li Likert ölçeğine mükemmel uyumlu olsun: Kesinlikle Katılmıyorum (1) - Katılmıyorum (2) - Kararsızım (3) - Katılıyorum (4) - Kesinlikle Katılıyorum (5).
+- Aynı veya benzer ifadeler ASLA tekrarlanmasın. Maksimum çeşitlilik sağla (farklı cümle yapıları, bağlamlar ve ifadeler kullan).
+- Çıktıda kesinlikle başka hiçbir metin, açıklama, başlık, markdown, kod bloğu işareti veya ek bilgi yazma. Sadece geçerli JSON üret.
+
+TESTLERE ÖZGÜ ZORUNLU KURALLAR:
+- Çoklu Zeka Testi (Gardner): Tam 80 soru üret. 8 zeka alanı için tam 10'ar soru: Sözel, Mantıksal, Görsel, Müziksel, Bedensel, Sosyal, İçsel, Doğacı. Her soruya ilgili "area" alanı ekle.
+- Holland Mesleki İlgi Envanteri (RIASEC): Tam 90 soru üret. 6 tip için tam 15'er soru: Gerçekçi, Araştırmacı, Yaratıcı, Sosyal, Girişimci, Düzenli. Sorular aktivite ve meslek ilgisi odaklı olsun. Her soruya ilgili "area" alanı ekle.
+- VARK Öğrenme Stilleri Testi: Tam 16 soru üret. Orijinal VARK tarzında günlük hayat senaryoları üzerinden çoktan seçmeli tercih soruları üret (4 seçenek: Görsel, İşitsel, Okuma/Yazma, Kinestetik). Likert değil, tercih tipi olsun.
+- Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği. Sorular davranış ve düşünce tarzı odaklı olsun.
+- Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret. Çalışma alışkanlıkları, motivasyon, disiplin ve zaman yönetimi odaklı olsun.
+- Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret. Sınav öncesi, sırası ve sonrası kaygı belirtileri odaklı olsun.
+
+JSON ÇIKTI FORMATI (KESİNLİKLE BU ŞEKİLDE OLSUN):
+{{
+  "type": "likert",
+  "questions": [
+    {{"id": 1, "text": "Soru metni burada"}}
+  ]
+}}
+
+Sadece istenen test için soru üret. Çıktı %100 geçerli JSON olsun ve başka hiçbir karakter içermesin.
+
+Test adı: {test_adi}
+"""
+
+TEK_RAPOR_PROMPT = """
+Sen dünyanın en iyi psikometrik test analizi ve yorumlama uzmanısın. Çocuk/ergen psikolojisi konusunda çok deneyimlisin ve gençlere yol göstermeyi seviyorsun.
+
+GÖREV: Sadece verilen JSON verilerine (puanlar, cevaplar, istatistikler) dayanarak test sonucunu çok kapsamlı ve zengin bir şekilde analiz et. 
+ASLA genel geçer bilgi, dış kaynak veya varsayım ekleme. Sadece kullanıcının kendi verilerinden yola çıkarak yorum yap.
+
+Rapor tamamen tarafsız, nesnel ve yargısız olsun. 
+Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin. 
+Kısa cümleler kullan. Karmaşık kelimelerden tamamen kaçın. Günlük konuşma gibi akıcı ve doğal yaz. 
+Derin ve zengin analiz yap ama ifadeleri her zaman basit ve net tut. Motive edici ve destekleyici bir üslup kullan.
+
+Test adı: {test_adi}
+Veriler: {cevaplar_json}
+
+ZORUNLU RAPOR FORMATI (Tam olarak bu başlıkları ve sırayı kullan):
+
+1. **Genel Değerlendirme** Testin en önemli 3-4 bulgusunu kısaca özetle. Kullanıcının dikkatini hemen çekecek şekilde başla.
+
+2. **Detaylı Puan Dağılımı** Her alan/tip için alınan puanları sayısal olarak listele. 
+   En yüksek 2-3 ve en düşük 2-3 alanı vurgula. Ortalama, yüzdelik veya doğru/yanlış/atlanan sayılarını (teste göre) belirt.
+
+3. **Baskın Özellikler ve Güçlü Yönler** Yüksek puan alınan alanlardaki özellikleri detaylı anlat. 
+   Bu özelliklerin günlük hayata, okul başarısına ve kişisel ilişkilere olumlu etkilerini veri odaklı örneklerle açıkla.
+
+4. **Gelişim Alanları ve Potansiyel Zorluklar** Düşük puan alınan alanlardaki özellikleri belirt. 
+   Bunların olası zorluklarını ve hayatındaki yansımalarını veri odaklı örneklerle anlat.
+
+5. **Puanlar Arası İlişkiler ve Çelişkiler** Farklı alanlar arasındaki ilişkileri analiz et. 
+   Örneğin: Bir alanda yüksek, başka alanda düşük puan varsa bunun olası anlamı nedir? 
+   İç çelişkiler veya dengesizlikler varsa vurgula.
+
+6. **Günlük Hayat Yansımaları** Verilere dayanarak bu sonuçların okulda, arkadaşlıkta, hobilerde ve aile hayatında nasıl görünebileceğini veri odaklı örneklerle açıkla.
+
+7. **Kişisel İçgörüler** Kullanıcının kendine dair fark edebileceği 5-6 önemli içgörü ver. 
+   Her içgörü doğrudan puanlardan çıksın ve "Senin puanların gösteriyor ki..." diye başlasın.
+
+8. **Grafik ve Görsel Öneriler** Bu test için en uygun grafik türlerini öner (radar chart, çubuk grafik vb.). 
+   Hangi alanların grafikte öne çıkacağını ve neden faydalı olacağını belirt.
+
+9. **Pratik Öneriler** Veri odaklı, uygulanabilir ve somut 6-7 öneri ver. 
+   Her öneri "Senin ... puanların nedeniyle..." diye başlasın ve hemen yapılabilecek bir adım içersin.
+
+10. **Sonuç Özeti ve Motivasyon** Tüm analizin kısa ve motive edici bir özeti. 
+    Güçlü yönlerini hatırlatarak, potansiyelini vurgulayarak bitir.
+
+TESTLERE ÖZEL EK YÖNERGELER (Otomatik uygula):
+- Enneagram: Baskın tipi ve kanadı (wing) özellikle çok derinlemesine detaylandır. 
+  Kanat etkisini katman katman analiz et:
+  - Kanadın baskın tipe nasıl renk kattığını ve ortaya çıkan kombinasyonun (örneğin 5w4, 2w1, 9w8) benzersiz özelliklerini zengin örneklerle anlat.
+  - Kanat puan farkını değerlendir: Güçlü kanat varsa etkisini, zayıf kanat varsa baskın tipin daha saf hâkimiyetini, dengeliyse hibrit potansiyeli vurgula.
+  - Bu kombinasyonun motivasyon kaynakları, stres altında ve rahatken olası davranışları, ilişkilerde ve karar vermede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
+  - Kombinasyonun sana özgü avantajlarını (örneğin daha yaratıcı veya daha pratik yanların), olası iç çelişkilerini ve kişisel gelişim fırsatlarını (kanadı bilinçli kullanma önerileriyle) detaylı belirt.
+- Holland (RIASEC): En yüksek 3 ilgi alanını (kodunu) derinlemesine analiz et.
+  3-kod kombinasyonunu (örneğin SIA, REC, ASE) oluştur ve bu kombinasyonun benzersiz özelliklerini zenginleştir:
+  - Kodların birbirini nasıl tamamladığı veya çelişkili yönlerini (puan farklarına göre güçlü/zayıf kod vurgusu).
+  - Bu kombinasyonun meslek seçiminde, hobi ve okul tercihlerinde nasıl görünebileceğini veri odaklı örneklerle detaylandır.
+  - Kombinasyonun sana özgü avantajlarını (örneğin hem yaratıcı hem sosyal yönün birleşimi), olası dengesizliklerini ve kariyer gelişim fırsatlarını belirt.
+  - Uygun meslek gruplarını bu 3-kod kombinasyonuna göre daha kişiselleştirilmiş ve çeşitli öner.
+- Çoklu Zeka (Gardner): En baskın 2-4 zeka türünü ve bunların etkileşimlerini çok derinlemesine analiz et.
+  Zeka etkileşimlerini katman katman açıkla:
+  - Baskın zekaların birbirini nasıl desteklediği veya tamamladığı (örneğin Sözel + Sosyal zeka birleşimi iletişim avantajı).
+  - Olası çelişkiler veya dengesizlikler (örneğin yüksek Mantıksal ama düşük Bedensel zeka durumunda zorluklar).
+  - Bu etkileşimlerin öğrenme tarzı, hobi, problem çözme ve yaratıcılıkta nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
+  - Kombinasyonun sana özgü potansiyellerini (örneğin çok yönlü beceri gelişimi), gelişim fırsatlarını ve günlük hayatta nasıl kullanılabileceğini detaylı belirt.
+- VARK Öğrenme Stilleri Testi: Baskın stili, ikincil stilleri ve genel karışımı çok derinlemesine analiz et.
+  Stil karışımını katman katman açıkla:
+  - Baskın stilin güçlü yönlerini ve ikincil stillerin nasıl desteklediğini veya renk kattığını (örneğin Görsel baskın + Kinestetik ikincil birleşimi).
+  - Karışımın puan farklarına göre dengesini değerlendir: Güçlü baskın stil varsa saf hâkimiyetini, dengeliyse hibrit öğrenme avantajını vurgula.
+  - Bu karışımın ders çalışma, bilgi işleme, sınav hazırlığı ve hobi öğrenmede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
+  - Karışımın sana özgü avantajlarını (örneğin hem görerek hem yaparak daha hızlı öğrenme), olası çelişkilerini (örneğin Okuma/Yazma düşükken not tutma zorluğu) ve öğrenme stratejisi geliştirme fırsatlarını detaylı belirt.
+- D2 veya Burdon Dikkat Testi: Doğru, hata, atlanan sayılarını ve özellikle hız-doğruluk dengesini (trade-off) çok derinlemesine analiz et.
+  Hız-doğruluk dengesini katman katman açıkla:
+  - Hız odaklı mı yoksa doğruluk odaklı mı performansın baskın olduğunu puanlara göre değerlendir.
+  - Bu dengenin güçlü yönlerini (örneğin yüksek hız ile hızlı karar verme avantajı) ve olası risklerini (örneğin yüksek hata oranı durumunda dikkat dağınıklığı).
+  - Dengesizliğin (aşırı hızda hata artışı veya aşırı yavaşlıkta atlanan artışı) günlük okul hayatı, sınavlar ve uzun süreli odaklanmada nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
+  - Bu dengenin sana özgü avantajlarını (örneğin hızlı ve doğru dengesiyle verimli çalışma), gelişim fırsatlarını (örneğin hızı artırırken doğruluğu koruma teknikleri) ve pratik dikkat stratejilerini detaylı belirt.
+- Sağ-Sol Beyin Dominansı Testi: Baskın tarafı (sağ, sol veya dengeli) çok derinlemesine analiz et.
+  Beyin dominansı etkisini katman katman açıkla:
+  - Baskın tarafın güçlü yönlerini ve diğer tarafın nasıl desteklediğini veya zayıf kaldığını (puan farklarına göre güçlü/zayıf/dengeli vurgusu).
+  - Bu dominansın düşünme tarzı, yaratıcılık, problem çözme, duygusal işlemleme ve karar vermede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
+  - Dominansın sana özgü avantajlarını (örneğin sağ beyinle sezgisel ve bütüncül bakış), olası çelişkilerini (örneğin sol beyin baskınken duygusal ifadede zorluk) ve beyin dengesi geliştirme fırsatlarını (her iki tarafı bilinçli kullanma önerileriyle) detaylı belirt.
+  - Günlük hayat, okul ve hobilerde bu dominansın pratik yansımalarını zengin örneklerle anlat.
+- Çalışma Davranışı Ölçeği (Baltaş): Çalışma alışkanlıkları, motivasyon ve disiplin alanlarını çok derinlemesine analiz et.
+  Alan etkileşimlerini katman katman açıkla:
+  - Alanların birbirini nasıl desteklediği veya tamamladığı (örneğin yüksek motivasyon + yüksek disiplin ile sürdürülebilir başarı).
+  - Olası çelişkiler veya dengesizlikler (örneğin yüksek motivasyon ama düşük disiplin durumunda erteleme eğilimi, veya yüksek alışkanlık ama düşük motivasyon durumunda mekanik çalışma).
+  - Bu etkileşimlerin ders çalışma, ödev tamamlama, uzun vadeli hedeflere ulaşma ve günlük okul performansında nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
+  - Kombinasyonun sana özgü avantajlarını (örneğin dengeli alanlarla verimli ve keyifli çalışma), olası risklerini (örneğin düşük motivasyonla tükenmişlik) ve çalışma davranışı geliştirme fırsatlarını (alanlara özel pratik stratejilerle) detaylı belirt.
+- Sınav Kaygısı Ölçeği (DuSKÖ): Kaygı düzeyini ve türlerini (bilişsel, fizyolojik, davranışsal belirtiler) çok derinlemesine analiz et.
+  Kaygı etkisini katman katman açıkla:
+  - Puanlara göre kaygı düzeyini sınıfla (düşük/orta/yüksek) ve baskın belirti türlerini vurgula.
+  - Bu kaygının sınav öncesi, sırası ve sonrası davranışlara, performans düşüşüne ve günlük okul stresine nasıl yansıdığını veri odaklı örneklerle zenginleştir.
+  - Kaygının sana özgü avantajlarını (örneğin hafif kaygı motivasyon kaynağıysa) ve risklerini (yüksek kaygı durumunda odak kaybı) belirt.
+  - Kaygı yönetimi için sana özel gelişim fırsatlarını ve pratik teknik önerilerini (nefes egzersizi, hazırlık stratejileri gibi) detaylı anlat.
+
+Çıktı sadece bu başlıklarla yapılandırılmış metin olsun. Başka hiçbir açıklama, giriş veya ek cümle ekleme.
+"""
+
+HARMAN_RAPOR_PROMPT = """
+Sen dünyanın en iyi psikometrik test sentez ve bütüncül profil analizi uzmanısın. Çocuk/ergen psikolojisi ve kariyer yönlendirmesi konusunda derin deneyim sahibisin.
+
+GÖREV: Verilen tüm test sonuçlarını (JSON formatında puanlar, istatistikler ve cevaplar) nesnel olarak birleştirerek çok kapsamlı bir bütüncül profil raporu üret.
+ASLA dışarıdan genel geçer bilgi, dış kaynak veya varsayım ekleme. Sadece kullanıcının kendi test verilerinden yola çıkarak yorum yap.
+
+Rapor tamamen tarafsız, nesnel ve yargısız olsun.
+Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin. 
+Kısa cümleler kullan. Karmaşık kelimelerden tamamen kaçın. Günlük konuşma gibi akıcı ve doğal yaz. 
+Derin ve zengin analiz yap ama ifadeleri her zaman basit ve net tut. Motive edici ve destekleyici bir üslup kullan.
+
+Tüm Test Sonuçları: {tum_cevaplar_json}
+
+ZORUNLU RAPOR FORMATI (Tam olarak bu başlıkları ve sırayı kullan):
+
+1. **Bütüncül Profil Özeti** Tüm testlerden çıkan genel tabloyu özetle. En dikkat çeken 4-5 ortak temayı ve ana eğilimi belirt. Beyin dominansı, dikkat performansı, kişilik tipi ve zeka/öğrenme uyumlarını kısaca bütünleştir.
+
+2. **Kişilik ve Davranış Profili** Enneagram, Sağ-Sol Beyin, Çalışma Davranışı, Sınav Kaygısı ve diğer ilgili testlerden çıkan özellikleri derinlemesine birleştir.
+   Baskın kişilik tipi, düşünme tarzı, motivasyon ve kaygı düzeylerini bütünleştirerek anlat.
+   Enneagram tipinin dikkat, çalışma davranışı ve sınav kaygısına etkisini; Sağ-Sol beyin baskınlığının kişilik ve motivasyona etkisini veri odaklı vurgula.
+
+   **Sağ-Sol Beyin Uyum Analizi** (Zorunlu alt başlık)  
+   Baskın beyin tarafını tüm diğer testlerle karşılaştır:
+   - Güçlü yönler (örneğin sağ beyin ile yüksek yaratıcılık/sezgisellik uyumu).
+   - Çelişkiler (örneğin sol beyin ile yüksek sosyal/duygusal alanlar arasındaki dengesizlik).
+   - Düşünme tarzı, karar verme, motivasyon ve günlük davranışlara etkisi veri odaklı örneklerle açıkla.
+   - Sana özgü avantajlar ve denge fırsatlarını belirt.
+
+3. **Ortak Güçlü Yönler** Tüm testlerden çıkan yüksek puanlı özellikleri listele. Bunların birbirini nasıl desteklediğini (örneğin yüksek dikkat ile yüksek disiplin) ve günlük hayata/okula olumlu yansımalarını açıkla.
+
+4. **Ortak Gelişim Alanları** Düşük puan alınan ortak temaları belirt. Bunların olası zorluklarını ve birbirini nasıl etkilediğini veri odaklı anlat.
+
+5. **Zeka ve Öğrenme Stili Uyumu** Çoklu Zeka (Gardner), VARK, Sağ-Sol Beyin ve diğer ilgili testleri derinlemesine birleştir. Dikkat performansının öğrenmeye etkisini de belirt.
+
+   **Gardner-VARK Uyum Analizi** (Zorunlu alt başlık)  
+   Baskın zeka türleri ile öğrenme stillerini karşılaştır. Sağ-Sol beyin baskınlığının bu uyuma etkisini dahil et.
+
+   **Enneagram-Gardner Uyum Analizi** (Zorunlu alt başlık)  
+   Baskın Enneagram tipini zeka türleri ile karşılaştır. Motivasyon ve öğrenme potansiyeline etkisini vurgula.
+
+6. **Dikkat ve Performans Analizi** D2, Burdon, Sınav Kaygısı, Çalışma Davranışı ve diğer testlerden çıkan dikkat, konsantrasyon özelliklerini birleştir.
+   Sağ-Sol beyin ve Enneagram'ın dikkat tarzına etkisini belirt.
+
+   **Dikkat-Çalışma Davranışı Uyum Analizi** (Zorunlu alt başlık)  
+   Dikkat performansını çalışma alışkanlıkları, motivasyon ve kaygı ile karşılaştır.
+   Enneagram tipinin ve Sağ-Sol beyin baskınlığının bu uyuma etkisini veri odaklı örneklerle açıkla.
+
+7. **Kariyer ve İlgi Eğilimleri** Holland (RIASEC) baskın kodlarını tüm diğer testlerle sentezle.
+   En yüksek 2-3 ilgi alanını belirt ve uygun meslek gruplarını detaylı anlat.
+
+   **Enneagram-Holland Uyum Analizi** (Zorunlu alt başlık)  
+   Baskın Enneagram tipini Holland kodları ile karşılaştır.
+   Sağ-Sol beyin baskınlığının ilgi alanlarına etkisini de dahil et.
+
+8. **Çelişkili Eğilimler ve Dengesizlikler** Tüm testler arasında çelişkili veya dengesiz alanları vurgula. 
+   Özellikle Sağ-Sol Beyin, Enneagram, Gardner, VARK, Holland, Dikkat ve Çalışma Davranışı arasındaki tüm uyumsuzlukları belirt.
+
+9. **Kişisel İçgörüler ve Motivasyon Özeti** Tüm verilerden çıkan 6-7 önemli kişisel içgörü ver. 
+   Tüm test uyumlarından (beyin dominansı, zeka-öğrenme, kişilik-ilgi, dikkat-çalışma) çıkan farkındalıkları vurgula.
+
+10. **Kişiselleştirilmiş Yol Haritası** Veri odaklı, uygulanabilir ve somut öneriler ver:
+    - **Kısa vadeli (1-3 ay):** Hemen başlayabileceğin 6-7 günlük adım.
+    - **Orta vadeli (6-12 ay):** Okul ve kariyer için planlanabilir hedefler.
+    - **Uzun vadeli:** Genel hayat stratejisi ve potansiyel gelişim yönü.
+    - Her öneri tüm ilgili uyumlara dayalı başlasın (örneğin "Sağ beyin baskınlığın ... ile Gardner zeka türlerin ... nedeniyle..." veya "Dikkat performansın ... ile Enneagram tipin ... nedeniyle...").
+
+Çıktı sadece bu başlıklarla yapılandırılmış metin olsun. Başka hiçbir giriş, açıklama veya ek cümle yazma.
+"""
+
+# --- SABİT ENNEAGRAM VERİLERİ ---
+ENNEAGRAM_QUESTIONS = {
+    1: [
+        "Kendimi hata yaptığımda çok eleştiririm.", "Doğru ve yanlış konusunda güçlü bir içgüdüm vardır.",
+        "Mükemmellik için çok çaba gösteririm.", "Disiplinli ve adil davranmaktan gurur duyarım.",
+        "Kişisel bütünlük benim için çok önemlidir.", "Genellikle mantıklı düşünürüm, duygusal değilim.",
+        "Çok ciddi olabilirim ve eğlenmeyi unuturum.", "Kendimi en çok ben eleştiririm.",
+        "Bir şeyin yanlış olduğunu hemen fark ederim.", "İşlerimi mükemmel yapmaya çalışırım.",
+        "Düzenli ve dakik olmayı çok önemserim.", "Ahlak kuralları benim için çok değerlidir.",
+        "Sorunları ve eksikleri çabuk görürüm.", "Detayların doğru olmasını isterim.",
+        "Stresli zamanlarda katı ve talepkar olurum.", "Rahatken daha anlayışlı ve kabul edici olurum.",
+        "Başkaları tarafından yanlış anlaşılmaktan korkarım.", "Affetmek bana zor gelir.",
+        "Her şeyi siyah-beyaz görürüm, gri alanları kabul etmekte zorlanırım.", "Yanlış olduğumu kabul etmek bana zor gelir."
+    ],
+    2: [
+        "İlişkiler hayatımın en önemli parçasıdır.", "Başkalarına yardım etmekten ve onları mutlu etmekten keyif alırım.",
+        "Hayır demek bana zor gelir.", "Vermek bana almaktan daha kolay gelir.",
+        "İnsanlarla yakın olmak isterim.", "Başkalarının bana ihtiyaç duymasını severim.",
+        "Dışa dönük ve sıcakkanlı bir yapım vardır.", "Olumsuz duygularımı pek göstermem.",
+        "Takdir edilmek beni çok motive eder.", "Başkalarının bana bağımlı olmasını severim.",
+        "Sevdiğimi söylemek ve duymak benim için önemlidir.", "İnsanlar bana sorunlarını rahatça anlatır.",
+        "İlişkilerimi korumak için çok çaba gösteririm.", "Stresli zamanlarda talepkar olurum.",
+        "Rahatken sevgi dolu ve destekleyici olurum.", "İnsanları kolayca severim.",
+        "Takdir görmediğimde üzülürüm.", "Yardım ederken kendimi iyi hissederim.",
+        "Sevilmek ve bağlantı kurmak benim için önemlidir.", "Endişelendiğimde fazla fedakar olurum."
+    ],
+    3: [
+        "Kendimi iyi tanıtır ve pazarlarım.", "Birden fazla işi aynı anda yapmayı severim.",
+        "Başarılı olmayı ve öne çıkmayı isterim.", "Çalışmak ve üretken olmak benim için önemlidir.",
+        "Hedeflerime odaklanırım.", "İyi görünmeye ve iyi izlenim bırakmaya önem veririm.",
+        "Rekabetten önce harekete geçmeyi tercih ederim.", "İnsanlarla birlikte olmayı severim.",
+        "En etkili yolu bulmakta iyiyim.", "Bazen fazla söz veririm.",
+        "Duygularımı pek göstermem.", "Rekabet etmek beni motive eder.",
+        "Kariyerimde zirveye çıkmayı isterim.", "Stresli zamanlarda kendimi fazla överim.",
+        "Rahatken dürüst ve çekici olurum.", "Olumsuz duyguları işe engel görürüm.",
+        "Yeni durumlara kolay uyum sağlarım.", "Başarılı insanları desteklerim.",
+        "En iyisi olmaya çalışırım.", "Başarı ile motive olurum."
+    ],
+    4: [
+        "Yaratıcı bir yapım vardır.", "Kendimi başkalarından farklı hissederim.",
+        "Melankolik ruh hallerim olur.", "Çok hassas bir insanım.",
+        "Hayatımda bir şey eksikmiş gibi hissederim.", "Başkalarının başarılarına kıskançlık duyabilirim.",
+        "Yaratıcılığımı ifade etmekten hoşlanırım.", "Yanlış anlaşıldığımda içe kapanırım.",
+        "Romantik bir yapım vardır.", "Hayal kurmayı severim.",
+        "Benzersiz şeylere sahip olmayı isterim.", "Yoğun deneyimlere çekilirim.",
+        "Stresli zamanlarda huysuz olurum.", "Rahatken şefkatli ve destekleyici olurum.",
+        "Eleştiriye çok duyarlıyım.", "Hayatın anlamını düşünürüm.",
+        "Sıradan olmaktan kaçınırım.", "İyi zevklere önem veririm.",
+        "Bazen dramatik davranırım.", "Duyguları anlamayı önemli bulurum."
+    ],
+    5: [
+        "Duygusal ortamlardan rahatsız olurum.", "Analiz yapmakta ve araştırmakta iyiyim.",
+        "İçe dönük ve utangaç olabilirim.", "Fikirlerimi duygulardan daha kolay ifade ederim.",
+        "Konuşmadan önce düşünürüm.", "Çatışmalardan kaçınırım.",
+        "Yalnız çalışmaktan zevk alırım.", "Eleştiriye duyarlıyım ama göstermem.",
+        "Bağımsız olmayı severim.", "Özel hayatımı paylaşmayı pek sevmem.",
+        "Düşüncelerim karmaşık olabilir.", "Zamanımı ve alanımı kontrol etmek isterim.",
+        "Bilgisiz davranışlardan rahatsız olurum.", "Her konuda fikrim vardır.",
+        "Benzer ilgi alanları olan insanlarla sosyalleşirim.", "Stresli zamanlarda mesafeli olurum.",
+        "Rahatken objektif ve içgörülü olurum.", "Entellektüel tartışmalara girebilirim.",
+        "Yalnız çalışmayı tercih ederim.", "Kararları mantıkla alırım."
+    ],
+    6: [
+        "Sorumluluk bilincim yüksektir.", "Her ihtimale hazırlıklı olmaya çalışırım.",
+        "Başkalarının niyetlerinden şüphe ederim.", "Karar vermekte zorlanırım.",
+        "Güvenlik benim için önemlidir.", "Kendi kararlarımdan şüphe duyarım.",
+        "Gruba ait olmayı önemserim.", "Her şeyin yoluna gireceğine inanırım ama endişelenirim.",
+        "Aile ve arkadaşlarım bana destek olur.", "Küçük sorunlara fazla tepki verebilirim.",
+        "Yeni insanlara hemen güvenmem.", "Tehlikeleri önceden fark ederim.",
+        "Stresli zamanlarda kaygılı olurum.", "Rahatken sıcak ve sadık olurum.",
+        "Kaygılı olduğumda kontrolcü olurum.", "Rahatken dostça davranırım.",
+        "İlişkilerde bağlılığa güvenmekte zorlanırım.", "Korkumu yenmek için çaba gösteririm.",
+        "Çoğu insandan daha fazla endişelenirim.", "Güvenlik ve destekle motive olurum."
+    ],
+    7: [
+        "Hayattan keyif almayı önemserim.", "Neşeli ve konuşkan bir yapım vardır.",
+        "Seçeneklerimi açık tutmayı severim.", "Çok arkadaşım vardır.",
+        "Yeni ve heyecan verici şeyler severim.", "İyimser bir insanım.",
+        "Eğlendirmeyi ve güldürmeyi severim.", "Çok enerjik olabilirim.",
+        "Farklı şeyler denemekten hoşlanırım.", "Sıkılmaktan nefret ederim.",
+        "Aşırıya kaçabilirim.", "Kısıtlanmaktan rahatsız olurum.",
+        "Stresli zamanlarda disiplinsiz olurum.", "Rahatken eğlenceli ve hayalperest olurum.",
+        "Sevdiğim işte çok üretken olurum.", "Acıdan kaçınırım.",
+        "Yeterli zaman olmaması beni üzür.", "Olumsuz insanlardan hoşlanmam.",
+        "Planları hemen uygulamak isterim.", "Heyecan ve mutlulukla motive olurum."
+    ],
+    8: [
+        "İstediklerim için mücadele ederim.", "Cesur ve lider bir yapım vardır.",
+        "Bağımsız ve güçlü olmayı severim.", "Kararsız insanlardan sabırsızlanırım.",
+        "Rekabet etmeyi ve kazanmayı severim.", "Sevdiklerimi korurum.",
+        "Kontrolü elimde tutmayı severim.", "Güven kazanmak gerekir.",
+        "Risk almaktan hoşlanırım.", "Sıkı çalışırım.",
+        "Meydan okumayı severim.", "Saygı duyulmayı tercih ederim.",
+        "Grupta liderlik yaparım.", "Doğrudan konuşurum.",
+        "Stresli zamanlarda kontrolcü olurum.", "Rahatken enerjik ve yardımcı olurum.",
+        "Duygularımı pek göstermem.", "Güvendiğimde hassas olurum.",
+        "Eğlenceye düşkün olabilirim.", "Kendimi korumakla motive olurum."
+    ],
+    9: [
+        "Çatışmadan kaçınırım.", "Rahat ve iyimser bir yapım vardır.",
+        "İyi bir dinleyiciyim.", "Ertelemeye meyilliyim.",
+        "Rutinlerden hoşlanırım.", "Karar vermekte zorlanırım.",
+        "Yapı ve rutin bana yardımcı olur.", "Detayları unutabilirim.",
+        "Öfkemi pek göstermem.", "Dinlenmeyi severim.",
+        "Evde vakit geçirmekten hoşlanırım.", "Uyum ararım.",
+        "Dırdır edilmekten hoşlanmam.", "Önemsiz işlerle oyalanırım.",
+        "Stresli zamanlarda inatçı olurum.", "Rahatken sabırlı ve açık fikirli olurum.",
+        "Başkalarını memnun etmeye çalışırım.", "Çok karar vermek beni yorar.",
+        "Herkesle iyi geçinirim.", "Huzur ve uyumla motive olurum."
+    ]
+}
+
+ENNEAGRAM_DATA = {
+    1: {"title": "Tip 1: Reformcu", "role": "Mükemmeliyetçi, Düzenleyici", "fear": "Hata yapmak, yozlaşmak.", "desire": "Doğruyu yapmak.", "stress": 4, "growth": 7, "desc": "Dünyayı düzeltmeye çalışan idealist.", "strengths": ["Disiplinli", "Adil", "Etik"], "weaknesses": ["Yargılayıcı", "Esnek olmayan"], "work_style": "Yapılandırılmış, net kuralları olan işler.", "relationship_style": "Dürüstlük ve sadakat ararsın.", "danger_signals": ["Sürekli düzeltme ihtiyacı.", "Öfkeyi bastırma."], "prescription": ["Hata Yapma İzni ver.", "Gri Alanları gör."]},
+    2: {"title": "Tip 2: Yardımcı", "role": "Şefkatli, İlgi Gösteren", "fear": "Sevilmemek.", "desire": "İhtiyaç duyulmak.", "stress": 8, "growth": 4, "desc": "Başkalarını önceleyen fedakar.", "strengths": ["Empatik", "Cömert"], "weaknesses": ["Hayır diyememek", "Alınganlık"], "work_style": "İnsan odaklı işler.", "relationship_style": "Partnerinin ihtiyaçlarını sezersin.", "danger_signals": ["Tükenmişlik."], "prescription": ["Hayır demeyi öğren.", "Kendi ihtiyaçlarını sor."]},
+    3: {"title": "Tip 3: Başarılı", "role": "Odaklı, Performansçı", "fear": "Başarısızlık.", "desire": "Değerli hissetmek.", "stress": 9, "growth": 6, "desc": "Başarı odaklı, hedef insanı.", "strengths": ["Verimli", "Motive edici"], "weaknesses": ["İşkoliklik", "Rekabetçilik"], "work_style": "Hedef odaklı, yükselme şansı olan işler.", "relationship_style": "İlişkiyi proje gibi görme riski.", "danger_signals": ["Duyguları hissetmemek."], "prescription": ["Durma egzersizi yap.", "Maskesiz ol."]},
+    4: {"title": "Tip 4: Bireyci", "role": "Romantik, Özgün", "fear": "Sıradan olmak.", "desire": "Eşsiz olmak.", "stress": 2, "growth": 1, "desc": "Derin duyguları olan hassas kişi.", "strengths": ["Yaratıcı", "Otantik"], "weaknesses": ["Melankoli", "Kıskançlık"], "work_style": "Yaratıcı, rutin olmayan işler.", "relationship_style": "Derin ve tutkulu bağ ararsın.", "danger_signals": ["Depresif ruh hali."], "prescription": ["Rutin oluştur.", "Bedenle bağ kur."]},
+    5: {"title": "Tip 5: Araştırmacı", "role": "Gözlemci, Uzman", "fear": "Yetersiz olmak.", "desire": "Dünyayı anlamak.", "stress": 7, "growth": 8, "desc": "Enerjisini koruyan zihin insanı.", "strengths": ["Analitik", "Objektif"], "weaknesses": ["İzolasyon", "Duygusal kopukluk"], "work_style": "Uzmanlık gerektiren, bağımsız işler.", "relationship_style": "Bağımsızlığa saygı beklersin.", "danger_signals": ["İnsanlardan kopmak."], "prescription": ["Eyleme geç.", "Duygusal risk al."]},
+    6: {"title": "Tip 6: Sadık", "role": "Sorgulayıcı, Güvenilir", "fear": "Güvensiz kalmak.", "desire": "Güvende olmak.", "stress": 3, "growth": 9, "desc": "Her senaryoyu düşünen sadık kişi.", "strengths": ["Sorumlu", "Sadık"], "weaknesses": ["Aşırı kaygı", "Kararsızlık"], "work_style": "Risk analizi yapılan güvenli ortamlar.", "relationship_style": "Güven her şeydir.", "danger_signals": ["Sürekli kötü senaryo düşünmek."], "prescription": ["Düşünceyi durdur.", "İçgüdüne güven."]},
+    7: {"title": "Tip 7: Hevesli", "role": "Maceracı, Vizyoner", "fear": "Acı çekmek.", "desire": "Mutlu olmak.", "stress": 1, "growth": 5, "desc": "Hazza koşan, enerjik kişi.", "strengths": ["İyimser", "Hızlı öğrenen"], "weaknesses": ["Odaklanma sorunu", "Sözünü tutamama"], "work_style": "Çeşitlilik sunan hızlı işler.", "relationship_style": "Eğlenceli ve spontane.", "danger_signals": ["Projeleri bitirememek."], "prescription": ["Bir işi bitir.", "Negatif duyguda kalmayı dene."]},
+    8: {"title": "Tip 8: Meydan Okuyan", "role": "Lider, Koruyucu", "fear": "Kontrol edilmek.", "desire": "Kontrol etmek.", "stress": 5, "growth": 2, "desc": "Güçlü, iradeli doğal lider.", "strengths": ["Cesur", "Adil"], "weaknesses": ["Baskıcı", "Öfke"], "work_style": "Liderlik yapabildiğin yerler.", "relationship_style": "Tutkulu ve koruyucu.", "danger_signals": ["Düşman yaratmak."], "prescription": ["Kırılgan ol.", "Dinlemeyi öğren."]},
+    9: {"title": "Tip 9: Barışçı", "role": "Uzlaştırıcı, Diplomat", "fear": "Çatışma.", "desire": "Huzur.", "stress": 6, "growth": 3, "desc": "Uyum arayan sakin liman.", "strengths": ["Sabırlı", "Kabul edici"], "weaknesses": ["Erteleme", "İnatçılık"], "work_style": "Rekabetin düşük olduğu huzurlu ortamlar.", "relationship_style": "Uyumlu ve destekleyici.", "danger_signals": ["Pasif-agresiflik."], "prescription": ["Önceliklendir.", "Kendi fikrini söyle."]}
+}
+
+WING_DESCRIPTIONS = {
+    "1w9": "Daha sakin ve filozofik mükemmeliyetçi.", "1w2": "Daha yardımsever ve dışa dönük.",
+    "2w1": "Daha prensipli ve sorumlu yardımcı.", "2w3": "Daha hırslı ve sosyal.",
+    "3w2": "Daha ilişki odaklı ve sıcakkanlı.", "3w4": "Daha sanatsal ve bireysel.",
+    "4w3": "Daha hırslı ve performans odaklı.", "4w5": "Daha analitik ve içe dönük.",
+    "5w4": "Daha yaratıcı ve duygusal araştırmacı.", "5w6": "Daha planlı ve sadık.",
+    "6w5": "Daha bağımsız ve mesafeli.", "6w7": "Daha sosyal ve iyimser.",
+    "7w6": "Daha sorumlu ve grup odaklı.", "7w8": "Daha lider ruhlu ve kararlı.",
+    "8w7": "Daha enerjik ve eğlenceli lider.", "8w9": "Daha barışçıl ve sakin güç.",
+    "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
+}
+
 BURDON_SURELERI = {
     "7-8 Yaş (10 Dakika)": 600, "9-10 Yaş (8 Dakika)": 480,
     "11-12 Yaş (6 Dakika)": 360, "13-14 Yaş (4 Dakika)": 240,
@@ -27,14 +365,10 @@ BURDON_SURELERI = {
 }
 
 TEST_BILGILERI = {
-    "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin.", "ipucu": "Dürüst olun."},
-    "d2 Dikkat Testi": {
-        "amac": "Seçici dikkatinizi ölçer.", 
-        "nasil": 'Toplam 14 satır vardır. Her satır için 20 saniyeniz var. Üzerinde toplam 2 çizgi olan d " harflerini bulun.', 
-        "ipucu": 'Hızlanın! Süre dolunca otomatik diğer satıra geçilir. Geri dönülemez. p " harflerini atlayın.'
-    },
-    "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlayın."},
-    "Genel": {"amac": "Kişisel analiz.", "nasil": "Size en uygun seçeneği işaretleyin.", "ipucu": "Dürüst olun."}
+    "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin (1-5 Puan).", "ipucu": "Dürüst olun, cevaplar gizlidir."},
+    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "d'' harflerini bulun.", "ipucu": "Hızlanın!"},
+    "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkat.", "nasil": "Harfleri işaretleyin.", "ipucu": "Süreye dikkat."},
+    "Genel": {"amac": "Analiz.", "nasil": "Seçim yapın.", "ipucu": "Dürüst olun."}
 }
 
 TESTLER = [
@@ -43,64 +377,6 @@ TESTLER = [
     "VARK Öğrenme Stilleri Testi", "Sağ-Sol Beyin Dominansı Testi",
     "Çalışma Davranışı Ölçeği (Baltaş)", "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
-
-# --- PROMPTLAR ---
-SORU_URETIM_PROMPT = """
-Sen dünyanın en iyi Türk psikometrik test tasarımcısı ve çocuk/ergen psikolojisi uzmanısın.
-GÖREV: Sadece belirtilen test için, orijinal testin soru sayısına ve yapısına TAM SADIK kalarak, tamamen yeni ve benzersiz sorular üret.
-- Tüm sorular doğal, akıcı ve düzgün Türkçe olsun. ASLA devrik cümle kullanma.
-- Her soru tek bir kısa, net ve sade cümle olsun.
-- Sorular ortaokul ve lise öğrencisinin rahatça anlayabileceği kadar açık ve basit olsun.
-- Hiçbir şekilde yönlendirme, manipülasyon, yargı, parantez içi açıklama, örnek veya ek bilgi ekleme.
-- Sorular tamamen tarafsız ve objektif olsun, hiçbir duygu veya değer yargısı yükleme.
-- Sorular psikolojik olarak derin ve kaliteli olsun; üst seviye analizlere olanak tanısın ama anlaşılırlığı asla feda etme.
-- Tüm sorular 5'li Likert ölçeğine (Kesinlikle Katılmıyorum - Katılmıyorum - Kararsızım - Katılıyorum - Kesinlikle Katılıyorum) mükemmel uyumlu olsun.
-- Aynı veya çok benzer ifadeler ASLA tekrarlanmasın.
-- Çıktı SADECE ve SADECE geçerli JSON formatında olsun. Başka hiçbir metin, açıklama veya markdown yazma.
-
-Testlere özgü zorunlu kurallar:
-- Enneagram Kişilik Testi: Tam 144 soru üret. 9 tip için eşit dağılım (her tip tam 16 soru). RHETI tarzı kişisel ifadeler kullan ("Ben ...", "Benim için ... önemlidir" vb.).
-- Çoklu Zeka Testi (Gardner): Tam 80 soru üret. 8 zeka alanı için tam 10'ar soru: Sözel, Mantıksal, Görsel, Müziksel, Bedensel, Sosyal, İçsel, Doğacı.
-- Holland Mesleki İlgi Envanteri (RIASEC): Tam 90 soru üret. 6 tip için tam 15'er soru: Gerçekçi, Araştırmacı, Yaratıcı, Sosyal, Girişimci, Düzenli. Aktivite ve ilgi odaklı olsun.
-- VARK Öğrenme Stilleri Testi: Tam 16 soru üret. Orijinal VARK senaryo tarzında günlük hayat durumları üzerinden tercih soruları.
-- Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği.
-- Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret. Çalışma alışkanlıkları, motivasyon ve disiplin odaklı.
-- Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret. Sınav kaygısı belirtileri odaklı.
-
-JSON formatı kesin olarak şöyle olsun:
-{{
-  "type": "likert",
-  "questions": [
-    {{"id": 1, "text": "Soru metni burada"}},
-    ...
-  ]
-}}
-Enneagram için ekstra: {{"id": 1, "text": "...", "type": 1}} (type 1-9 integer)
-Gardner için ekstra: {{"id": 1, "text": "...", "area": "Sözel"}}
-Holland için ekstra: {{"id": 1, "text": "...", "area": "Gerçekçi"}}
-
-Sadece istenen test için soru üret. Çıktıya kesinlikle başka hiçbir şey yazma.
-Test adı: {test_adi}
-"""
-
-TEK_RAPOR_PROMPT = """
-Sen dünyanın en iyi psikometrik test analizi uzmanısın.
-GÖREV: Sadece verilen JSON verilerine dayanarak, test sonuçlarını nesnel ve veri odaklı şekilde analiz et.
-Asla genel geçer bilgi verme, sadece kullanıcının puanları ve cevapları üzerinden yorum yap.
-Rapor tamamen tarafsız olsun.
-
-Test: {test_adi}
-Veriler: {cevaplar_json}
-
-Rapor Formatı (Tam olarak bu başlıkları kullan):
-1. **Genel Değerlendirme:** Test sonuçlarının genel özeti.
-2. **Puan Analizi:** Her alan/tip için alınan puanlar ve bu puanların anlamı (sayısal verilere dayanarak).
-3. **Güçlü Yönler:** Yüksek puan alınan alanlardaki özellikler ve sonuçları.
-4. **Gelişim Alanları:** Düşük puan alınan alanlardaki özellikler ve sonuçları.
-5. **Öneriler:** Veri odaklı, uygulanabilir 4-5 somut tavsiye.
-
-Dil: Sade, yalın ve profesyonel Türkçe. Tarafsız ve nesnel bir üslup kullan.
-"""
 
 # --- YARDIMCI FONKSİYONLAR ---
 def get_data_from_ai(prompt):
@@ -148,36 +424,97 @@ def generate_burdon_content():
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
 
-def score_enneagram(answers, questions):
-    scores = {i: 0 for i in range(1, 10)}
-    for q in questions:
-        q_id = q["id"]
-        score = answers.get(q_id)
-        if score and "type" in q:
-            scores[q["type"]] += score
-    return scores
+def calculate_enneagram_report(all_answers):
+    # Puan Hesapla
+    scores = {t: 0 for t in range(1, 10)}
+    for q_id, val in all_answers.items():
+        # q_id formatı: "1_0", "1_1" -> Tip_SoruIndex
+        tip = int(q_id.split('_')[0])
+        scores[tip] += val
+    
+    # Normalize et (Yüzdeye çevir)
+    max_score = 20 * 5 # 20 soru, max 5 puan
+    normalized = {t: round(s / max_score * 100, 1) for t, s in scores.items()}
+    
+    # Ana Tip Bul
+    main_type = max(scores, key=scores.get)
+    main_score = normalized[main_type]
+    
+    # Kanat Bul
+    if main_type == 1: wings = [9, 2]
+    elif main_type == 9: wings = [8, 1]
+    else: wings = [main_type - 1, main_type + 1]
+    
+    wing_type = max(wings, key=lambda w: normalized[w])
+    wing_score = normalized[wing_type]
+    
+    full_type_str = f"{main_type}w{wing_type}" if wing_score > main_score * 0.7 else f"{main_type} (Saf Tip)"
+    
+    # Rapor Metni Oluştur
+    data = ENNEAGRAM_DATA[main_type]
+    wing_txt = WING_DESCRIPTIONS.get(f"{main_type}w{wing_type}", "Dengeli kanat.")
+    
+    report = f"""
+    # 🌟 ENNEAGRAM ANALİZ SONUCU 🌟
+    
+    **Baskın Tip:** {data['title']} (%{main_score})
+    **Tam Profil:** {full_type_str}
+    **Temel Rol:** {data['role']}
+    
+    ---
+    ### 📖 Kimsin Sen?
+    {data['desc']}
+    
+    **Temel Arzu:** {data['desire']}
+    **Temel Korku:** {data['fear']}
+    
+    ---
+    ### 🦅 Kanat Etkisi ({wing_type}. Tip)
+    {wing_txt}
+    
+    ---
+    ### 💪 Süper Güçlerin
+    {', '.join(data['strengths'])}
+    
+    ### 🚧 Gelişim Alanların
+    {', '.join(data['weaknesses'])}
+    
+    ---
+    ### 💼 Çalışma Tarzın
+    {data['work_style']}
+    
+    ### ❤️ İlişki Tarzın
+    {data['relationship_style']}
+    
+    ---
+    ### ⚠️ Tükenmişlik Sinyalleri
+    {', '.join(data['danger_signals'])}
+    
+    ### 💊 Sana Özel Reçete
+    {', '.join(data['prescription'])}
+    
+    ---
+    **Stres Anında:** Tip {data['stress']} gibi davranabilirsin.
+    **Büyüme Anında:** Tip {data['growth']} özelliklerini gösterirsin.
+    """
+    
+    return scores, report
 
 # --- CALLBACK FONKSİYONLARI ---
 def toggle_burdon_selection(item_id, current_chunk):
     if current_chunk not in st.session_state.burdon_isaretlenen:
         st.session_state.burdon_isaretlenen[current_chunk] = set()
-    if item_id in st.session_state.burdon_isaretlenen[current_chunk]:
-        st.session_state.burdon_isaretlenen[current_chunk].remove(item_id)
-    else:
-        st.session_state.burdon_isaretlenen[current_chunk].add(item_id)
+    s = st.session_state.burdon_isaretlenen[current_chunk]
+    if item_id in s: s.remove(item_id)
+    else: s.add(item_id)
 
 def toggle_d2_selection(item_id):
-    if item_id in st.session_state.d2_isaretlenen:
-        st.session_state.d2_isaretlenen.remove(item_id)
-    else:
-        st.session_state.d2_isaretlenen.add(item_id)
+    s = st.session_state.d2_isaretlenen
+    if item_id in s: s.remove(item_id)
+    else: s.add(item_id)
 
-# --- NAVİGASYON CALLBACKLERİ (BURDON İÇİN KRİTİK) ---
-def next_chunk_callback():
-    st.session_state.current_chunk += 1
-
-def finish_burdon_callback():
-    st.session_state.test_bitti = True
+def next_chunk_callback(): st.session_state.current_chunk += 1
+def finish_burdon_callback(): st.session_state.test_bitti = True
 
 # --- ANA ÖĞRENCİ UYGULAMASI (APP) ---
 def app():
@@ -195,7 +532,7 @@ def app():
     if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
     if "test_finished" not in st.session_state: st.session_state.test_finished = False
 
-    # 1. LIMIT KONTROLÜ (Home sayfasındayken kontrol et)
+    # 1. LIMIT KONTROLÜ (Test bitince tekrar kontrol edilmeli)
     if st.session_state.page == "home":
         if not check_daily_limit(st.session_state.student_id):
             st.error("⚠️ Günlük test çözme limitinize (2 adet) ulaştınız. Yarın tekrar bekleriz.")
@@ -225,7 +562,14 @@ def app():
                 st.session_state.test_finished = False
                 
                 with st.spinner("Test hazırlanıyor..."):
-                    if "d2" in selected_test.lower():
+                    # ÖZEL ENNEAGRAM DURUMU
+                    if "Enneagram" in selected_test:
+                        st.session_state.enneagram_type_idx = 1 # Tip 1'den başla
+                        st.session_state.enneagram_answers = {} # Cevapları tut
+                        st.session_state.current_test_data = {"type": "enneagram_fixed"} # Özel tip
+                    
+                    # DİĞER TESTLER
+                    elif "d2" in selected_test.lower():
                         st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
                         st.session_state.d2_isaretlenen = set()
                         st.session_state.d2_basla = False
@@ -241,11 +585,12 @@ def app():
                         st.session_state.burdon_limit = 600
                         st.session_state.test_bitti = False
                     else:
+                        # GROK API İLE SORU ÜRET (Diğer testler için)
                         prompt = SORU_URETIM_PROMPT.format(test_adi=selected_test)
                         raw = get_data_from_ai(prompt)
                         try:
                             test_data = json.loads(raw)
-                            test_data["type"] = "enneagram" if "Enneagram" in selected_test else "likert"
+                            test_data["type"] = "likert" # Standart Likert
                             st.session_state.current_test_data = test_data
                             st.session_state.cevaplar = {}
                             st.session_state.sayfa = 0
@@ -308,79 +653,123 @@ def app():
         else:
             data = st.session_state.current_test_data
             q_type = data.get("type", "likert")
-            questions = data.get("questions", [])
 
-            # --- TİP 1: LIKERT / ENNEAGRAM ---
-            if q_type in ["enneagram", "likert"]:
-                PER_PAGE = 10
-                total = (len(questions) // PER_PAGE) + (1 if len(questions) % PER_PAGE else 0)
-                start = st.session_state.sayfa * PER_PAGE
-                current_qs = questions[start:start + PER_PAGE]
+            # --- 1. ÖZEL ENNEAGRAM TESTİ (SABİT SORULAR) ---
+            if q_type == "enneagram_fixed":
+                curr_type = st.session_state.enneagram_type_idx
+                questions = ENNEAGRAM_QUESTIONS[curr_type]
                 
-                st.progress((st.session_state.sayfa + 1) / total)
+                st.progress(curr_type / 9)
+                st.subheader(f"Bölüm {curr_type}: Tip {curr_type} Soruları")
+                st.caption("Aşağıdaki ifadelere ne kadar katılıyorsunuz? (1: Neredeyse Hiç - 5: Neredeyse Her Zaman)")
                 
-                options_map = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
-                opts = list(options_map.keys())
-                options_reverse = {v: k for k, v in options_map.items()}
-
-                for q in current_qs:
-                    st.write(f"**{q['text']}**")
-                    saved = st.session_state.cevaplar.get(q['id'])
-                    def_idx = opts.index(options_reverse[saved]) if saved in options_reverse else None
-                    val = st.radio("Seçim:", opts, key=f"q_{q['id']}", index=def_idx, horizontal=True, label_visibility="collapsed")
-                    if val: st.session_state.cevaplar[q['id']] = options_map[val]
+                # Cevapları al
+                opts = [1, 2, 3, 4, 5]
+                labels = ["1 (Hiç)", "2", "3", "4", "5 (Çok)"]
+                
+                all_answered = True
+                
+                # Form elemanları
+                for i, q_text in enumerate(questions):
+                    q_key = f"{curr_type}_{i}" # Unique ID: Tip_SoruIndex
+                    st.write(f"**{i+1}. {q_text}**")
+                    
+                    prev_val = st.session_state.enneagram_answers.get(q_key, None)
+                    val = st.radio(f"Soru {i+1}", opts, key=f"rad_{q_key}", index=opts.index(prev_val) if prev_val else None, horizontal=True, format_func=lambda x: labels[x-1], label_visibility="collapsed")
+                    
+                    if val:
+                        st.session_state.enneagram_answers[q_key] = val
+                    else:
+                        all_answered = False
                     st.divider()
-
-                c1, c2 = st.columns(2)
-                if st.session_state.sayfa > 0:
-                    if c1.button("⬅️ Geri"):
-                        st.session_state.sayfa -= 1
-                        st.rerun()
                 
-                if st.session_state.sayfa < total - 1:
+                # İleri / Bitir Butonları
+                c1, c2 = st.columns(2)
+                
+                if curr_type < 9:
+                    if c2.button(f"Tip {curr_type+1}'e Geç ➡️", type="primary"):
+                        if not all_answered:
+                            st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevaplayınız!")
+                        else:
+                            st.session_state.enneagram_type_idx += 1
+                            st.rerun()
+                else:
+                    if c2.button("TESTİ BİTİR VE ANALİZ ET ✅", type="primary"):
+                        if not all_answered:
+                            st.error("⚠️ Lütfen tüm soruları cevaplayınız!")
+                        else:
+                            with st.spinner("Kişilik haritanız çıkarılıyor..."):
+                                # Enneagram Özel Hesaplama
+                                scores, report = calculate_enneagram_report(st.session_state.enneagram_answers)
+                                
+                                # Veritabanına Kayıt
+                                save_test_result_to_db(
+                                    st.session_state.student_id, 
+                                    test_name, 
+                                    st.session_state.enneagram_answers, 
+                                    scores, 
+                                    report
+                                )
+                                st.session_state.page = "success_screen"
+                                st.rerun()
+
+            # --- 2. DİĞER LIKERT TESTLERİ (Grok ile Üretilenler) ---
+            elif q_type == "likert":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs)//PER_PAGE)+1
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa+1)/tot_p)
+                
+                opts = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
+                
+                for q in curr_qs:
+                    st.write(f"**{q['text']}**")
+                    k = f"q_{q['id']}"
+                    saved = st.session_state.cevaplar.get(q['id'])
+                    # Default index ayarı
+                    idx = None
+                    if saved:
+                        vals = list(opts.values())
+                        if saved in vals:
+                            idx = vals.index(saved)
+
+                    val = st.radio("Cevap", list(opts.keys()), key=k, index=idx, horizontal=True, label_visibility="collapsed")
+                    if val: st.session_state.cevaplar[q['id']] = opts[val]
+                    st.divider()
+                
+                c1, c2 = st.columns(2)
+                if st.session_state.sayfa < tot_p-1:
                     if c2.button("İleri ➡️"):
+                        # Basit boş kontrolü (Opsiyonel, sıkmasın diye kapalı ama eklenebilir)
                         st.session_state.sayfa += 1
                         st.rerun()
                 else:
-                    if c2.button("TESTİ BİTİR VE GÖNDER ✅", type="primary"):
-                        if len(st.session_state.cevaplar) < len(questions):
-                            st.warning("Lütfen tüm soruları cevaplayınız!")
-                        else:
-                            with st.spinner("Sonuçlar hesaplanıyor ve öğretmene iletiliyor..."):
-                                scores = None
-                                if q_type == "enneagram":
-                                    scores = score_enneagram(st.session_state.cevaplar, questions)
-                                    stats = {"Puanlar": scores}
-                                else:
-                                    stats = {"Cevaplar": st.session_state.cevaplar}
-                                
-                                prompt = TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats, ensure_ascii=False))
-                                report = get_data_from_ai(prompt)
+                    if c2.button("Bitir ✅", type="primary"):
+                        if len(st.session_state.cevaplar) < len(qs):
+                            st.warning("Lütfen eksik soruları tamamlayınız.")
+                            return
+                        
+                        with st.spinner("Analiz ediliyor..."):
+                            stats = {"Cevaplar": st.session_state.cevaplar}
+                            # Grok Raporu
+                            rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats)))
+                            save_test_result_to_db(st.session_state.student_id, test_name, st.session_state.cevaplar, None, rep)
+                            st.session_state.page = "success_screen"
+                            st.rerun()
 
-                                success = save_test_result_to_db(
-                                    st.session_state.student_id,
-                                    test_name,
-                                    st.session_state.cevaplar,
-                                    scores,
-                                    report
-                                )
-
-                                if success:
-                                    st.session_state.page = "success_screen"
-                                    st.rerun()
-                                else:
-                                    st.error("Kayıt sırasında hata oluştu.")
-
-            # --- TİP 2: d2 DİKKAT TESTİ ---
+            # --- 3. D2 TESTİ ---
             elif q_type == "d2":
-                ROW_TIME_LIMIT = 20
+                ROW_TIME = 20
                 TOTAL_ROWS = 14
                 
                 @st.fragment(run_every=1)
                 def d2_row_timer():
                     if st.session_state.get("d2_basla", False) and not st.session_state.get("d2_bitti", False):
                         elapsed = time.time() - st.session_state.d2_row_start_time
-                        remaining = ROW_TIME_LIMIT - elapsed
+                        remaining = ROW_TIME - elapsed
                         if remaining <= 0:
                             st.session_state.d2_current_row += 1
                             if st.session_state.d2_current_row >= TOTAL_ROWS:
@@ -388,7 +777,7 @@ def app():
                             else:
                                 st.session_state.d2_row_start_time = time.time()
                             st.rerun()
-                        st.progress(max(0.0, remaining / ROW_TIME_LIMIT))
+                        st.progress(max(0.0, remaining / ROW_TIME))
                         st.caption(f"Satır: {st.session_state.d2_current_row + 1} / {TOTAL_ROWS}")
 
                 @st.fragment
@@ -422,13 +811,12 @@ def app():
                     current_items = questions[start_idx:start_idx + 47]
                     d2_grid_view(current_items)
 
-            # --- TİP 3: BURDON TESTİ (DÜZELTİLDİ) ---
+            # --- 4. BURDON TESTİ ---
             elif q_type == "burdon":
                 CHUNK_SIZE = 50
                 total = (len(questions) // CHUNK_SIZE) + 1
                 LIMIT = st.session_state.burdon_limit
                 
-                # Timer Fragment (Sadece süreyi yönetir)
                 @st.fragment(run_every=1)
                 def burdon_timer():
                     if not st.session_state.get("test_bitti", False):
@@ -439,12 +827,9 @@ def app():
                             st.rerun()
                         st.metric("Kalan Süre", f"{int(rem)} sn")
 
-                # Timer'ı Göster
                 burdon_timer()
                 
-                # Test Bitti Mi Kontrolü
                 if st.session_state.get("test_bitti", False):
-                    # BİTİŞ İŞLEMLERİ
                     all_sel = set()
                     for chunk in st.session_state.burdon_isaretlenen.values():
                         all_sel.update(chunk)
@@ -460,16 +845,12 @@ def app():
                         save_test_result_to_db(st.session_state.student_id, test_name, {"isaretlenen_idleri": list(all_sel)}, stats, report)
                         st.session_state.page = "success_screen"
                         st.rerun()
-                
                 else:
-                    # GRID VE SAYFALAMA
                     start = st.session_state.current_chunk * CHUNK_SIZE
                     current_items = questions[start:start + CHUNK_SIZE]
-                    
                     st.info(f"HEDEFLER: {', '.join(st.session_state.burdon_targets)}")
-                    st.caption(f"Sayfa {st.session_state.current_chunk + 1} / {total}") # Sayfa numarası eklendi
+                    st.caption(f"Sayfa {st.session_state.current_chunk + 1} / {total}")
                     
-                    # Grid Oluşturma
                     cols_count = 10
                     rows = [current_items[i:i+cols_count] for i in range(0, len(current_items), cols_count)]
                     
@@ -477,7 +858,6 @@ def app():
                         cols = st.columns(cols_count)
                         for c, item in enumerate(row):
                             is_sel = item['id'] in st.session_state.burdon_isaretlenen.get(st.session_state.current_chunk, set())
-                            # Seçim butonu
                             cols[c].button(
                                 item['char'], 
                                 key=f"b_{item['id']}", 
@@ -489,20 +869,7 @@ def app():
                     st.markdown("---")
                     c1, c2 = st.columns([1, 4])
                     
-                    # NAVİGASYON BUTONLARI (Callback ile güçlendirildi)
                     if st.session_state.current_chunk < total - 1:
-                        # SONRAKİ SAYFA butonu
-                        c2.button(
-                            "SONRAKİ SAYFA ➡️", 
-                            type="primary", 
-                            on_click=next_chunk_callback,
-                            key=f"next_btn_{st.session_state.current_chunk}" # Benzersiz key
-                        )
+                        c2.button("SONRAKİ SAYFA ➡️", type="primary", on_click=next_chunk_callback, key=f"next_{st.session_state.current_chunk}")
                     else:
-                        # BİTİR butonu
-                        c2.button(
-                            "TESTİ BİTİR 🏁", 
-                            type="primary",
-                            on_click=finish_burdon_callback,
-                            key="finish_btn"
-                        )
+                        c2.button("TESTİ BİTİR 🏁", type="primary", on_click=finish_burdon_callback, key="finish_btn")
