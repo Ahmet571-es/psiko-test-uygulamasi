@@ -18,8 +18,7 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- YENİ PROMPTLAR (ENTEGRE EDİLDİ) ---
-
+# --- PROMPTLAR ---
 SORU_URETIM_PROMPT = """
 Sen dünyanın en iyi Türk psikometrik test tasarımcısı, çocuk/ergen psikolojisi uzmanı ve ölçme-değerlendirme otoritesisin.
 
@@ -99,127 +98,6 @@ ZORUNLU RAPOR FORMATI (Tam olarak bu başlıkları ve sırayı kullan):
 
 10. **Sonuç Özeti ve Motivasyon** Tüm analizin kısa ve motive edici bir özeti. 
     Güçlü yönlerini hatırlatarak, potansiyelini vurgulayarak bitir.
-
-TESTLERE ÖZEL EK YÖNERGELER (Otomatik uygula):
-- Enneagram: Baskın tipi ve kanadı (wing) özellikle çok derinlemesine detaylandır. 
-  Kanat etkisini katman katman analiz et:
-  - Kanadın baskın tipe nasıl renk kattığını ve ortaya çıkan kombinasyonun (örneğin 5w4, 2w1, 9w8) benzersiz özelliklerini zengin örneklerle anlat.
-  - Kanat puan farkını değerlendir: Güçlü kanat varsa etkisini, zayıf kanat varsa baskın tipin daha saf hâkimiyetini, dengeliyse hibrit potansiyeli vurgula.
-  - Bu kombinasyonun motivasyon kaynakları, stres altında ve rahatken olası davranışları, ilişkilerde ve karar vermede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
-  - Kombinasyonun sana özgü avantajlarını (örneğin daha yaratıcı veya daha pratik yanların), olası iç çelişkilerini ve kişisel gelişim fırsatlarını (kanadı bilinçli kullanma önerileriyle) detaylı belirt.
-- Holland (RIASEC): En yüksek 3 ilgi alanını (kodunu) derinlemesine analiz et.
-  3-kod kombinasyonunu (örneğin SIA, REC, ASE) oluştur ve bu kombinasyonun benzersiz özelliklerini zenginleştir:
-  - Kodların birbirini nasıl tamamladığı veya çelişkili yönlerini (puan farklarına göre güçlü/zayıf kod vurgusu).
-  - Bu kombinasyonun meslek seçiminde, hobi ve okul tercihlerinde nasıl görünebileceğini veri odaklı örneklerle detaylandır.
-  - Kombinasyonun sana özgü avantajlarını (örneğin hem yaratıcı hem sosyal yönün birleşimi), olası dengesizliklerini ve kariyer gelişim fırsatlarını belirt.
-  - Uygun meslek gruplarını bu 3-kod kombinasyonuna göre daha kişiselleştirilmiş ve çeşitli öner.
-- Çoklu Zeka (Gardner): En baskın 2-4 zeka türünü ve bunların etkileşimlerini çok derinlemesine analiz et.
-  Zeka etkileşimlerini katman katman açıkla:
-  - Baskın zekaların birbirini nasıl desteklediği veya tamamladığı (örneğin Sözel + Sosyal zeka birleşimi iletişim avantajı).
-  - Olası çelişkiler veya dengesizlikler (örneğin yüksek Mantıksal ama düşük Bedensel zeka durumunda zorluklar).
-  - Bu etkileşimlerin öğrenme tarzı, hobi, problem çözme ve yaratıcılıkta nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
-  - Kombinasyonun sana özgü potansiyellerini (örneğin çok yönlü beceri gelişimi), gelişim fırsatlarını ve günlük hayatta nasıl kullanılabileceğini detaylı belirt.
-- VARK Öğrenme Stilleri Testi: Baskın stili, ikincil stilleri ve genel karışımı çok derinlemesine analiz et.
-  Stil karışımını katman katman açıkla:
-  - Baskın stilin güçlü yönlerini ve ikincil stillerin nasıl desteklediğini veya renk kattığını (örneğin Görsel baskın + Kinestetik ikincil birleşimi).
-  - Karışımın puan farklarına göre dengesini değerlendir: Güçlü baskın stil varsa saf hâkimiyetini, dengeliyse hibrit öğrenme avantajını vurgula.
-  - Bu karışımın ders çalışma, bilgi işleme, sınav hazırlığı ve hobi öğrenmede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
-  - Karışımın sana özgü avantajlarını (örneğin hem görerek hem yaparak daha hızlı öğrenme), olası çelişkilerini (örneğin Okuma/Yazma düşükken not tutma zorluğu) ve öğrenme stratejisi geliştirme fırsatlarını detaylı belirt.
-- D2 veya Burdon Dikkat Testi: Doğru, hata, atlanan sayılarını ve özellikle hız-doğruluk dengesini (trade-off) çok derinlemesine analiz et.
-  Hız-doğruluk dengesini katman katman açıkla:
-  - Hız odaklı mı yoksa doğruluk odaklı mı performansın baskın olduğunu puanlara göre değerlendir.
-  - Bu dengenin güçlü yönlerini (örneğin yüksek hız ile hızlı karar verme avantajı) ve olası risklerini (örneğin yüksek hata oranı durumunda dikkat dağınıklığı).
-  - Dengesizliğin (aşırı hızda hata artışı veya aşırı yavaşlıkta atlanan artışı) günlük okul hayatı, sınavlar ve uzun süreli odaklanmada nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
-  - Bu dengenin sana özgü avantajlarını (örneğin hızlı ve doğru dengesiyle verimli çalışma), gelişim fırsatlarını (örneğin hızı artırırken doğruluğu koruma teknikleri) ve pratik dikkat stratejilerini detaylı belirt.
-- Sağ-Sol Beyin Dominansı Testi: Baskın tarafı (sağ, sol veya dengeli) çok derinlemesine analiz et.
-  Beyin dominansı etkisini katman katman açıkla:
-  - Baskın tarafın güçlü yönlerini ve diğer tarafın nasıl desteklediğini veya zayıf kaldığını (puan farklarına göre güçlü/zayıf/dengeli vurgusu).
-  - Bu dominansın düşünme tarzı, yaratıcılık, problem çözme, duygusal işlemleme ve karar vermede nasıl görünebileceğini veri odaklı örneklerle derinleştir.
-  - Dominansın sana özgü avantajlarını (örneğin sağ beyinle sezgisel ve bütüncül bakış), olası çelişkilerini (örneğin sol beyin baskınken duygusal ifadede zorluk) ve beyin dengesi geliştirme fırsatlarını (her iki tarafı bilinçli kullanma önerileriyle) detaylı belirt.
-  - Günlük hayat, okul ve hobilerde bu dominansın pratik yansımalarını zengin örneklerle anlat.
-- Çalışma Davranışı Ölçeği (Baltaş): Çalışma alışkanlıkları, motivasyon ve disiplin alanlarını çok derinlemesine analiz et.
-  Alan etkileşimlerini katman katman açıkla:
-  - Alanların birbirini nasıl desteklediği veya tamamladığı (örneğin yüksek motivasyon + yüksek disiplin ile sürdürülebilir başarı).
-  - Olası çelişkiler veya dengesizlikler (örneğin yüksek motivasyon ama düşük disiplin durumunda erteleme eğilimi, veya yüksek alışkanlık ama düşük motivasyon durumunda mekanik çalışma).
-  - Bu etkileşimlerin ders çalışma, ödev tamamlama, uzun vadeli hedeflere ulaşma ve günlük okul performansında nasıl görünebileceğini veri odaklı örneklerle zenginleştir.
-  - Kombinasyonun sana özgü avantajlarını (örneğin dengeli alanlarla verimli ve keyifli çalışma), olası risklerini (örneğin düşük motivasyonla tükenmişlik) ve çalışma davranışı geliştirme fırsatlarını (alanlara özel pratik stratejilerle) detaylı belirt.
-- Sınav Kaygısı Ölçeği (DuSKÖ): Kaygı düzeyini ve türlerini (bilişsel, fizyolojik, davranışsal belirtiler) çok derinlemesine analiz et.
-  Kaygı etkisini katman katman açıkla:
-  - Puanlara göre kaygı düzeyini sınıfla (düşük/orta/yüksek) ve baskın belirti türlerini vurgula.
-  - Bu kaygının sınav öncesi, sırası ve sonrası davranışlara, performans düşüşüne ve günlük okul stresine nasıl yansıdığını veri odaklı örneklerle zenginleştir.
-  - Kaygının sana özgü avantajlarını (örneğin hafif kaygı motivasyon kaynağıysa) ve risklerini (yüksek kaygı durumunda odak kaybı) belirt.
-  - Kaygı yönetimi için sana özel gelişim fırsatlarını ve pratik teknik önerilerini (nefes egzersizi, hazırlık stratejileri gibi) detaylı anlat.
-
-Çıktı sadece bu başlıklarla yapılandırılmış metin olsun. Başka hiçbir açıklama, giriş veya ek cümle ekleme.
-"""
-
-HARMAN_RAPOR_PROMPT = """
-Sen dünyanın en iyi psikometrik test sentez ve bütüncül profil analizi uzmanısın. Çocuk/ergen psikolojisi ve kariyer yönlendirmesi konusunda derin deneyim sahibisin.
-
-GÖREV: Verilen tüm test sonuçlarını (JSON formatında puanlar, istatistikler ve cevaplar) nesnel olarak birleştirerek çok kapsamlı bir bütüncül profil raporu üret.
-ASLA dışarıdan genel geçer bilgi, dış kaynak veya varsayım ekleme. Sadece kullanıcının kendi test verilerinden yola çıkarak yorum yap.
-
-Rapor tamamen tarafsız, nesnel ve yargısız olsun.
-Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin. 
-Kısa cümleler kullan. Karmaşık kelimelerden tamamen kaçın. Günlük konuşma gibi akıcı ve doğal yaz. 
-Derin ve zengin analiz yap ama ifadeleri her zaman basit ve net tut. Motive edici ve destekleyici bir üslup kullan.
-
-Tüm Test Sonuçları: {tum_cevaplar_json}
-
-ZORUNLU RAPOR FORMATI (Tam olarak bu başlıkları ve sırayı kullan):
-
-1. **Bütüncül Profil Özeti** Tüm testlerden çıkan genel tabloyu özetle. En dikkat çeken 4-5 ortak temayı ve ana eğilimi belirt. Beyin dominansı, dikkat performansı, kişilik tipi ve zeka/öğrenme uyumlarını kısaca bütünleştir.
-
-2. **Kişilik ve Davranış Profili** Enneagram, Sağ-Sol Beyin, Çalışma Davranışı, Sınav Kaygısı ve diğer ilgili testlerden çıkan özellikleri derinlemesine birleştir.
-   Baskın kişilik tipi, düşünme tarzı, motivasyon ve kaygı düzeylerini bütünleştirerek anlat.
-   Enneagram tipinin dikkat, çalışma davranışı ve sınav kaygısına etkisini; Sağ-Sol beyin baskınlığının kişilik ve motivasyona etkisini veri odaklı vurgula.
-
-   **Sağ-Sol Beyin Uyum Analizi** (Zorunlu alt başlık)  
-   Baskın beyin tarafını tüm diğer testlerle karşılaştır:
-   - Güçlü yönler (örneğin sağ beyin ile yüksek yaratıcılık/sezgisellik uyumu).
-   - Çelişkiler (örneğin sol beyin ile yüksek sosyal/duygusal alanlar arasındaki dengesizlik).
-   - Düşünme tarzı, karar verme, motivasyon ve günlük davranışlara etkisi veri odaklı örneklerle açıkla.
-   - Sana özgü avantajlar ve denge fırsatlarını belirt.
-
-3. **Ortak Güçlü Yönler** Tüm testlerden çıkan yüksek puanlı özellikleri listele. Bunların birbirini nasıl desteklediğini (örneğin yüksek dikkat ile yüksek disiplin) ve günlük hayata/okula olumlu yansımalarını açıkla.
-
-4. **Ortak Gelişim Alanları** Düşük puan alınan ortak temaları belirt. Bunların olası zorluklarını ve birbirini nasıl etkilediğini veri odaklı anlat.
-
-5. **Zeka ve Öğrenme Stili Uyumu** Çoklu Zeka (Gardner), VARK, Sağ-Sol Beyin ve diğer ilgili testleri derinlemesine birleştir. Dikkat performansının öğrenmeye etkisini de belirt.
-
-   **Gardner-VARK Uyum Analizi** (Zorunlu alt başlık)  
-   Baskın zeka türleri ile öğrenme stillerini karşılaştır. Sağ-Sol beyin baskınlığının bu uyuma etkisini dahil et.
-
-   **Enneagram-Gardner Uyum Analizi** (Zorunlu alt başlık)  
-   Baskın Enneagram tipini zeka türleri ile karşılaştır. Motivasyon ve öğrenme potansiyeline etkisini vurgula.
-
-6. **Dikkat ve Performans Analizi** D2, Burdon, Sınav Kaygısı, Çalışma Davranışı ve diğer testlerden çıkan dikkat, konsantrasyon özelliklerini birleştir.
-   Sağ-Sol beyin ve Enneagram'ın dikkat tarzına etkisini belirt.
-
-   **Dikkat-Çalışma Davranışı Uyum Analizi** (Zorunlu alt başlık)  
-   Dikkat performansını çalışma alışkanlıkları, motivasyon ve kaygı ile karşılaştır.
-   Enneagram tipinin ve Sağ-Sol beyin baskınlığının bu uyuma etkisini veri odaklı örneklerle açıkla.
-
-7. **Kariyer ve İlgi Eğilimleri** Holland (RIASEC) baskın kodlarını tüm diğer testlerle sentezle.
-   En yüksek 2-3 ilgi alanını belirt ve uygun meslek gruplarını detaylı anlat.
-
-   **Enneagram-Holland Uyum Analizi** (Zorunlu alt başlık)  
-   Baskın Enneagram tipini Holland kodları ile karşılaştır.
-   Sağ-Sol beyin baskınlığının ilgi alanlarına etkisini de dahil et.
-
-8. **Çelişkili Eğilimler ve Dengesizlikler** Tüm testler arasında çelişkili veya dengesiz alanları vurgula. 
-   Özellikle Sağ-Sol Beyin, Enneagram, Gardner, VARK, Holland, Dikkat ve Çalışma Davranışı arasındaki tüm uyumsuzlukları belirt.
-
-9. **Kişisel İçgörüler ve Motivasyon Özeti** Tüm verilerden çıkan 6-7 önemli kişisel içgörü ver. 
-   Tüm test uyumlarından (beyin dominansı, zeka-öğrenme, kişilik-ilgi, dikkat-çalışma) çıkan farkındalıkları vurgula.
-
-10. **Kişiselleştirilmiş Yol Haritası** Veri odaklı, uygulanabilir ve somut öneriler ver:
-    - **Kısa vadeli (1-3 ay):** Hemen başlayabileceğin 6-7 günlük adım.
-    - **Orta vadeli (6-12 ay):** Okul ve kariyer için planlanabilir hedefler.
-    - **Uzun vadeli:** Genel hayat stratejisi ve potansiyel gelişim yönü.
-    - Her öneri tüm ilgili uyumlara dayalı başlasın (örneğin "Sağ beyin baskınlığın ... ile Gardner zeka türlerin ... nedeniyle..." veya "Dikkat performansın ... ile Enneagram tipin ... nedeniyle...").
-
-Çıktı sadece bu başlıklarla yapılandırılmış metin olsun. Başka hiçbir giriş, açıklama veya ek cümle yazma.
 """
 
 # --- SABİT ENNEAGRAM VERİLERİ ---
@@ -743,22 +621,37 @@ def app():
                 c1, c2 = st.columns(2)
                 if st.session_state.sayfa < tot_p-1:
                     if c2.button("İleri ➡️"):
-                        # Basit boş kontrolü (Opsiyonel, sıkmasın diye kapalı ama eklenebilir)
                         st.session_state.sayfa += 1
                         st.rerun()
                 else:
                     if c2.button("Bitir ✅", type="primary"):
-                        if len(st.session_state.cevaplar) < len(qs):
-                            st.warning("Lütfen eksik soruları tamamlayınız.")
-                            return
+                        # EKSİK SORU KONTROLÜ VE YÖNLENDİRME
+                        missing_q = None
+                        missing_idx = -1
                         
-                        with st.spinner("Analiz ediliyor..."):
-                            stats = {"Cevaplar": st.session_state.cevaplar}
-                            # Grok Raporu
-                            rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats)))
-                            save_test_result_to_db(st.session_state.student_id, test_name, st.session_state.cevaplar, None, rep)
-                            st.session_state.page = "success_screen"
+                        # Tüm soruları tara
+                        for i, q in enumerate(qs):
+                            if q['id'] not in st.session_state.cevaplar:
+                                missing_q = q
+                                missing_idx = i
+                                break
+                        
+                        if missing_q:
+                            # Eksik soru varsa sayfasını bul
+                            target_page = missing_idx // PER_PAGE
+                            st.session_state.sayfa = target_page
+                            st.error(f"⚠️ {missing_idx + 1}. soruyu boş bıraktınız. Lütfen cevaplayınız.")
+                            time.sleep(1.5) # Kullanıcı hatayı görsün diye azıcık bekle
                             st.rerun()
+                        else:
+                            # Her şey tamsa kaydet
+                            with st.spinner("Analiz ediliyor..."):
+                                stats = {"Cevaplar": st.session_state.cevaplar}
+                                # Grok Raporu
+                                rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats)))
+                                save_test_result_to_db(st.session_state.student_id, test_name, st.session_state.cevaplar, None, rep)
+                                st.session_state.page = "success_screen"
+                                st.rerun()
 
             # --- 3. D2 TESTİ ---
             elif q_type == "d2":
