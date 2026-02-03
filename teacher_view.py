@@ -1,17 +1,32 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb  3 21:03:04 2026
-
-@author: YYYNÇİGGGİİÜÜÜÜĞĞĞ
-"""
-
 import streamlit as st
 import pandas as pd
-from db_utils import get_all_results
+import time
+from db_utils import get_all_results, reset_database
 
 def app():
     st.title("👨‍🏫 Öğretmen Yönetim Paneli")
     
+    # --- SIDEBAR: SIFIRLAMA BUTONU ---
+    with st.sidebar:
+        st.markdown("---")
+        st.header("⚠️ Yönetici Ayarları")
+        
+        with st.expander("🗑️ Sistemi Sıfırla"):
+            st.error("Bu işlem tüm öğrenci kayıtlarını ve test sonuçlarını kalıcı olarak silecektir!")
+            
+            # Yanlışlıkla basılmasın diye onay kutusu
+            onay = st.checkbox("Evet, tüm verileri silmek istiyorum.")
+            
+            if onay:
+                if st.button("VERİLERİ SİL", type="primary"):
+                    if reset_database():
+                        st.success("Veritabanı temizlendi!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Bir hata oluştu.")
+
+    # --- ANA EKRAN ---
     results = get_all_results()
     
     if not results:
