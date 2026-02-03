@@ -108,7 +108,7 @@ def get_data_from_ai(prompt):
         return "Hata: API Key bulunamadı."
     try:
         response = client.chat.completions.create(
-            model="grok-4-1-fast-reasoning",
+            model="grok-4-1-fast-reasoning", # GÜNCEL MODEL
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0
         )
@@ -172,6 +172,13 @@ def toggle_d2_selection(item_id):
     else:
         st.session_state.d2_isaretlenen.add(item_id)
 
+# --- NAVİGASYON CALLBACKLERİ (BURDON İÇİN KRİTİK) ---
+def next_chunk_callback():
+    st.session_state.current_chunk += 1
+
+def finish_burdon_callback():
+    st.session_state.test_bitti = True
+
 # --- ANA ÖĞRENCİ UYGULAMASI (APP) ---
 def app():
     # CSS
@@ -188,7 +195,7 @@ def app():
     if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
     if "test_finished" not in st.session_state: st.session_state.test_finished = False
 
-    # 1. LIMIT KONTROLÜ (Test bitince tekrar kontrol edilmeli)
+    # 1. LIMIT KONTROLÜ (Home sayfasındayken kontrol et)
     if st.session_state.page == "home":
         if not check_daily_limit(st.session_state.student_id):
             st.error("⚠️ Günlük test çözme limitinize (2 adet) ulaştınız. Yarın tekrar bekleriz.")
@@ -249,7 +256,7 @@ def app():
                 st.session_state.page = "test"
                 st.rerun()
 
-    # 3. SAYFA: TEST BİTİŞ EKRANI (Yeni Özellik)
+    # 3. SAYFA: TEST BİTİŞ EKRANI (BAŞARI EKRANI)
     elif st.session_state.page == "success_screen":
         st.markdown("""
         <div class="success-box">
@@ -455,12 +462,12 @@ def app():
                         st.rerun()
                 
                 else:
-                    # GRID GÖRÜNÜMÜ (Artık fragment değil, normal Streamlit akışı)
-                    # Böylece buton tıklamaları sayfayı yeniler ve yeni veriyi getirir
+                    # GRID VE SAYFALAMA
                     start = st.session_state.current_chunk * CHUNK_SIZE
                     current_items = questions[start:start + CHUNK_SIZE]
                     
                     st.info(f"HEDEFLER: {', '.join(st.session_state.burdon_targets)}")
+                    st.caption(f"Sayfa {st.session_state.current_chunk + 1} / {total}") # Sayfa numarası eklendi
                     
                     # Grid Oluşturma
                     cols_count = 10
@@ -482,12 +489,20 @@ def app():
                     st.markdown("---")
                     c1, c2 = st.columns([1, 4])
                     
-                    # Navigasyon Butonları
+                    # NAVİGASYON BUTONLARI (Callback ile güçlendirildi)
                     if st.session_state.current_chunk < total - 1:
-                        if c2.button("SONRAKİ SAYFA ➡️", type="primary"):
-                            st.session_state.current_chunk += 1
-                            st.rerun()
+                        # SONRAKİ SAYFA butonu
+                        c2.button(
+                            "SONRAKİ SAYFA ➡️", 
+                            type="primary", 
+                            on_click=next_chunk_callback,
+                            key=f"next_btn_{st.session_state.current_chunk}" # Benzersiz key
+                        )
                     else:
-                        if c2.button("TESTİ BİTİR 🏁", type="primary"):
-                            st.session_state.test_bitti = True
-                            st.rerun()
+                        # BİTİR butonu
+                        c2.button(
+                            "TESTİ BİTİR 🏁", 
+                            type="primary",
+                            on_click=finish_burdon_callback,
+                            key="finish_btn"
+                        )
