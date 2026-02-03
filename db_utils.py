@@ -24,7 +24,7 @@ def check_daily_limit(student_id):
         count = session.query(CompletedTest).filter(
             and_(CompletedTest.student_id == student_id, CompletedTest.completion_date == today)
         ).count()
-        return count < 200 # Test rahat olsun diye limiti artırdım, istersen 2 yap.
+        return count < 200 # Test için limit geniş
     finally:
         session.close()
 
@@ -90,5 +90,22 @@ def get_all_results():
                 "Puanlar": r.scores
             })
         return data
+    finally:
+        session.close()
+
+def reset_database():
+    """DİKKAT: Tüm öğrenci ve test verilerini siler!"""
+    session = SessionLocal()
+    try:
+        # Önce test kayıtlarını sil (bağımlılık var)
+        session.query(CompletedTest).delete()
+        # Sonra öğrencileri sil
+        session.query(Student).delete()
+        session.commit()
+        return True
+    except Exception as e:
+        session.rollback()
+        print(f"Sıfırlama Hatası: {e}")
+        return False
     finally:
         session.close()
