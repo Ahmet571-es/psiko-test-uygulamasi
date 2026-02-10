@@ -1,7 +1,7 @@
 streamlit
-sqlalchemy
 openai
 python-dotenv
+sqlalchemy
 pandas
 matplotlib
-numpy
+seaborn
