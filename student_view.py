@@ -603,8 +603,12 @@ def app():
                 
                 opts = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
                 
+                # SAYFA İÇİ EKSİK KONTROLÜ İÇİN LİSTE
+                current_page_q_ids = []
+
                 for q in curr_qs:
                     st.write(f"**{q['text']}**")
+                    current_page_q_ids.append(q['id']) # ID'yi listeye ekle
                     k = f"q_{q['id']}"
                     saved = st.session_state.cevaplar.get(q['id'])
                     # Default index ayarı
@@ -621,11 +625,21 @@ def app():
                 c1, c2 = st.columns(2)
                 if st.session_state.sayfa < tot_p-1:
                     if c2.button("İleri ➡️"):
-                        st.session_state.sayfa += 1
-                        st.rerun()
+                        # YENİ EKLENEN KISIM: SAYFA İÇİ KONTROL
+                        missing_in_page = False
+                        for qid in current_page_q_ids:
+                            if qid not in st.session_state.cevaplar:
+                                missing_in_page = True
+                                break
+                        
+                        if missing_in_page:
+                             st.error("⚠️ Lütfen bu sayfadaki tüm soruları cevaplayıp öyle ilerleyiniz.")
+                        else:
+                            st.session_state.sayfa += 1
+                            st.rerun()
                 else:
                     if c2.button("Bitir ✅", type="primary"):
-                        # EKSİK SORU KONTROLÜ VE YÖNLENDİRME
+                        # EKSİK SORU KONTROLÜ VE YÖNLENDİRME (Final Kontrol)
                         missing_q = None
                         missing_idx = -1
                         
@@ -655,7 +669,7 @@ def app():
 
             # --- 3. D2 TESTİ ---
             elif q_type == "d2":
-                questions = data["questions"] # D2 ERROR FIX İÇİN EKLENEN SATIR
+                questions = data["questions"]
                 ROW_TIME = 20
                 TOTAL_ROWS = 14
                 
