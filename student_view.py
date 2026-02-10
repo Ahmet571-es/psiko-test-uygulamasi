@@ -655,6 +655,7 @@ def app():
 
             # --- 3. D2 TESTİ ---
             elif q_type == "d2":
+                questions = data["questions"] # D2 ERROR FIX İÇİN EKLENEN SATIR
                 ROW_TIME = 20
                 TOTAL_ROWS = 14
                 
