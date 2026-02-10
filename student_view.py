@@ -3,11 +3,8 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import json
-import matplotlib.pyplot as plt
-import numpy as np
 import time
-import random
-from db_utils import check_daily_limit, check_test_completed, save_test_result_to_db
+from db_utils import check_test_completed, save_test_result_to_db
 
 # --- API VE AYARLAR ---
 load_dotenv()
@@ -17,6 +14,24 @@ else:
     GROK_API_KEY = os.getenv("GROK_API_KEY")
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
+
+# --- FAZ SİSTEMİ TEST LİSTELERİ ---
+# Öğrenci giriş sayısına göre bu listelerden birini görecek.
+PHASE_1_TESTS = [
+    "Enneagram Kişilik Testi",
+    "Çalışma Davranışı Ölçeği (Baltaş)",
+    "Sağ-Sol Beyin Dominansı Testi"
+]
+
+PHASE_2_TESTS = [
+    "Sınav Kaygısı Ölçeği (DuSKÖ)",
+    "VARK Öğrenme Stilleri Testi"
+]
+
+PHASE_3_TESTS = [
+    "Çoklu Zeka Testi (Gardner)",
+    "Holland Mesleki İlgi Envanteri (RIASEC)"
+]
 
 # --- PROMPTLAR ---
 SORU_URETIM_PROMPT = """
@@ -30,77 +45,55 @@ ZORUNLU GENEL KURALLAR (ASLA İHLAL ETME):
 - Sorular tamamen tarafsız, objektif ve yargısız olsun. Hiçbir yönlendirme, duygu yüklemesi veya değer yargısı içermesin.
 - Her soru, psikolojik derinlik taşıyarak üst düzey analizlere olanak tanısın ama anlaşılırlığı asla feda etme.
 - Tüm sorular 5'li Likert ölçeğine mükemmel uyumlu olsun: Kesinlikle Katılmıyorum (1) - Katılmıyorum (2) - Kararsızım (3) - Katılıyorum (4) - Kesinlikle Katılıyorum (5).
-- Aynı veya benzer ifadeler ASLA tekrarlanmasın. Maksimum çeşitlilik sağla (farklı cümle yapıları, bağlamlar ve ifadeler kullan).
-- Çıktıda kesinlikle başka hiçbir metin, açıklama, başlık, markdown, kod bloğu işareti veya ek bilgi yazma. Sadece geçerli JSON üret.
+- Aynı veya benzer ifadeler ASLA tekrarlanmasın. Maksimum çeşitlilik sağla.
+- Çıktıda kesinlikle başka hiçbir metin, açıklama, başlık, markdown veya ek bilgi yazma. Sadece geçerli JSON üret.
 
 TESTLERE ÖZGÜ ZORUNLU KURALLAR:
 - Çoklu Zeka Testi (Gardner): Tam 80 soru üret. 8 zeka alanı için tam 10'ar soru: Sözel, Mantıksal, Görsel, Müziksel, Bedensel, Sosyal, İçsel, Doğacı. Her soruya ilgili "area" alanı ekle.
-- Holland Mesleki İlgi Envanteri (RIASEC): Tam 90 soru üret. 6 tip için tam 15'er soru: Gerçekçi, Araştırmacı, Yaratıcı, Sosyal, Girişimci, Düzenli. Sorular aktivite ve meslek ilgisi odaklı olsun. Her soruya ilgili "area" alanı ekle.
-- VARK Öğrenme Stilleri Testi: Tam 16 soru üret. Orijinal VARK tarzında günlük hayat senaryoları üzerinden çoktan seçmeli tercih soruları üret (4 seçenek: Görsel, İşitsel, Okuma/Yazma, Kinestetik). Likert değil, tercih tipi olsun.
-- Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği. Sorular davranış ve düşünce tarzı odaklı olsun.
-- Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret. Çalışma alışkanlıkları, motivasyon, disiplin ve zaman yönetimi odaklı olsun.
-- Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret. Sınav öncesi, sırası ve sonrası kaygı belirtileri odaklı olsun.
+- Holland Mesleki İlgi Envanteri (RIASEC): Tam 90 soru üret. 6 tip için tam 15'er soru: Gerçekçi, Araştırmacı, Yaratıcı, Sosyal, Girişimci, Düzenli. Her soruya ilgili "area" alanı ekle.
+- VARK Öğrenme Stilleri Testi: Tam 16 soru üret. Orijinal VARK tarzında.
+- Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği.
+- Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret.
+- Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret.
 
 JSON ÇIKTI FORMATI (KESİNLİKLE BU ŞEKİLDE OLSUN):
 {{
   "type": "likert",
   "questions": [
-    {{"id": 1, "text": "Soru metni burada"}}
+    {{"id": 1, "text": "Soru metni burada"}} 
   ]
 }}
 
-Sadece istenen test için soru üret. Çıktı %100 geçerli JSON olsun ve başka hiçbir karakter içermesin.
-
+Sadece istenen test için soru üret. Çıktı %100 geçerli JSON olsun.
 Test adı: {test_adi}
 """
 
 TEK_RAPOR_PROMPT = """
-Sen dünyanın en iyi psikometrik test analizi ve yorumlama uzmanısın. Çocuk/ergen psikolojisi konusunda çok deneyimlisin ve gençlere yol göstermeyi seviyorsun.
+Sen dünyanın en iyi psikometrik test analizi ve yorumlama uzmanısın. Çocuk/ergen psikolojisi konusunda çok deneyimlisin.
 
-GÖREV: Sadece verilen JSON verilerine (puanlar, cevaplar, istatistikler) dayanarak test sonucunu çok kapsamlı ve zengin bir şekilde analiz et. 
-ASLA genel geçer bilgi, dış kaynak veya varsayım ekleme. Sadece kullanıcının kendi verilerinden yola çıkarak yorum yap.
+GÖREV: Sadece verilen JSON verilerine dayanarak test sonucunu analiz et. 
+ASLA genel geçer bilgi ekleme. Sadece kullanıcının verilerinden yola çık.
 
 Rapor tamamen tarafsız, nesnel ve yargısız olsun. 
-Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin. 
-Kısa cümleler kullan. Karmaşık kelimelerden tamamen kaçın. Günlük konuşma gibi akıcı ve doğal yaz. 
-Derin ve zengin analiz yap ama ifadeleri her zaman basit ve net tut. Motive edici ve destekleyici bir üslup kullan.
+Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin.
+Bol grafiksel betimleme kullan (Sözel olarak grafiği anlat, görsel değil).
 
 Test adı: {test_adi}
 Veriler: {cevaplar_json}
 
-ZORUNLU RAPOR FORMATI (Tam olarak bu başlıkları ve sırayı kullan):
+ZORUNLU RAPOR FORMATI:
+1. **Genel Değerlendirme**
+2. **Detaylı Puan Dağılımı** (Sayısal veriler)
+3. **Baskın Özellikler ve Güçlü Yönler**
+4. **Gelişim Alanları ve Potansiyel Zorluklar**
+5. **Günlük Hayat Yansımaları** (Okul, ev, arkadaşlık)
+6. **Pratik Öneriler** (Hemen uygulanabilir adımlar)
+7. **Sonuç Özeti ve Motivasyon**
 
-1. **Genel Değerlendirme** Testin en önemli 3-4 bulgusunu kısaca özetle. Kullanıcının dikkatini hemen çekecek şekilde başla.
-
-2. **Detaylı Puan Dağılımı** Her alan/tip için alınan puanları sayısal olarak listele. 
-   En yüksek 2-3 ve en düşük 2-3 alanı vurgula. Ortalama, yüzdelik veya doğru/yanlış/atlanan sayılarını (teste göre) belirt.
-
-3. **Baskın Özellikler ve Güçlü Yönler** Yüksek puan alınan alanlardaki özellikleri detaylı anlat. 
-   Bu özelliklerin günlük hayata, okul başarısına ve kişisel ilişkilere olumlu etkilerini veri odaklı örneklerle açıkla.
-
-4. **Gelişim Alanları ve Potansiyel Zorluklar** Düşük puan alınan alanlardaki özellikleri belirt. 
-   Bunların olası zorluklarını ve hayatındaki yansımalarını veri odaklı örneklerle anlat.
-
-5. **Puanlar Arası İlişkiler ve Çelişkiler** Farklı alanlar arasındaki ilişkileri analiz et. 
-   Örneğin: Bir alanda yüksek, başka alanda düşük puan varsa bunun olası anlamı nedir? 
-   İç çelişkiler veya dengesizlikler varsa vurgula.
-
-6. **Günlük Hayat Yansımaları** Verilere dayanarak bu sonuçların okulda, arkadaşlıkta, hobilerde ve aile hayatında nasıl görünebileceğini veri odaklı örneklerle açıkla.
-
-7. **Kişisel İçgörüler** Kullanıcının kendine dair fark edebileceği 5-6 önemli içgörü ver. 
-   Her içgörü doğrudan puanlardan çıksın ve "Senin puanların gösteriyor ki..." diye başlasın.
-
-8. **Grafik ve Görsel Öneriler** Bu test için en uygun grafik türlerini öner (radar chart, çubuk grafik vb.). 
-   Hangi alanların grafikte öne çıkacağını ve neden faydalı olacağını belirt.
-
-9. **Pratik Öneriler** Veri odaklı, uygulanabilir ve somut 6-7 öneri ver. 
-   Her öneri "Senin ... puanların nedeniyle..." diye başlasın ve hemen yapılabilecek bir adım içersin.
-
-10. **Sonuç Özeti ve Motivasyon** Tüm analizin kısa ve motive edici bir özeti. 
-    Güçlü yönlerini hatırlatarak, potansiyelini vurgulayarak bitir.
+Çıktı sadece bu başlıklarla yapılandırılmış metin olsun.
 """
 
-# --- SABİT ENNEAGRAM VERİLERİ ---
+# --- SABİT ENNEAGRAM VERİLERİ (HIZ VE GÜVENLİK İÇİN LOKAL) ---
 ENNEAGRAM_QUESTIONS = {
     1: [
         "Kendimi hata yaptığımda çok eleştiririm.", "Doğru ve yanlış konusunda güçlü bir içgüdüm vardır.",
@@ -236,548 +229,244 @@ WING_DESCRIPTIONS = {
     "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
 }
 
-BURDON_SURELERI = {
-    "7-8 Yaş (10 Dakika)": 600, "9-10 Yaş (8 Dakika)": 480,
-    "11-12 Yaş (6 Dakika)": 360, "13-14 Yaş (4 Dakika)": 240,
-    "15-16 Yaş (3 Dakika)": 180, "17+ / Yetişkin (2.5 Dakika)": 150
-}
-
-TEST_BILGILERI = {
-    "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin (1-5 Puan).", "ipucu": "Dürüst olun, cevaplar gizlidir."},
-    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "d'' harflerini bulun.", "ipucu": "Hızlanın!"},
-    "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkat.", "nasil": "Harfleri işaretleyin.", "ipucu": "Süreye dikkat."},
-    "Genel": {"amac": "Analiz.", "nasil": "Seçim yapın.", "ipucu": "Dürüst olun."}
-}
-
-TESTLER = [
-    "Enneagram Kişilik Testi", "d2 Dikkat Testi", "Burdon Dikkat Testi",
-    "Çoklu Zeka Testi (Gardner)", "Holland Mesleki İlgi Envanteri (RIASEC)",
-    "VARK Öğrenme Stilleri Testi", "Sağ-Sol Beyin Dominansı Testi",
-    "Çalışma Davranışı Ölçeği (Baltaş)", "Sınav Kaygısı Ölçeği (DuSKÖ)"
-]
-
 # --- YARDIMCI FONKSİYONLAR ---
 def get_data_from_ai(prompt):
-    if not GROK_API_KEY:
-        return "Hata: API Key bulunamadı."
+    if not GROK_API_KEY: return "Hata: API Key yok."
     try:
         response = client.chat.completions.create(
-            model="grok-4-1-fast-reasoning", # GÜNCEL MODEL
+            model="grok-4-1-fast-reasoning",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0
         )
         content = response.choices[0].message.content.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
+        if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
         return content
-    except Exception as e:
-        return f"Hata: {e}"
-
-def generate_d2_grid():
-    grid = []
-    chars = ['d', 'p']
-    for i in range(658):
-        char = random.choice(chars)
-        lines = random.choice([1, 2, 3, 4])
-        is_target = (char == 'd' and lines == 2)
-        visual_lines = "'" * lines
-        grid.append({
-            "id": i,
-            "char": char,
-            "lines": lines,
-            "visual": f"{char}\n{visual_lines}", 
-            "is_target": is_target
-        })
-    return grid
-
-def generate_burdon_content():
-    content = []
-    targets = ['a', 'b', 'c', 'd', 'g']
-    alpha = "abcdefghijklmnopqrstuvwxyz"
-    for i in range(2000):
-        is_target = random.random() < 0.30
-        char = random.choice(targets) if is_target else random.choice([c for c in alpha if c not in targets])
-        content.append({"id": i, "char": char, "is_target": (char in targets)})
-    return content, targets
+    except Exception as e: return f"Hata: {e}"
 
 def calculate_enneagram_report(all_answers):
-    # Puan Hesapla
     scores = {t: 0 for t in range(1, 10)}
     for q_id, val in all_answers.items():
-        # q_id formatı: "1_0", "1_1" -> Tip_SoruIndex
         tip = int(q_id.split('_')[0])
         scores[tip] += val
     
-    # Normalize et (Yüzdeye çevir)
-    max_score = 20 * 5 # 20 soru, max 5 puan
+    max_score = 20 * 5
     normalized = {t: round(s / max_score * 100, 1) for t, s in scores.items()}
     
-    # Ana Tip Bul
     main_type = max(scores, key=scores.get)
     main_score = normalized[main_type]
     
-    # Kanat Bul
     if main_type == 1: wings = [9, 2]
     elif main_type == 9: wings = [8, 1]
     else: wings = [main_type - 1, main_type + 1]
     
     wing_type = max(wings, key=lambda w: normalized[w])
     wing_score = normalized[wing_type]
-    
     full_type_str = f"{main_type}w{wing_type}" if wing_score > main_score * 0.7 else f"{main_type} (Saf Tip)"
     
-    # Rapor Metni Oluştur
     data = ENNEAGRAM_DATA[main_type]
     wing_txt = WING_DESCRIPTIONS.get(f"{main_type}w{wing_type}", "Dengeli kanat.")
     
     report = f"""
-    # 🌟 ENNEAGRAM ANALİZ SONUCU 🌟
-    
+    # 🌟 ENNEAGRAM SONUÇ RAPORU 🌟
     **Baskın Tip:** {data['title']} (%{main_score})
-    **Tam Profil:** {full_type_str}
-    **Temel Rol:** {data['role']}
+    **Profil:** {full_type_str}
     
     ---
-    ### 📖 Kimsin Sen?
-    {data['desc']}
-    
-    **Temel Arzu:** {data['desire']}
-    **Temel Korku:** {data['fear']}
-    
-    ---
-    ### 🦅 Kanat Etkisi ({wing_type}. Tip)
-    {wing_txt}
-    
-    ---
-    ### 💪 Süper Güçlerin
-    {', '.join(data['strengths'])}
-    
-    ### 🚧 Gelişim Alanların
-    {', '.join(data['weaknesses'])}
-    
-    ---
-    ### 💼 Çalışma Tarzın
-    {data['work_style']}
-    
-    ### ❤️ İlişki Tarzın
-    {data['relationship_style']}
-    
-    ---
-    ### ⚠️ Tükenmişlik Sinyalleri
-    {', '.join(data['danger_signals'])}
-    
-    ### 💊 Sana Özel Reçete
-    {', '.join(data['prescription'])}
-    
-    ---
-    **Stres Anında:** Tip {data['stress']} gibi davranabilirsin.
-    **Büyüme Anında:** Tip {data['growth']} özelliklerini gösterirsin.
+    **Kimsin Sen?** {data['desc']}
+    **Kanat Etkisi:** {wing_txt}
+    **Süper Güçler:** {', '.join(data['strengths'])}
+    **Gelişim Alanları:** {', '.join(data['weaknesses'])}
+    **Çalışma Tarzın:** {data['work_style']}
+    **Reçete:** {', '.join(data['prescription'])}
     """
-    
     return scores, report
 
-# --- CALLBACK FONKSİYONLARI ---
-def toggle_burdon_selection(item_id, current_chunk):
-    if current_chunk not in st.session_state.burdon_isaretlenen:
-        st.session_state.burdon_isaretlenen[current_chunk] = set()
-    s = st.session_state.burdon_isaretlenen[current_chunk]
-    if item_id in s: s.remove(item_id)
-    else: s.add(item_id)
-
-def toggle_d2_selection(item_id):
-    s = st.session_state.d2_isaretlenen
-    if item_id in s: s.remove(item_id)
-    else: s.add(item_id)
-
-def next_chunk_callback(): st.session_state.current_chunk += 1
-def finish_burdon_callback(): st.session_state.test_bitti = True
-
-# --- ANA ÖĞRENCİ UYGULAMASI (APP) ---
+# --- ANA APP FONKSİYONU ---
 def app():
-    # CSS
     st.markdown("""
     <style>
-        .stButton > button { width: 100%; border-radius: 10px; height: 50px; font-weight: 600; }
-        [data-testid="column"] div.stButton > button { height: 60px; font-size: 22px; margin: 1px; }
-        .success-box { background-color: #dcfce7; padding: 20px; border-radius: 10px; border: 1px solid #16a34a; text-align: center; }
+        .stButton > button { width: 100%; border-radius: 12px; height: 60px; font-size: 18px; font-weight: bold; }
+        .success-box { background-color: #dcfce7; padding: 25px; border-radius: 12px; border: 2px solid #16a34a; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-    # Session State
     if "page" not in st.session_state: st.session_state.page = "home"
-    if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
-    if "test_finished" not in st.session_state: st.session_state.test_finished = False
+    
+    # --- FAZ SİSTEMİ MANTIĞI ---
+    lc = st.session_state.get('login_phase', 1)
+    
+    if lc <= 1: # İlk kayıt ve ilk giriş
+        current_tests = PHASE_1_TESTS
+        phase_name = "1. AŞAMA: Kişilik ve Zihin Yapısı"
+    elif lc == 2: # İkinci giriş
+        current_tests = PHASE_2_TESTS
+        phase_name = "2. AŞAMA: Öğrenme ve Kaygı Durumu"
+    else: # Üçüncü ve sonraki girişler
+        current_tests = PHASE_3_TESTS
+        phase_name = "3. AŞAMA: Yetenek ve Kariyer Eğilimi"
 
-    # 1. LIMIT KONTROLÜ (Test bitince tekrar kontrol edilmeli)
-    if st.session_state.page == "home":
-        if not check_daily_limit(st.session_state.student_id):
-            st.error("⚠️ Günlük test çözme limitinize (2 adet) ulaştınız. Yarın tekrar bekleriz.")
-            if st.button("🚪 Çıkış Yap", type="secondary"):
-                st.session_state.clear()
-                st.rerun()
-            return
-
-    # 2. SAYFA: HOME (Test Seçimi)
+    # --- SAYFA 1: ANA MENÜ (HOME) ---
     if st.session_state.page == "home":
         st.markdown(f"## 👤 Merhaba, {st.session_state.student_name}")
-        st.write("Lütfen uygulamak istediğiniz testi seçin.")
+        st.info(f"Şu an **{phase_name}** testlerini görüntülüyorsunuz.")
+        st.write("Lütfen çözmek istediğiniz testi seçiniz:")
         
-        selected_test = st.selectbox("Test Listesi:", TESTLER, index=None, placeholder="Bir test seçiniz...")
-        
-        if st.button("SEÇİMİ ONAYLA VE BAŞLA ➡️", type="primary"):
-            if not selected_test:
-                st.error("Lütfen bir test seçin.")
-            else:
-                # GEÇMİŞ KONTROLÜ
-                if check_test_completed(st.session_state.student_id, selected_test):
-                    st.warning(f"⛔ '{selected_test}' testini daha önce tamamladınız. Tekrar çözemezsiniz.")
-                    return
-
-                st.session_state.selected_test = selected_test
-                st.session_state.intro_passed = False
-                st.session_state.test_finished = False
-                
-                with st.spinner("Test hazırlanıyor..."):
-                    # ÖZEL ENNEAGRAM DURUMU
-                    if "Enneagram" in selected_test:
-                        st.session_state.enneagram_type_idx = 1 # Tip 1'den başla
-                        st.session_state.enneagram_answers = {} # Cevapları tut
-                        st.session_state.current_test_data = {"type": "enneagram_fixed"} # Özel tip
-                    
-                    # DİĞER TESTLER
-                    elif "d2" in selected_test.lower():
-                        st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
-                        st.session_state.d2_isaretlenen = set()
-                        st.session_state.d2_basla = False
-                        st.session_state.d2_bitti = False
-                        st.session_state.d2_current_row = 0
-                    elif "burdon" in selected_test.lower():
-                        d, t = generate_burdon_content()
-                        st.session_state.current_test_data = {"type": "burdon", "questions": d}
-                        st.session_state.burdon_targets = t
-                        st.session_state.burdon_basla = False
-                        st.session_state.burdon_isaretlenen = {}
-                        st.session_state.current_chunk = 0
-                        st.session_state.burdon_limit = 600
-                        st.session_state.test_bitti = False
-                    else:
-                        # GROK API İLE SORU ÜRET (Diğer testler için)
-                        prompt = SORU_URETIM_PROMPT.format(test_adi=selected_test)
-                        raw = get_data_from_ai(prompt)
-                        try:
-                            test_data = json.loads(raw)
-                            test_data["type"] = "likert" # Standart Likert
-                            st.session_state.current_test_data = test_data
-                            st.session_state.cevaplar = {}
-                            st.session_state.sayfa = 0
-                        except:
-                            st.error("Test üretilirken hata oluştu. Lütfen tekrar deneyin.")
-                            return
-                
-                st.session_state.page = "test"
-                st.rerun()
-
-    # 3. SAYFA: TEST BİTİŞ EKRANI (BAŞARI EKRANI)
-    elif st.session_state.page == "success_screen":
-        st.markdown("""
-        <div class="success-box">
-            <h1>🎉 Tebrikler!</h1>
-            <p>Testi başarıyla tamamladınız.</p>
-            <p>Sonuçlarınız analiz edilmek üzere öğretmeninize iletildi.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("### Ne yapmak istersiniz?")
         col1, col2 = st.columns(2)
         
-        with col1:
-            if st.button("🏠 Ana Sayfaya Dön (Yeni Test)", type="primary"):
-                st.session_state.page = "home"
-                st.session_state.test_finished = False
-                st.rerun()
-                
-        with col2:
-            if st.button("🚪 Çıkış Yap"):
-                st.session_state.clear()
-                st.rerun()
-
-    # 4. SAYFA: TEST EKRANI
-    elif st.session_state.page == "test":
-        test_name = st.session_state.selected_test
-        
-        # Giriş / Bilgilendirme
-        if not st.session_state.intro_passed:
-            st.markdown(f"# 📘 {test_name}")
-            info = TEST_BILGILERI.get(test_name, TEST_BILGILERI["Genel"])
-            st.info(f"**Amaç:** {info['amac']}\n\n**Nasıl:** {info['nasil']}\n\n**İpucu:** {info['ipucu']}")
+        # Testleri dinamik listele
+        for idx, test in enumerate(current_tests):
+            is_done = check_test_completed(st.session_state.student_id, test)
+            target_col = col1 if idx % 2 == 0 else col2
             
-            if "Burdon" in test_name:
-                yas = st.selectbox("Yaş Grubu:", list(BURDON_SURELERI.keys()))
-                st.session_state.burdon_limit = BURDON_SURELERI[yas]
+            if is_done:
+                target_col.button(f"✅ {test} (Tamamlandı)", disabled=True, key=test)
+            else:
+                if target_col.button(f"👉 {test}", type="primary", key=test):
+                    st.session_state.selected_test = test
+                    st.session_state.intro_passed = False
+                    
+                    with st.spinner("Test Yükleniyor..."):
+                        if "Enneagram" in test:
+                            st.session_state.enneagram_type_idx = 1
+                            st.session_state.enneagram_answers = {}
+                            st.session_state.current_test_data = {"type": "enneagram_fixed"}
+                        else:
+                            # Grok'tan soru çek
+                            prompt = SORU_URETIM_PROMPT.format(test_adi=test)
+                            raw = get_data_from_ai(prompt)
+                            try:
+                                td = json.loads(raw)
+                                td["type"] = "likert"
+                                st.session_state.current_test_data = td
+                                st.session_state.cevaplar = {}
+                                st.session_state.sayfa = 0
+                            except:
+                                st.error("Test soruları yüklenirken hata oluştu.")
+                                return
+                    
+                    st.session_state.page = "test"
+                    st.rerun()
 
-            if st.button("✅ TESTİ BAŞLAT", type="primary"):
+    # --- SAYFA 2: BAŞARI EKRANI ---
+    elif st.session_state.page == "success_screen":
+        st.markdown("<div class='success-box'><h1>🎉 Tebrikler!</h1><p>Testi başarıyla tamamladınız. Sonuçlar öğretmen paneline iletildi.</p></div>", unsafe_allow_html=True)
+        st.markdown("---")
+        c1, c2 = st.columns(2)
+        if c1.button("🏠 Ana Menüye Dön"):
+            st.session_state.page = "home"
+            st.rerun()
+        if c2.button("🚪 Güvenli Çıkış"):
+            st.session_state.clear()
+            st.rerun()
+
+    # --- SAYFA 3: TEST ÇÖZME EKRANI ---
+    elif st.session_state.page == "test":
+        t_name = st.session_state.selected_test
+        
+        # Giriş
+        if not st.session_state.intro_passed:
+            st.title(f"📘 {t_name}")
+            st.info("Lütfen tüm soruları samimiyetle cevaplayınız. Boş bırakılan sorular sistem tarafından tespit edilir.")
+            if st.button("TESTİ BAŞLAT", type="primary"):
                 st.session_state.intro_passed = True
-                if "d2" in test_name:
-                    st.session_state.d2_basla = True
-                    st.session_state.d2_row_start_time = time.time()
-                if "Burdon" in test_name:
-                    st.session_state.burdon_basla = True
-                    st.session_state.start_time = time.time()
                 st.rerun()
-
-        # Soru Ekranları
+        
+        # Sorular
         else:
             data = st.session_state.current_test_data
-            q_type = data.get("type", "likert")
+            q_type = data.get("type")
 
-            # --- 1. ÖZEL ENNEAGRAM TESTİ (SABİT SORULAR) ---
-            if q_type == "enneagram_fixed":
+            # --- TİP 1: LIKERT TESTLERİ (Grok) ---
+            if q_type == "likert":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs)//PER_PAGE) + 1
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa+1)/tot_p)
+                
+                # Sayfa içi boş kontrolü için ID listesi
+                page_q_ids = []
+                
+                opts = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
+                
+                for q in curr_qs:
+                    st.write(f"**{q['text']}**")
+                    page_q_ids.append(q['id'])
+                    k = f"q_{q['id']}"
+                    
+                    saved = st.session_state.cevaplar.get(q['id'])
+                    idx = list(opts.values()).index(saved) if saved else None
+                    
+                    val = st.radio("Cevap", list(opts.keys()), key=k, index=idx, horizontal=True, label_visibility="collapsed")
+                    if val: st.session_state.cevaplar[q['id']] = opts[val]
+                    st.divider()
+                
+                c1, c2 = st.columns(2)
+                
+                # Navigasyon
+                if st.session_state.sayfa < tot_p - 1:
+                    if c2.button("İleri ➡️"):
+                        # Sayfa içi kontrol
+                        missing = [qid for qid in page_q_ids if qid not in st.session_state.cevaplar]
+                        if missing:
+                            st.error("⚠️ Lütfen bu sayfadaki tüm soruları cevaplayınız!")
+                        else:
+                            st.session_state.sayfa += 1
+                            st.rerun()
+                else:
+                    if c2.button("Bitir ve Gönder ✅", type="primary"):
+                        # Final kontrol
+                        missing_q = next((q for q in qs if q['id'] not in st.session_state.cevaplar), None)
+                        if missing_q:
+                            st.error("⚠️ Eksik sorular var! Lütfen kontrol ediniz.")
+                            # İstenirse burada sayfa yönlendirmesi de yapılabilir ama sayfa içi kontrol olduğu için gerek kalmayabilir.
+                        else:
+                            with st.spinner("Analiz yapılıyor..."):
+                                rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=t_name, cevaplar_json=json.dumps(st.session_state.cevaplar)))
+                                save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.cevaplar, None, rep)
+                                st.session_state.page = "success_screen"
+                                st.rerun()
+
+            # --- TİP 2: ENNEAGRAM (Sabit) ---
+            elif q_type == "enneagram_fixed":
                 curr_type = st.session_state.enneagram_type_idx
                 questions = ENNEAGRAM_QUESTIONS[curr_type]
                 
                 st.progress(curr_type / 9)
                 st.subheader(f"Bölüm {curr_type}: Tip {curr_type} Soruları")
-                st.caption("Aşağıdaki ifadelere ne kadar katılıyorsunuz? (1: Neredeyse Hiç - 5: Neredeyse Her Zaman)")
                 
-                # Cevapları al
                 opts = [1, 2, 3, 4, 5]
                 labels = ["1 (Hiç)", "2", "3", "4", "5 (Çok)"]
-                
                 all_answered = True
                 
-                # Form elemanları
                 for i, q_text in enumerate(questions):
-                    q_key = f"{curr_type}_{i}" # Unique ID: Tip_SoruIndex
+                    q_key = f"{curr_type}_{i}"
                     st.write(f"**{i+1}. {q_text}**")
+                    prev = st.session_state.enneagram_answers.get(q_key)
+                    val = st.radio(f"Soru {i+1}", opts, key=f"rad_{q_key}", index=opts.index(prev) if prev else None, horizontal=True, format_func=lambda x: labels[x-1], label_visibility="collapsed")
                     
-                    prev_val = st.session_state.enneagram_answers.get(q_key, None)
-                    val = st.radio(f"Soru {i+1}", opts, key=f"rad_{q_key}", index=opts.index(prev_val) if prev_val else None, horizontal=True, format_func=lambda x: labels[x-1], label_visibility="collapsed")
-                    
-                    if val:
-                        st.session_state.enneagram_answers[q_key] = val
-                    else:
-                        all_answered = False
+                    if val: st.session_state.enneagram_answers[q_key] = val
+                    else: all_answered = False
                     st.divider()
                 
-                # İleri / Bitir Butonları
                 c1, c2 = st.columns(2)
-                
                 if curr_type < 9:
-                    if c2.button(f"Tip {curr_type+1}'e Geç ➡️", type="primary"):
+                    if c2.button("Sonraki Bölüm ➡️"):
                         if not all_answered:
                             st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevaplayınız!")
                         else:
                             st.session_state.enneagram_type_idx += 1
                             st.rerun()
                 else:
-                    if c2.button("TESTİ BİTİR VE ANALİZ ET ✅", type="primary"):
+                    if c2.button("Bitir ✅", type="primary"):
                         if not all_answered:
                             st.error("⚠️ Lütfen tüm soruları cevaplayınız!")
                         else:
-                            with st.spinner("Kişilik haritanız çıkarılıyor..."):
-                                # Enneagram Özel Hesaplama
-                                scores, report = calculate_enneagram_report(st.session_state.enneagram_answers)
-                                
-                                # Veritabanına Kayıt
-                                save_test_result_to_db(
-                                    st.session_state.student_id, 
-                                    test_name, 
-                                    st.session_state.enneagram_answers, 
-                                    scores, 
-                                    report
-                                )
+                            with st.spinner("Kişilik analizi yapılıyor..."):
+                                scores, rep = calculate_enneagram_report(st.session_state.enneagram_answers)
+                                save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.enneagram_answers, scores, rep)
                                 st.session_state.page = "success_screen"
                                 st.rerun()
-
-            # --- 2. DİĞER LIKERT TESTLERİ (Grok ile Üretilenler) ---
-            elif q_type == "likert":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs)//PER_PAGE)+1
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start+PER_PAGE]
-                
-                st.progress((st.session_state.sayfa+1)/tot_p)
-                
-                opts = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
-                
-                # SAYFA İÇİ EKSİK KONTROLÜ İÇİN LİSTE
-                current_page_q_ids = []
-
-                for q in curr_qs:
-                    st.write(f"**{q['text']}**")
-                    current_page_q_ids.append(q['id']) # ID'yi listeye ekle
-                    k = f"q_{q['id']}"
-                    saved = st.session_state.cevaplar.get(q['id'])
-                    # Default index ayarı
-                    idx = None
-                    if saved:
-                        vals = list(opts.values())
-                        if saved in vals:
-                            idx = vals.index(saved)
-
-                    val = st.radio("Cevap", list(opts.keys()), key=k, index=idx, horizontal=True, label_visibility="collapsed")
-                    if val: st.session_state.cevaplar[q['id']] = opts[val]
-                    st.divider()
-                
-                c1, c2 = st.columns(2)
-                if st.session_state.sayfa < tot_p-1:
-                    if c2.button("İleri ➡️"):
-                        # YENİ EKLENEN KISIM: SAYFA İÇİ KONTROL
-                        missing_in_page = False
-                        for qid in current_page_q_ids:
-                            if qid not in st.session_state.cevaplar:
-                                missing_in_page = True
-                                break
-                        
-                        if missing_in_page:
-                             st.error("⚠️ Lütfen bu sayfadaki tüm soruları cevaplayıp öyle ilerleyiniz.")
-                        else:
-                            st.session_state.sayfa += 1
-                            st.rerun()
-                else:
-                    if c2.button("Bitir ✅", type="primary"):
-                        # EKSİK SORU KONTROLÜ VE YÖNLENDİRME (Final Kontrol)
-                        missing_q = None
-                        missing_idx = -1
-                        
-                        # Tüm soruları tara
-                        for i, q in enumerate(qs):
-                            if q['id'] not in st.session_state.cevaplar:
-                                missing_q = q
-                                missing_idx = i
-                                break
-                        
-                        if missing_q:
-                            # Eksik soru varsa sayfasını bul
-                            target_page = missing_idx // PER_PAGE
-                            st.session_state.sayfa = target_page
-                            st.error(f"⚠️ {missing_idx + 1}. soruyu boş bıraktınız. Lütfen cevaplayınız.")
-                            time.sleep(1.5) # Kullanıcı hatayı görsün diye azıcık bekle
-                            st.rerun()
-                        else:
-                            # Her şey tamsa kaydet
-                            with st.spinner("Analiz ediliyor..."):
-                                stats = {"Cevaplar": st.session_state.cevaplar}
-                                # Grok Raporu
-                                rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats)))
-                                save_test_result_to_db(st.session_state.student_id, test_name, st.session_state.cevaplar, None, rep)
-                                st.session_state.page = "success_screen"
-                                st.rerun()
-
-            # --- 3. D2 TESTİ ---
-            elif q_type == "d2":
-                questions = data["questions"]
-                ROW_TIME = 20
-                TOTAL_ROWS = 14
-                
-                @st.fragment(run_every=1)
-                def d2_row_timer():
-                    if st.session_state.get("d2_basla", False) and not st.session_state.get("d2_bitti", False):
-                        elapsed = time.time() - st.session_state.d2_row_start_time
-                        remaining = ROW_TIME - elapsed
-                        if remaining <= 0:
-                            st.session_state.d2_current_row += 1
-                            if st.session_state.d2_current_row >= TOTAL_ROWS:
-                                st.session_state.d2_bitti = True
-                            else:
-                                st.session_state.d2_row_start_time = time.time()
-                            st.rerun()
-                        st.progress(max(0.0, remaining / ROW_TIME))
-                        st.caption(f"Satır: {st.session_state.d2_current_row + 1} / {TOTAL_ROWS}")
-
-                @st.fragment
-                def d2_grid_view(current_row_items):
-                    if st.session_state.get("d2_bitti", False): return
-                    cols = st.columns(10)
-                    sel = st.session_state.d2_isaretlenen
-                    for idx, item in enumerate(current_row_items):
-                        c = cols[idx % 10]
-                        is_sel = item['id'] in sel
-                        c.button(item['visual'], key=f"d2_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_d2_selection, args=(item['id'],))
-
-                if st.session_state.get("d2_bitti", False):
-                    targets = [q['id'] for q in questions if q['is_target']]
-                    sel = st.session_state.d2_isaretlenen
-                    hits = len(set(targets).intersection(sel))
-                    false_al = len(sel - set(targets))
-                    miss = len(set(targets) - sel)
-                    stats = {"Doğru": hits, "Hata": false_al, "Atlanan": miss}
-                    
-                    with st.spinner("Sonuçlar kaydediliyor..."):
-                        prompt = TEK_RAPOR_PROMPT.format(test_adi="d2 Dikkat Testi", cevaplar_json=json.dumps(stats))
-                        report = get_data_from_ai(prompt)
-                        save_test_result_to_db(st.session_state.student_id, test_name, {"isaretlenen_idleri": list(sel)}, stats, report)
-                        st.session_state.page = "success_screen"
-                        st.rerun()
-                else:
-                    d2_row_timer()
-                    curr_r = st.session_state.d2_current_row
-                    start_idx = curr_r * 47
-                    current_items = questions[start_idx:start_idx + 47]
-                    d2_grid_view(current_items)
-
-            # --- 4. BURDON TESTİ ---
-            elif q_type == "burdon":
-                CHUNK_SIZE = 50
-                total = (len(questions) // CHUNK_SIZE) + 1
-                LIMIT = st.session_state.burdon_limit
-                
-                @st.fragment(run_every=1)
-                def burdon_timer():
-                    if not st.session_state.get("test_bitti", False):
-                        elapsed = time.time() - st.session_state.start_time
-                        rem = LIMIT - elapsed
-                        if rem <= 0:
-                            st.session_state.test_bitti = True
-                            st.rerun()
-                        st.metric("Kalan Süre", f"{int(rem)} sn")
-
-                burdon_timer()
-                
-                if st.session_state.get("test_bitti", False):
-                    all_sel = set()
-                    for chunk in st.session_state.burdon_isaretlenen.values():
-                        all_sel.update(chunk)
-                    targets = [q['id'] for q in questions if q['is_target']]
-                    hits = len(set(targets).intersection(all_sel))
-                    missed = len(set(targets) - all_sel)
-                    wrong = len(all_sel - set(targets))
-                    stats = {"Doğru": hits, "Atlanan": missed, "Yanlış": wrong}
-                    
-                    with st.spinner("Sonuçlar kaydediliyor..."):
-                        prompt = TEK_RAPOR_PROMPT.format(test_adi="Burdon Dikkat Testi", cevaplar_json=json.dumps(stats))
-                        report = get_data_from_ai(prompt)
-                        save_test_result_to_db(st.session_state.student_id, test_name, {"isaretlenen_idleri": list(all_sel)}, stats, report)
-                        st.session_state.page = "success_screen"
-                        st.rerun()
-                else:
-                    start = st.session_state.current_chunk * CHUNK_SIZE
-                    current_items = questions[start:start + CHUNK_SIZE]
-                    st.info(f"HEDEFLER: {', '.join(st.session_state.burdon_targets)}")
-                    st.caption(f"Sayfa {st.session_state.current_chunk + 1} / {total}")
-                    
-                    cols_count = 10
-                    rows = [current_items[i:i+cols_count] for i in range(0, len(current_items), cols_count)]
-                    
-                    for row in rows:
-                        cols = st.columns(cols_count)
-                        for c, item in enumerate(row):
-                            is_sel = item['id'] in st.session_state.burdon_isaretlenen.get(st.session_state.current_chunk, set())
-                            cols[c].button(
-                                item['char'], 
-                                key=f"b_{item['id']}", 
-                                type="primary" if is_sel else "secondary", 
-                                on_click=toggle_burdon_selection, 
-                                args=(item['id'], st.session_state.current_chunk)
-                            )
-
-                    st.markdown("---")
-                    c1, c2 = st.columns([1, 4])
-                    
-                    if st.session_state.current_chunk < total - 1:
-                        c2.button("SONRAKİ SAYFA ➡️", type="primary", on_click=next_chunk_callback, key=f"next_{st.session_state.current_chunk}")
-                    else:
-                        c2.button("TESTİ BİTİR 🏁", type="primary", on_click=finish_burdon_callback, key="finish_btn")
