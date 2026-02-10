@@ -1,8 +1,8 @@
 import streamlit as st
 from database import init_db
-from db_utils import get_or_create_student
+from db_utils import login_student, register_student
 
-# Sayfa Ayarları (EN ÜSTTE OLMALI)
+# --- SAYFA YAPILANDIRMASI (EN ÜSTTE OLMALI) ---
 st.set_page_config(
     page_title="Psikometrik Test Platformu",
     page_icon="🧠",
@@ -10,80 +10,110 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Veritabanını Başlat
+# Veritabanını başlat (Tablolar yoksa oluşturur)
 init_db()
 
-# CSS İyileştirmeleri
+# --- CSS VE TASARIM AYARLARI ---
 st.markdown("""
 <style>
-    .big-font { font-size: 20px !important; }
-    .stButton>button { border-radius: 10px; height: 3em; }
-    div[data-testid="stForm"] { border: 2px solid #f0f2f6; padding: 20px; border-radius: 10px; }
+    .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; }
+    div[data-testid="stForm"] { border: 2px solid #e0e0e0; padding: 30px; border-radius: 15px; background-color: #f9f9f9; }
+    .header-text { text-align: center; color: #2E86C1; }
 </style>
 """, unsafe_allow_html=True)
 
-# Session State Başlangıç
+# --- SESSION STATE (OTURUM DEĞİŞKENLERİ) ---
 if 'role' not in st.session_state: st.session_state.role = None
 if 'student_id' not in st.session_state: st.session_state.student_id = None
 if 'student_name' not in st.session_state: st.session_state.student_name = None
+if 'login_phase' not in st.session_state: st.session_state.login_phase = 1
 
-# --- GİRİŞ SAYFASI ---
-def login_page():
-    st.title("🧠 Psikometrik Test ve Analiz Merkezi")
+# --- ANA GİRİŞ EKRANI FONKSİYONU ---
+def main_login():
+    st.markdown("<h1 class='header-text'>🧠 Psikometrik Test ve Analiz Merkezi</h1>", unsafe_allow_html=True)
     st.markdown("---")
     
-    col1, col2 = st.columns(2)
+    # 3 Sekmeli Yapı
+    tab1, tab2, tab3 = st.tabs(["🔑 Öğrenci Girişi", "📝 Yeni Öğrenci Kaydı", "👨‍🏫 Öğretmen Girişi"])
     
-    # --- SOL: ÖĞRENCİ GİRİŞİ ---
-    with col1:
-        st.header("🎓 Öğrenci Girişi")
-        st.info("Testlere başlamak için Adınızı ve Soyadınızı giriniz.")
-        
-        with st.form("student_login"):
-            name_input = st.text_input("Adınız Soyadınız:", placeholder="Örn: Ahmet Yılmaz")
-            submitted = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
-            
-            if submitted:
-                # Temizle ve Baş Harfleri Büyüt
-                clean_name = name_input.strip().title()
+    # --- SEKME 1: ÖĞRENCİ GİRİŞİ ---
+    with tab1:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.subheader("Öğrenci Girişi 👋")
+            with st.form("student_login_form"):
+                user = st.text_input("Kullanıcı Adı")
+                pw = st.text_input("Şifre", type="password")
+                submitted = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
                 
-                # KONTROL: En az 2 kelime (Ad + Soyad) var mı?
-                if len(clean_name.split()) < 2:
-                    st.error("⚠️ Lütfen hem Adınızı hem de Soyadınızı tam giriniz. (Örn: Ali Kaya)")
-                elif len(clean_name) < 5: # Çok kısa isim kontrolü
-                    st.error("⚠️ Lütfen geçerli bir isim giriniz.")
-                else:
-                    # Giriş Başarılı
-                    s_id, s_name = get_or_create_student(clean_name)
-                    st.session_state.role = "student"
-                    st.session_state.student_id = s_id
-                    st.session_state.student_name = s_name
-                    st.rerun()
+                if submitted:
+                    status, student_obj = login_student(user, pw)
+                    if status:
+                        st.success(f"Giriş başarılı! Hoşgeldin {student_obj.name}")
+                        # Session bilgilerini kaydet
+                        st.session_state.role = "student"
+                        st.session_state.student_id = student_obj.id
+                        st.session_state.student_name = student_obj.name
+                        # Öğrencinin kaçıncı girişi olduğunu al (Faz sistemi için)
+                        st.session_state.login_phase = student_obj.login_count
+                        st.rerun()
+                    else:
+                        st.error("Kullanıcı adı veya şifre hatalı.")
 
-    # --- SAĞ: ÖĞRETMEN GİRİŞİ ---
-    with col2:
-        st.header("👨‍🏫 Öğretmen Girişi")
-        st.info("Yönetim paneli erişimi.")
+    # --- SEKME 2: ÖĞRENCİ KAYIT ---
+    with tab2:
+        st.subheader("Yeni Hesap Oluştur 🚀")
+        st.info("Testlere başlamak için lütfen aşağıdaki formu doldurarak kayıt olun.")
         
-        with st.form("teacher_login"):
-            password_input = st.text_input("Yönetici Şifresi:", type="password")
-            submitted_t = st.form_submit_button("Yönetim Paneline Git", type="secondary", use_container_width=True)
+        with st.form("register_form"):
+            c1, c2 = st.columns(2)
+            with c1:
+                name = st.text_input("Ad Soyad (Tam İsim)")
+                age = st.number_input("Yaş", min_value=5, max_value=99, step=1, value=15)
+                gender = st.selectbox("Cinsiyet", ["Kız", "Erkek"])
+            with c2:
+                new_user = st.text_input("Kullanıcı Adı Belirle (Giriş için gerekli)")
+                new_pw = st.text_input("Şifre Belirle", type="password")
             
-            if submitted_t:
-                # Şifre kontrolü: Önce st.secrets (Cloud), yoksa 'admin123'
-                secret_pass = "admin123"
-                if "teacher_password" in st.secrets:
-                    secret_pass = st.secrets["teacher_password"]
-                
-                if password_input == secret_pass:
-                    st.session_state.role = "teacher"
-                    st.rerun()
+            st.markdown("---")
+            reg_submit = st.form_submit_button("Kayıt Ol", type="secondary", use_container_width=True)
+            
+            if reg_submit:
+                if not name or not new_user or not new_pw:
+                    st.warning("Lütfen tüm alanları doldurunuz.")
                 else:
-                    st.error("⛔ Hatalı şifre.")
+                    success, msg = register_student(name.title(), new_user, new_pw, age, gender)
+                    if success:
+                        st.success(msg)
+                        st.balloons()
+                    else:
+                        st.error(msg)
 
-# --- SAYFA YÖNLENDİRME ---
+    # --- SEKME 3: ÖĞRETMEN GİRİŞİ ---
+    with tab3:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.subheader("Yönetici Erişimi 🔒")
+            with st.form("teacher_login_form"):
+                password_input = st.text_input("Yönetici Şifresi:", type="password")
+                submitted_t = st.form_submit_button("Yönetim Paneline Git", type="secondary", use_container_width=True)
+                
+                if submitted_t:
+                    # Şifre kontrolü (Varsayılan: admin123)
+                    secret_pass = "admin123"
+                    # Streamlit Cloud secrets varsa oradan al
+                    if "teacher_password" in st.secrets:
+                        secret_pass = st.secrets["teacher_password"]
+                    
+                    if password_input == secret_pass:
+                        st.session_state.role = "teacher"
+                        st.rerun()
+                    else:
+                        st.error("Hatalı şifre.")
+
+# --- SAYFA YÖNLENDİRME MANTIĞI ---
 if st.session_state.role is None:
-    login_page()
+    main_login()
 
 elif st.session_state.role == "student":
     import student_view
@@ -93,10 +123,10 @@ elif st.session_state.role == "teacher":
     import teacher_view
     teacher_view.app()
 
-# ÇIKIŞ BUTONU (SIDEBAR)
-with st.sidebar:
-    if st.session_state.role:
+# --- SIDEBAR: ÇIKIŞ BUTONU ---
+if st.session_state.role:
+    with st.sidebar:
         st.write(f"Kullanıcı: **{st.session_state.get('student_name', 'Yönetici')}**")
-        if st.button("Çıkış Yap"):
+        if st.button("Güvenli Çıkış", type="secondary"):
             st.session_state.clear()
             st.rerun()
