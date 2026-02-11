@@ -19,8 +19,29 @@ st.markdown("""
 <style>
     .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; width: 100%; }
     .auth-container { border: 2px solid #e0e0e0; padding: 40px; border-radius: 15px; background-color: #ffffff; max-width: 600px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .brand-text { text-align: center; color: #1F618D; font-size: 1.5rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 0; }
-    .header-text { text-align: center; color: #2E86C1; margin-top: 5px; margin-bottom: 20px; font-weight: 600; }
+    
+    /* BAŞLIK STİLLERİ */
+    .header-text { 
+        text-align: center; 
+        color: #2E86C1; 
+        margin-top: 10px; 
+        margin-bottom: 5px; 
+        font-weight: 700; 
+    }
+    
+    .brand-text { 
+        text-align: center; 
+        color: #1F618D; 
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        letter-spacing: 1px; 
+        margin-top: 0;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #AED6F1;
+        display: inline-block;
+        padding-bottom: 5px;
+    }
+    
     .sub-link { text-align: center; margin-top: 10px; cursor: pointer; color: #555; }
 </style>
 """, unsafe_allow_html=True)
@@ -46,11 +67,11 @@ def go_to_teacher():
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
-    # --- KURUMSAL BAŞLIK ALANI ---
+    # --- KURUMSAL BAŞLIK ALANI (DÜZELTİLDİ: Logo Altta) ---
     st.markdown("""
         <div style="padding: 20px; text-align: center;">
-            <div class='brand-text'>BALABAN EĞİTİM-KOÇLUK</div>
             <h1 class='header-text'>🧠 Psikometrik Test ve Analiz Merkezi</h1>
+            <div class='brand-text'>BALABAN EĞİTİM-KOÇLUK</div>
         </div>
     """, unsafe_allow_html=True)
     
