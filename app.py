@@ -5,7 +5,7 @@ from db_utils import login_student, register_student
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
-    page_title="Psikometrik Test Platformu",
+    page_title="BALABAN EĞİTİM-KOÇLUK",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -18,8 +18,9 @@ init_db()
 st.markdown("""
 <style>
     .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; width: 100%; }
-    .auth-container { border: 2px solid #e0e0e0; padding: 40px; border-radius: 15px; background-color: #ffffff; max-width: 600px; margin: auto; }
-    .header-text { text-align: center; color: #2E86C1; margin-bottom: 20px; }
+    .auth-container { border: 2px solid #e0e0e0; padding: 40px; border-radius: 15px; background-color: #ffffff; max-width: 600px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .brand-text { text-align: center; color: #1F618D; font-size: 1.5rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 0; }
+    .header-text { text-align: center; color: #2E86C1; margin-top: 5px; margin-bottom: 20px; font-weight: 600; }
     .sub-link { text-align: center; margin-top: 10px; cursor: pointer; color: #555; }
 </style>
 """, unsafe_allow_html=True)
@@ -30,7 +31,7 @@ if 'student_id' not in st.session_state: st.session_state.student_id = None
 if 'student_name' not in st.session_state: st.session_state.student_name = None
 if 'login_phase' not in st.session_state: st.session_state.login_phase = 1
 
-# Sayfa Modu Kontrolü (Varsayılan: 'register' -> İlk açılışta Kayıt Ekranı gelir)
+# Sayfa Modu Kontrolü (Varsayılan: 'register')
 if 'auth_mode' not in st.session_state: st.session_state.auth_mode = 'register' 
 
 # --- NAVİGASYON FONKSİYONLARI ---
@@ -45,7 +46,15 @@ def go_to_teacher():
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
-    st.markdown("<h1 class='header-text'>🧠 Psikometrik Test ve Analiz Merkezi</h1>", unsafe_allow_html=True)
+    # --- KURUMSAL BAŞLIK ALANI ---
+    st.markdown("""
+        <div style="padding: 20px; text-align: center;">
+            <div class='brand-text'>BALABAN EĞİTİM-KOÇLUK</div>
+            <h1 class='header-text'>🧠 Psikometrik Test ve Analiz Merkezi</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
     
     # Ortalamak için kolon yapısı
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -169,6 +178,5 @@ if st.session_state.role:
         st.write(f"Kullanıcı: **{st.session_state.get('student_name', 'Yönetici')}**")
         if st.button("Güvenli Çıkış", type="secondary"):
             st.session_state.clear()
-            # Çıkış yapınca tekrar kayıt ekranına dönmesi için:
             st.session_state.auth_mode = 'register' 
             st.rerun()
