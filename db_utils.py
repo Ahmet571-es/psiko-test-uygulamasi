@@ -7,7 +7,8 @@ from sqlalchemy import and_
 def register_student(name, username, password, age, gender):
     """
     Yeni bir öğrenci kaydı oluşturur.
-    Kullanıcı adı benzersiz olmalıdır.
+    Başarılı olursa (True, student_obj) döner.
+    Hata olursa (False, "Hata Mesajı") döner.
     """
     session = SessionLocal()
     try:
@@ -22,11 +23,12 @@ def register_student(name, username, password, age, gender):
             password=password,
             age=age,
             gender=gender,
-            login_count=1 # İlk kayıt oluştuğunda 1. giriş sayılır (Faz 1)
+            login_count=1 # İlk kayıt = 1. Faz
         )
         session.add(new_student)
         session.commit()
-        return True, "Kayıt başarıyla oluşturuldu! Giriş sekmesinden giriş yapabilirsiniz."
+        session.refresh(new_student) # Yeni öğrencinin ID'sini almak için yenile
+        return True, new_student
     except Exception as e:
         session.rollback()
         return False, f"Kayıt sırasında hata oluştu: {str(e)}"
@@ -37,17 +39,13 @@ def login_student(username, password):
     """
     Öğrenci girişi yapar.
     Başarılı girişte 'login_count' (giriş sayısı) değerini 1 artırır.
-    Bu sayede öğrencinin kaçıncı aşamada olduğunu (Faz) takip ederiz.
     """
     session = SessionLocal()
     try:
         student = session.query(Student).filter_by(username=username, password=password).first()
         if student:
-            # Giriş başarılı, faz takibi için sayacı artır
             student.login_count += 1
             session.commit()
-            
-            # Güncel veriyi döndürmek için refresh yapabiliriz veya direkt objeyi döneriz
             session.refresh(student)
             return True, student
         return False, None
@@ -67,17 +65,13 @@ def get_student_details(student_id):
 # --- TEST YÖNETİM İŞLEMLERİ ---
 
 def check_test_completed(student_id, test_name):
-    """
-    Öğrencinin belirtilen testi daha önce çözüp çözmediğini kontrol eder.
-    """
+    """Öğrencinin belirtilen testi daha önce çözüp çözmediğini kontrol eder."""
     session = SessionLocal()
     try:
-        # Önce testin ID'sini bul
         test = session.query(Test).filter_by(name=test_name).first()
         if not test: 
-            return False # Test veritabanında hiç yoksa, çözülmemiştir.
+            return False
         
-        # Eşleşen kayıt var mı bak
         exists = session.query(CompletedTest).filter(
             and_(CompletedTest.student_id == student_id, CompletedTest.test_id == test.id)
         ).first()
@@ -87,12 +81,9 @@ def check_test_completed(student_id, test_name):
         session.close()
 
 def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_text):
-    """
-    Tamamlanan test sonucunu, puanları ve üretilen raporu veritabanına kaydeder.
-    """
+    """Tamamlanan test sonucunu kaydeder."""
     session = SessionLocal()
     try:
-        # Test tablosunda bu test tanımlı mı? Yoksa oluştur.
         test = session.query(Test).filter_by(name=test_name).first()
         if not test:
             test = Test(name=test_name)
@@ -100,15 +91,13 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
             session.commit()
             session.refresh(test)
 
-        # Mükerrer kayıt kontrolü (Aynı testi tekrar kaydetmesin)
         exists = session.query(CompletedTest).filter(
             and_(CompletedTest.student_id == student_id, CompletedTest.test_id == test.id)
         ).first()
         
         if exists:
-            return True # Zaten kayıtlı
+            return True
 
-        # Yeni kaydı oluştur
         new_record = CompletedTest(
             student_id=student_id,
             test_id=test.id,
@@ -130,16 +119,12 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
 # --- ÖĞRETMEN PANELİ VERİ ÇEKME İŞLEMLERİ ---
 
 def get_all_students_with_results():
-    """
-    Öğretmen paneli için hiyerarşik veri yapısı döndürür.
-    Her öğrenci için: Kişisel Bilgiler + Çözdüğü Testler Listesi.
-    """
+    """Öğretmen paneli için hiyerarşik veri yapısı döndürür."""
     session = SessionLocal()
     try:
         students = session.query(Student).all()
         data = []
         for s in students:
-            # Öğrencinin testlerini bir liste haline getir
             student_tests = []
             for t in s.tests:
                 student_tests.append({
@@ -149,10 +134,8 @@ def get_all_students_with_results():
                     "scores": t.scores,
                     "raw_answers": t.raw_answers
                 })
-            
-            # Ana listeye ekle
             data.append({
-                "info": s, # Student objesi (isim, yaş, şifre vb.)
+                "info": s,
                 "tests": student_tests
             })
         return data
@@ -162,10 +145,7 @@ def get_all_students_with_results():
 # --- SİLME VE SIFIRLAMA İŞLEMLERİ ---
 
 def reset_database():
-    """
-    DİKKAT: Veritabanındaki TÜM tabloları (Öğrenciler, Testler, Sonuçlar) siler.
-    Fabrika ayarlarına döndürür.
-    """
+    """TÜM veriyi siler."""
     session = SessionLocal()
     try:
         session.query(CompletedTest).delete()
@@ -180,22 +160,16 @@ def reset_database():
         session.close()
 
 def delete_specific_students(student_names_list):
-    """
-    Öğretmen panelinden seçilen belirli öğrencileri siler.
-    Cascade özelliği sayesinde, öğrenci silinince ona ait test sonuçları da otomatik silinir.
-    """
+    """Seçilen öğrencileri siler."""
     session = SessionLocal()
     try:
         if not student_names_list:
             return False
-            
-        # İsim listesindeki öğrencileri bul ve sil
         session.query(Student).filter(Student.name.in_(student_names_list)).delete(synchronize_session=False)
         session.commit()
         return True
     except Exception as e:
         session.rollback()
-        print(f"Silme Hatası: {e}")
         return False
     finally:
         session.close()
