@@ -15,7 +15,7 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- TÜM TESTLER LİSTESİ (FAZ YOK, HEPSİ BİR ARADA) ---
+# --- TÜM TESTLER LİSTESİ (TEK LİSTE) ---
 ALL_TESTS = [
     "Enneagram Kişilik Testi",
     "Çalışma Davranışı Ölçeği (Baltaş)",
@@ -299,15 +299,15 @@ ENNEAGRAM_DATA = {
 }
 
 WING_DESCRIPTIONS = {
-    "1w9": "Sakin ve barışçıl mükemmeliyetçi.", "1w2": "Yardımsever ve dışa dönük reformcu.",
-    "2w1": "Prensipli ve ciddi yardımcı.", "2w3": "Hırslı ve popüler yardımcı.",
-    "3w2": "Sıcakkanlı ve insan odaklı başarılı.", "3w4": "Sanatsal ve duygusal başarılı.",
-    "4w3": "Hırslı ve sahne ışığı seven bireyci.", "4w5": "İçe dönük ve entelektüel bireyci.",
-    "5w4": "Yaratıcı ve hayalperest araştırmacı.", "5w6": "Planlı ve güvenilir araştırmacı.",
-    "6w5": "Bağımsız ve ciddi sadık.", "6w7": "Eğlenceli ve sosyal sadık.",
-    "7w6": "Sorumluluk sahibi ve dost canlısı maceracı.", "7w8": "Lider ruhlu ve cesur maceracı.",
-    "8w7": "Enerjik ve dışa dönük lider.", "8w9": "Sakin güç ve babacan lider.",
-    "9w8": "Kararlı ve sınır koyan barışçı.", "9w1": "İdealist ve düzenli barışçı."
+    "1w9": "Daha sakin ve filozofik mükemmeliyetçi.", "1w2": "Daha yardımsever ve dışa dönük.",
+    "2w1": "Daha prensipli ve sorumlu yardımcı.", "2w3": "Daha hırslı ve sosyal.",
+    "3w2": "Daha ilişki odaklı ve sıcakkanlı.", "3w4": "Daha sanatsal ve bireysel.",
+    "4w3": "Daha hırslı ve performans odaklı.", "4w5": "Daha analitik ve içe dönük.",
+    "5w4": "Daha yaratıcı ve duygusal araştırmacı.", "5w6": "Daha planlı ve sadık.",
+    "6w5": "Daha bağımsız ve mesafeli.", "6w7": "Daha sosyal ve iyimser.",
+    "7w6": "Daha sorumlu ve grup odaklı.", "7w8": "Daha lider ruhlu ve kararlı.",
+    "8w7": "Daha enerjik ve eğlenceli lider.", "8w9": "Daha barışçıl ve sakin güç.",
+    "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
 }
 
 # --- YARDIMCI FONKSİYONLAR ---
@@ -382,9 +382,16 @@ def app():
 
     if "page" not in st.session_state: st.session_state.page = "home"
     
-    # --- FAZ SİSTEMİ KALDIRILDI - TÜM TESTLER AÇIK ---
-    # Tüm testleri tek bir listede birleştirelim
-    ALL_TESTS = PHASE_1_TESTS + PHASE_2_TESTS + PHASE_3_TESTS
+    # --- TÜM TESTLER TEK LİSTEDE ---
+    ALL_TESTS = [
+        "Enneagram Kişilik Testi",
+        "Çalışma Davranışı Ölçeği (Baltaş)",
+        "Sağ-Sol Beyin Dominansı Testi",
+        "Sınav Kaygısı Ölçeği (DuSKÖ)",
+        "VARK Öğrenme Stilleri Testi",
+        "Çoklu Zeka Testi (Gardner)",
+        "Holland Mesleki İlgi Envanteri (RIASEC)"
+    ]
 
     # --- SAYFA 1: ANA MENÜ (HOME) ---
     if st.session_state.page == "home":
