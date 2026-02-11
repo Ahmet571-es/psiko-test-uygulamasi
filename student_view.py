@@ -15,19 +15,13 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- FAZ SİSTEMİ TEST LİSTELERİ ---
-PHASE_1_TESTS = [
+# --- TÜM TESTLER LİSTESİ (FAZ YOK, HEPSİ BİR ARADA) ---
+ALL_TESTS = [
     "Enneagram Kişilik Testi",
     "Çalışma Davranışı Ölçeği (Baltaş)",
-    "Sağ-Sol Beyin Dominansı Testi"
-]
-
-PHASE_2_TESTS = [
+    "Sağ-Sol Beyin Dominansı Testi",
     "Sınav Kaygısı Ölçeği (DuSKÖ)",
-    "VARK Öğrenme Stilleri Testi"
-]
-
-PHASE_3_TESTS = [
+    "VARK Öğrenme Stilleri Testi",
     "Çoklu Zeka Testi (Gardner)",
     "Holland Mesleki İlgi Envanteri (RIASEC)"
 ]
@@ -180,7 +174,7 @@ Test: {test_adi}
 Veriler: {cevaplar_json}
 """
 
-# --- SABİT ENNEAGRAM VERİLERİ (DEĞİŞMEDİ) ---
+# --- SABİT ENNEAGRAM VERİLERİ ---
 ENNEAGRAM_QUESTIONS = {
     1: [
         "Hata yaptığımda kendime çok kızarım.", "Neyin doğru neyin yanlış olduğunu hemen hissederim.",
@@ -388,28 +382,19 @@ def app():
 
     if "page" not in st.session_state: st.session_state.page = "home"
     
-    # --- FAZ SİSTEMİ MANTIĞI ---
-    lc = st.session_state.get('login_phase', 1)
-    
-    if lc <= 1: 
-        current_tests = PHASE_1_TESTS
-        phase_name = "1. AŞAMA: Kişilik ve Zihin Yapısı"
-    elif lc == 2: 
-        current_tests = PHASE_2_TESTS
-        phase_name = "2. AŞAMA: Öğrenme ve Kaygı Durumu"
-    else: 
-        current_tests = PHASE_3_TESTS
-        phase_name = "3. AŞAMA: Yetenek ve Kariyer Eğilimi"
+    # --- FAZ SİSTEMİ KALDIRILDI - TÜM TESTLER AÇIK ---
+    # Tüm testleri tek bir listede birleştirelim
+    ALL_TESTS = PHASE_1_TESTS + PHASE_2_TESTS + PHASE_3_TESTS
 
     # --- SAYFA 1: ANA MENÜ (HOME) ---
     if st.session_state.page == "home":
         st.markdown(f"## 👤 Merhaba, {st.session_state.student_name}")
-        st.info(f"Şu an **{phase_name}** ekranındasınız.")
-        st.write("Lütfen çözmek istediğiniz testi seçiniz:")
+        st.info("Aşağıdaki listeden dilediğin testi seçip çözebilirsin. Başarılar!")
         
         col1, col2 = st.columns(2)
         
-        for idx, test in enumerate(current_tests):
+        # Testleri dinamik listele
+        for idx, test in enumerate(ALL_TESTS):
             is_done = check_test_completed(st.session_state.student_id, test)
             target_col = col1 if idx % 2 == 0 else col2
             
