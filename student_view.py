@@ -16,7 +16,6 @@ else:
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 # --- FAZ SİSTEMİ TEST LİSTELERİ ---
-# Öğrenci giriş sayısına göre bu listelerden birini görecek.
 PHASE_1_TESTS = [
     "Enneagram Kişilik Testi",
     "Çalışma Davranışı Ölçeği (Baltaş)",
@@ -33,175 +32,263 @@ PHASE_3_TESTS = [
     "Holland Mesleki İlgi Envanteri (RIASEC)"
 ]
 
-# --- PROMPTLAR ---
+# --- GELİŞMİŞ, FEW-SHOT DESTEKLİ PROMPTLAR ---
 SORU_URETIM_PROMPT = """
-Sen dünyanın en iyi Türk psikometrik test tasarımcısı, çocuk/ergen psikolojisi uzmanı ve ölçme-değerlendirme otoritesisin.
+Sen dünyanın en iyi çocuk ve ergen psikolojisi uzmanı, aynı zamanda ödüllü bir test tasarımcısısın.
 
-GÖREV: Sadece belirtilen test için, orijinal testin soru sayısı, yapısı ve ölçek tipine %100 sadık kalarak, tamamen özgün, yeni ve benzersiz sorular üret.
+GÖREV: Belirtilen test ({test_adi}) için, orijinal yapısına sadık kalarak YEPYENİ sorular üret.
 
-ZORUNLU GENEL KURALLAR (ASLA İHLAL ETME):
-- Tüm sorular kusursuz, akıcı ve doğal Türkçe olsun. Cümleler kısa, net ve sade olsun.
-- Ortaokul-lise öğrencisinin rahatça anlayabileceği dil kullan; karmaşık kelimelerden kaçın.
-- Sorular tamamen tarafsız, objektif ve yargısız olsun. Hiçbir yönlendirme, duygu yüklemesi veya değer yargısı içermesin.
-- Her soru, psikolojik derinlik taşıyarak üst düzey analizlere olanak tanısın ama anlaşılırlığı asla feda etme.
-- Tüm sorular 5'li Likert ölçeğine mükemmel uyumlu olsun: Kesinlikle Katılmıyorum (1) - Katılmıyorum (2) - Kararsızım (3) - Katılıyorum (4) - Kesinlikle Katılıyorum (5).
-- Aynı veya benzer ifadeler ASLA tekrarlanmasın. Maksimum çeşitlilik sağla.
-- Çıktıda kesinlikle başka hiçbir metin, açıklama, başlık, markdown veya ek bilgi yazma. Sadece geçerli JSON üret.
+⚠️ KRİTİK KURALLAR (HAYATİ ÖNEM TAŞIR):
+1. **DİL VE ANLATIM (İLKOKUL SEVİYESİ):** Sorular o kadar sade, duru ve net olsun ki, ilkokula giden bir çocuk bile tek seferde anlasın. Asla "akademik" kelime kullanma.
+2. **MANİPÜLASYON KALKANI:** Öğrencinin "bunu seçersem havalı görünürüm" diyemeyeceği, **dolaylı** ve **zekice** kurgulanmış durumlar sun.
+3. **PSİKOLOJİK DERİNLİK:** Dil basit olsun ama ölçtüğü şey derin olsun.
 
-TESTLERE ÖZGÜ ZORUNLU KURALLAR:
-- Çoklu Zeka Testi (Gardner): Tam 80 soru üret. 8 zeka alanı için tam 10'ar soru: Sözel, Mantıksal, Görsel, Müziksel, Bedensel, Sosyal, İçsel, Doğacı. Her soruya ilgili "area" alanı ekle.
-- Holland Mesleki İlgi Envanteri (RIASEC): Tam 90 soru üret. 6 tip için tam 15'er soru: Gerçekçi, Araştırmacı, Yaratıcı, Sosyal, Girişimci, Düzenli. Her soruya ilgili "area" alanı ekle.
-- VARK Öğrenme Stilleri Testi: Tam 16 soru üret. Orijinal VARK tarzında.
-- Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği.
-- Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret.
-- Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret.
+---
+### 🌟 REFERANS ÖRNEK HAVUZU (FEW-SHOT EXAMPLES) 🌟
+(Soruları üretirken aşağıdaki örneklerin sadeliğini, doğallığını ve dolaylı anlatım tarzını kopyala. Asla sıkıcı olma!)
 
-JSON ÇIKTI FORMATI (KESİNLİKLE BU ŞEKİLDE OLSUN):
+**Örnek 1 (Çoklu Zeka - Mantıksal):**
+❌ Kötü Soru: "Matematik problemlerini çözmeyi severim." (Çok bariz)
+✅ İyi Soru: "Sayılarla oynamak bana bulmaca çözmek gibi eğlenceli gelir."
+
+**Örnek 2 (Çoklu Zeka - Sosyal):**
+❌ Kötü Soru: "Liderlik özelliklerim vardır."
+✅ İyi Soru: "Arkadaşlarım bir oyun oynayacağı zaman kuralları genelde ben koyarım."
+
+**Örnek 3 (Çoklu Zeka - İçsel):**
+❌ Kötü Soru: "Kendi duygularımın farkındayımdır."
+✅ İyi Soru: "Bazen odama çekilip 'Bugün neler hissettim?' diye düşünmeyi severim."
+
+**Örnek 4 (Çoklu Zeka - Doğacı):**
+❌ Kötü Soru: "Botanik ile ilgilenirim."
+✅ İyi Soru: "Yerdeki farklı taşları veya yaprakları toplayıp incelemek hoşuma gider."
+
+**Örnek 5 (Holland - Gerçekçi):**
+❌ Kötü Soru: "Mekanik aletleri tamir ederim."
+✅ İyi Soru: "Bozulan bir oyuncağın içini açıp 'Bu nasıl çalışıyor?' diye bakmak isterim."
+
+**Örnek 6 (Holland - Araştırmacı):**
+❌ Kötü Soru: "Bilimsel deneyleri severim."
+✅ İyi Soru: "Gökyüzündeki yıldızların veya karıncaların nasıl yaşadığını merak edip araştırırım."
+
+**Örnek 7 (Holland - Yaratıcı):**
+❌ Kötü Soru: "Sanatsal faaliyetlere katılırım."
+✅ İyi Soru: "Boş bir kağıt gördüğümde dayanamam, hemen renkli kalemlerle bir şeyler çizerim."
+
+**Örnek 8 (Sınav Kaygısı):**
+❌ Kötü Soru: "Sınavlarda fizyolojik semptomlar gösteririm."
+✅ İyi Soru: "Sınav kağıdı önüme gelince kalbim sanki yerinden çıkacakmış gibi hızlı atar."
+
+**Örnek 9 (Sınav Kaygısı):**
+❌ Kötü Soru: "Odaklanma sorunu yaşarım."
+✅ İyi Soru: "Sınavda bildiğim soruları bile heyecandan unutur, sonra hatırlarım."
+
+**Örnek 10 (VARK - Görsel):**
+❌ Kötü Soru: "Görerek öğrenirim."
+✅ İyi Soru: "Bir yeri bulmak için bana adres tarif edilmesi yerine harita gösterilmesini isterim."
+
+**Örnek 11 (VARK - Kinestetik):**
+❌ Kötü Soru: "Dokunarak öğrenirim."
+✅ İyi Soru: "Müzedeki eşyalara dokunmak yasak olduğunda orayı gezmekten sıkılırım."
+
+**Örnek 12 (Sağ-Sol Beyin):**
+❌ Kötü Soru: "Analitik düşünürüm."
+✅ İyi Soru: "Odamdaki eşyaların her zaman aynı yerde ve düzenli durmasını isterim."
+
+**Örnek 13 (Sağ-Sol Beyin):**
+❌ Kötü Soru: "Sezgiselimdir."
+✅ İyi Soru: "Birinin yalan söylediğini, o konuşmasa bile yüzünden anlarım."
+
+**Örnek 14 (Çalışma Davranışı):**
+❌ Kötü Soru: "Planlı çalışırım."
+✅ İyi Soru: "Ödevlerimi son güne bırakmam, azar azar yapıp bitiririm."
+
+**Örnek 15 (Çalışma Davranışı):**
+❌ Kötü Soru: "Ders çalışırken dikkatim dağılır."
+✅ İyi Soru: "Dersin başındayken aklım sürekli telefona veya oyuna gidiyor."
+
+**Örnek 16 (Holland - Girişimci):**
+❌ Kötü Soru: "Satış yapmayı severim."
+✅ İyi Soru: "Eski eşyalarımı veya yaptığım bileklikleri başkalarına satmak hoşuma gider."
+
+**Örnek 17 (Çoklu Zeka - Müziksel):**
+❌ Kötü Soru: "Müzik kulağım iyidir."
+✅ İyi Soru: "Duyduğum bir şarkının ritmini hemen parmaklarımla tutmaya başlarım."
+
+**Örnek 18 (Çoklu Zeka - Bedensel):**
+❌ Kötü Soru: "Spor aktivitelerinde başarılıyımdır."
+✅ İyi Soru: "Sıramda otururken bile ayaklarımı sallar veya elimle bir şeylerle oynarım, duramam."
+
+**Örnek 19 (Holland - Sosyal):**
+❌ Kötü Soru: "İnsanlara yardım ederim."
+✅ İyi Soru: "Sınıfta biri üzgünse hemen yanına gidip onu güldürmeye çalışırım."
+
+**Örnek 20 (Çalışma Davranışı):**
+❌ Kötü Soru: "Motivasyonum yüksektir."
+✅ İyi Soru: "Zor bir ödevle karşılaşınca pes etmem, 'Bunu çözeceğim' derim."
+---
+
+TESTLERE ÖZEL YAPILANDIRMA:
+- **Çoklu Zeka (Gardner):** 80 soru. 8 zeka türü için 10'ar adet. Her soruya "area" etiketi ekle.
+- **Holland (RIASEC):** 90 soru. 6 tip için 15'er adet. Her soruya "area" etiketi ekle.
+- **VARK:** 16 soru.
+- **Sağ-Sol Beyin:** 30 soru.
+- **Çalışma Davranışı:** 73 soru.
+- **Sınav Kaygısı:** 50 soru.
+
+JSON ÇIKTI FORMATI:
 {{
   "type": "likert",
   "questions": [
-    {{"id": 1, "text": "Soru metni burada"}} 
+    {{"id": 1, "text": "Üretilen soru..."}} 
   ]
 }}
 
-Sadece istenen test için soru üret. Çıktı %100 geçerli JSON olsun.
-Test adı: {test_adi}
+Sadece JSON formatında çıktı ver.
+Test Adı: {test_adi}
 """
 
 TEK_RAPOR_PROMPT = """
-Sen dünyanın en iyi psikometrik test analizi ve yorumlama uzmanısın. Çocuk/ergen psikolojisi konusunda çok deneyimlisin.
+Sen öğrencilerin en sevdiği, onları çok iyi anlayan uzman bir psikologsun.
 
-GÖREV: Sadece verilen JSON verilerine dayanarak test sonucunu analiz et. 
-ASLA genel geçer bilgi ekleme. Sadece kullanıcının verilerinden yola çık.
+GÖREV: Verilen test sonuçlarını analiz et ve öğrenciye özel bir rapor yaz.
 
-Rapor tamamen tarafsız, nesnel ve yargısız olsun. 
-Dil ÇOK sade, yalın ve herkesin anlayabileceği bir Türkçe olsun. Ortaokul öğrencisi bile rahatça okuyabilsin.
-Bol grafiksel betimleme kullan (Sözel olarak grafiği anlat, görsel değil).
+---
+### 🌟 RAPOR DİLİ ÖRNEĞİ (FEW-SHOT) 🌟
+(Raporu yazarken aynen bu tonu ve samimiyeti kullan)
 
-Test adı: {test_adi}
+**Örnek Giriş:**
+"Merhaba! Test sonuçlarına baktım ve gerçekten çok ilginç şeyler gördüm. Sanki zihninin içinde kocaman, rengarenk bir kütüphane var ama bazen aradığın kitabı bulmakta zorlanıyorsun gibi..."
+
+**Örnek Güçlü Yön Anlatımı:**
+"Sayısal zekan harika çıkmış! Bu ne demek biliyor musun? Sen olaylara bir dedektif gibi bakıyorsun. Başkalarının 'çok karışık' dediği problemleri sen parçalara ayırıp şıp diye çözüyorsun."
+
+**Örnek Gelişim Alanı Anlatımı:**
+"Biraz sınav kaygın var gibi görünüyor. Sınav kağıdı önüne gelince, aslında bildiğin şeyler saklambaç oynuyor gibi aklından kaçıyor olabilir. Ama merak etme, bunu basit nefes taktikleriyle yeneceğiz."
+---
+
+RAPOR FORMATI:
+1. **Senin Dünyan (Genel Bakış):** Sonuçların özeti.
+2. **Sayısal Tablo:** Puanların listesi.
+3. **Süper Güçlerin:** En iyi olduğun alanlar ve hayattaki karşılığı.
+4. **Geliştirebileceğin Yanlar:** Zorlandığın yerler ve çözüm yolları.
+5. **Hayatına Yansımaları:** Okulda, evde, arkadaşlarınla nasılsın?
+6. **Sana Özel Tavsiyeler:** Hemen bugün yapabileceğin basit öneriler.
+7. **Son Söz:** Motive edici kapanış.
+
+Test: {test_adi}
 Veriler: {cevaplar_json}
-
-ZORUNLU RAPOR FORMATI:
-1. **Genel Değerlendirme**
-2. **Detaylı Puan Dağılımı** (Sayısal veriler)
-3. **Baskın Özellikler ve Güçlü Yönler**
-4. **Gelişim Alanları ve Potansiyel Zorluklar**
-5. **Günlük Hayat Yansımaları** (Okul, ev, arkadaşlık)
-6. **Pratik Öneriler** (Hemen uygulanabilir adımlar)
-7. **Sonuç Özeti ve Motivasyon**
-
-Çıktı sadece bu başlıklarla yapılandırılmış metin olsun.
 """
 
-# --- SABİT ENNEAGRAM VERİLERİ (HIZ VE GÜVENLİK İÇİN LOKAL) ---
+# --- SABİT ENNEAGRAM VERİLERİ (DEĞİŞMEDİ) ---
 ENNEAGRAM_QUESTIONS = {
     1: [
-        "Kendimi hata yaptığımda çok eleştiririm.", "Doğru ve yanlış konusunda güçlü bir içgüdüm vardır.",
-        "Mükemmellik için çok çaba gösteririm.", "Disiplinli ve adil davranmaktan gurur duyarım.",
-        "Kişisel bütünlük benim için çok önemlidir.", "Genellikle mantıklı düşünürüm, duygusal değilim.",
-        "Çok ciddi olabilirim ve eğlenmeyi unuturum.", "Kendimi en çok ben eleştiririm.",
-        "Bir şeyin yanlış olduğunu hemen fark ederim.", "İşlerimi mükemmel yapmaya çalışırım.",
-        "Düzenli ve dakik olmayı çok önemserim.", "Ahlak kuralları benim için çok değerlidir.",
-        "Sorunları ve eksikleri çabuk görürüm.", "Detayların doğru olmasını isterim.",
-        "Stresli zamanlarda katı ve talepkar olurum.", "Rahatken daha anlayışlı ve kabul edici olurum.",
-        "Başkaları tarafından yanlış anlaşılmaktan korkarım.", "Affetmek bana zor gelir.",
-        "Her şeyi siyah-beyaz görürüm, gri alanları kabul etmekte zorlanırım.", "Yanlış olduğumu kabul etmek bana zor gelir."
+        "Hata yaptığımda kendime çok kızarım.", "Neyin doğru neyin yanlış olduğunu hemen hissederim.",
+        "Yaptığım işin kusursuz olması için çok uğraşırım.", "Kurallara uymak ve adil olmak benim için çok önemlidir.",
+        "Sözümün eri olmak, dürüst olmak her şeyden önce gelir.", "Duygularımla değil, mantığımla hareket etmeyi severim.",
+        "Bazen o kadar ciddi olurum ki eğlenmeyi unutabilirim.", "Beni en çok eleştiren kişi yine benim.",
+        "Bir ortamda bir şey düzgün değilse hemen gözüme batar.", "İşlerimi baştan savma değil, tam olması gerektiği gibi yaparım.",
+        "Randevularıma sadık kalmaya ve düzenli olmaya çok dikkat ederim.", "Ahlaklı olmak benim kırmızı çizgimdir.",
+        "Başkalarının göremediği eksiklikleri şıp diye görürüm.", "Detayların atlanmasından hiç hoşlanmam.",
+        "İşler karışınca biraz sert ve kuralcı olabilirim.", "Rahatladığımda ise çok daha anlayışlı ve neşeli olurum.",
+        "Yanlış anlaşılmaktan çok korkarım.", "Bana yapılan yanlışı affetmekte bazen zorlanırım.",
+        "Benim için olaylar ya siyahtır ya beyaz, griyi pek sevmem.", "Haksız olduğumu kabul etmek bana biraz zor gelir."
     ],
     2: [
-        "İlişkiler hayatımın en önemli parçasıdır.", "Başkalarına yardım etmekten ve onları mutlu etmekten keyif alırım.",
-        "Hayır demek bana zor gelir.", "Vermek bana almaktan daha kolay gelir.",
-        "İnsanlarla yakın olmak isterim.", "Başkalarının bana ihtiyaç duymasını severim.",
-        "Dışa dönük ve sıcakkanlı bir yapım vardır.", "Olumsuz duygularımı pek göstermem.",
-        "Takdir edilmek beni çok motive eder.", "Başkalarının bana bağımlı olmasını severim.",
-        "Sevdiğimi söylemek ve duymak benim için önemlidir.", "İnsanlar bana sorunlarını rahatça anlatır.",
-        "İlişkilerimi korumak için çok çaba gösteririm.", "Stresli zamanlarda talepkar olurum.",
-        "Rahatken sevgi dolu ve destekleyici olurum.", "İnsanları kolayca severim.",
-        "Takdir görmediğimde üzülürüm.", "Yardım ederken kendimi iyi hissederim.",
-        "Sevilmek ve bağlantı kurmak benim için önemlidir.", "Endişelendiğimde fazla fedakar olurum."
+        "Hayatımdaki en önemli şey sevdiklerimle olan ilişkimdir.", "İnsanlara yardım etmek beni çok mutlu eder.",
+        "Biri benden bir şey isteyince 'Hayır' demekte zorlanırım.", "Hediye vermeyi, hediye almaktan daha çok severim.",
+        "İnsanlarla samimi ve yakın olmayı isterim.", "Başkalarının bana ihtiyaç duyması hoşuma gider.",
+        "Genelde sıcakkanlı ve güler yüzlüyümdür.", "Üzgün olduğumu pek belli etmem, hep güçlü görünmeye çalışırım.",
+        "Yaptığım iyiliğin fark edilmesi ve 'Teşekkür' duymak beni motive eder.", "Sevdiklerimin her an yanımda olmasını isterim.",
+        "'Seni seviyorum' demekten ve duymaktan hiç çekinmem.", "Arkadaşlarım dertlerini hep bana anlatır, iyi bir sırdaşımdır.",
+        "Arkadaşlıklarımı korumak için kendimden çok ödün veririm.", "Çok strese girersem biraz sitemkar olabilirim.",
+        "Mutluysam etrafıma neşe ve sevgi saçarım.", "İnsanları sevmeye çok hazırım.",
+        "İlgi görmediğim zaman içten içe kırılırım.", "Birinin işini kolaylaştırmak beni iyi hissettirir.",
+        "Sevilmek ve bir gruba ait olmak benim için hava, su kadar önemlidir.", "Endişelendiğimde insanlara daha çok yardım etmeye çalışırım."
     ],
     3: [
-        "Kendimi iyi tanıtır ve pazarlarım.", "Birden fazla işi aynı anda yapmayı severim.",
-        "Başarılı olmayı ve öne çıkmayı isterim.", "Çalışmak ve üretken olmak benim için önemlidir.",
-        "Hedeflerime odaklanırım.", "İyi görünmeye ve iyi izlenim bırakmaya önem veririm.",
-        "Rekabetten önce harekete geçmeyi tercih ederim.", "İnsanlarla birlikte olmayı severim.",
-        "En etkili yolu bulmakta iyiyim.", "Bazen fazla söz veririm.",
-        "Duygularımı pek göstermem.", "Rekabet etmek beni motive eder.",
-        "Kariyerimde zirveye çıkmayı isterim.", "Stresli zamanlarda kendimi fazla överim.",
-        "Rahatken dürüst ve çekici olurum.", "Olumsuz duyguları işe engel görürüm.",
-        "Yeni durumlara kolay uyum sağlarım.", "Başarılı insanları desteklerim.",
-        "En iyisi olmaya çalışırım.", "Başarı ile motive olurum."
+        "Girdiğim ortamlarda kendimi iyi ifade ederim.", "Aynı anda birkaç işi birden yönetebilirim.",
+        "Başarılı olmak ve parmakla gösterilmek isterim.", "Boş durmayı sevmem, üretken olmak beni canlı tutar.",
+        "Bir hedef koyduysam ona kilitlenirim.", "Dışarıdan nasıl göründüğüme ve imajıma önem veririm.",
+        "Rakiplerimden önce harekete geçmeyi severim.", "Takım çalışmasını severim ama lider olmak isterim.",
+        "Bir işin en kısa ve en pratik yolunu hemen bulurum.", "Bazen heyecanlanıp yapabileceğimden fazla söz verebilirim.",
+        "Duygularımı işime karıştırmayı pek sevmem.", "Yarışma ortamları beni daha çok çalışmaya iter.",
+        "Okulda veya işte en tepede olmayı hayal ederim.", "Çok stresliysem başkalarını biraz küçümseyebilirim.",
+        "Rahatsam çok dürüst ve herkesi motive eden biri olurum.", "Olumsuz düşüncelerin beni yavaşlatmasına izin vermem.",
+        "Yeni bir ortama girdiğimde hemen uyum sağlarım.", "Başarılı insanlarla arkadaşlık etmeyi severim.",
+        "Yaptığım her işin 'En İyisi' olmaya çalışırım.", "Başardığımı görmek benim yakıtımdır."
     ],
     4: [
-        "Yaratıcı bir yapım vardır.", "Kendimi başkalarından farklı hissederim.",
-        "Melankolik ruh hallerim olur.", "Çok hassas bir insanım.",
-        "Hayatımda bir şey eksikmiş gibi hissederim.", "Başkalarının başarılarına kıskançlık duyabilirim.",
-        "Yaratıcılığımı ifade etmekten hoşlanırım.", "Yanlış anlaşıldığımda içe kapanırım.",
-        "Romantik bir yapım vardır.", "Hayal kurmayı severim.",
-        "Benzersiz şeylere sahip olmayı isterim.", "Yoğun deneyimlere çekilirim.",
-        "Stresli zamanlarda huysuz olurum.", "Rahatken şefkatli ve destekleyici olurum.",
-        "Eleştiriye çok duyarlıyım.", "Hayatın anlamını düşünürüm.",
-        "Sıradan olmaktan kaçınırım.", "İyi zevklere önem veririm.",
-        "Bazen dramatik davranırım.", "Duyguları anlamayı önemli bulurum."
+        "Hayal gücüm çok geniştir, kafamda filmler çekerim.", "Kendimi çoğu insandan biraz farklı ve özel hissederim.",
+        "Bazen sebepsiz yere hüzünlenirim, melankoliyi severim.", "Çok hassas bir kalbim vardır, çabuk etkilenirim.",
+        "Sanki hayatımda bir parça eksikmiş gibi hissederim.", "Başkalarının mutluluğunu görünce bazen 'Neden ben değil?' derim.",
+        "Duygularımı sanatla, müzikle veya yazıyla ifade etmeyi severim.", "Beni anlamadıklarını düşündüğümde kabuğuma çekilirim.",
+        "Romantik ve duygusal filmlerden/kitaplardan hoşlanırım.", "Sıradan ve herkes gibi olmak benim korkulu rüyamdır.",
+        "Kimsede olmayan, orijinal eşyalara sahip olmayı severim.", "Duyguları çok yoğun yaşarım, ya hep ya hiç.",
+        "Stresliyken biraz huysuz ve mesafeli olabilirim.", "Rahatsam çok şefkatli ve anlayışlı olurum.",
+        "Eleştirildiğim zaman çok alınırım.", "Hayatın anlamını ve derinliğini sık sık düşünürüm.",
+        "Sürüden ayrılmayı, kendi tarzımı yaratmayı severim.", "Estetik ve güzellik benim için çok önemlidir.",
+        "Bazen olayları biraz dramatik hale getirebilirim.", "Duyguların samimi olması benim için her şeyden önemlidir."
     ],
     5: [
-        "Duygusal ortamlardan rahatsız olurum.", "Analiz yapmakta ve araştırmakta iyiyim.",
-        "İçe dönük ve utangaç olabilirim.", "Fikirlerimi duygulardan daha kolay ifade ederim.",
-        "Konuşmadan önce düşünürüm.", "Çatışmalardan kaçınırım.",
-        "Yalnız çalışmaktan zevk alırım.", "Eleştiriye duyarlıyım ama göstermem.",
-        "Bağımsız olmayı severim.", "Özel hayatımı paylaşmayı pek sevmem.",
-        "Düşüncelerim karmaşık olabilir.", "Zamanımı ve alanımı kontrol etmek isterim.",
-        "Bilgisiz davranışlardan rahatsız olurum.", "Her konuda fikrim vardır.",
-        "Benzer ilgi alanları olan insanlarla sosyalleşirim.", "Stresli zamanlarda mesafeli olurum.",
-        "Rahatken objektif ve içgörülü olurum.", "Entellektüel tartışmalara girebilirim.",
-        "Yalnız çalışmayı tercih ederim.", "Kararları mantıkla alırım."
+        "Çok vıcık vıcık duygusal ortamlardan kaçarım.", "Bir konuyu en ince detayına kadar araştırmayı severim.",
+        "Biraz utangaç olabilirim, kalabalıkta kaybolmayı tercih ederim.", "Duygularımı anlatmaktansa fikirlerimi anlatmayı severim.",
+        "Bir şey söylemeden önce kafamda tartar, öyle konuşurum.", "Kavgadan ve gürültüden nefret ederim.",
+        "Tek başıma vakit geçirmek benim için şarj olmak gibidir.", "Eleştiriye gelemem ama bunu dışarı pek belli etmem.",
+        "Kimseye muhtaç olmadan, kendi ayaklarımın üzerinde durmak isterim.", "Özel hayatımı ve sırlarımı kolay kolay paylaşmam.",
+        "Kafamın içinde sürekli projeler, fikirler döner durur.", "Zamanımı ve odamı kimsenin işgal etmesini istemem.",
+        "Bilmeden konuşan insanlara tahammül edemem.", "İlgi duyduğum konularda ayaklı kütüphane gibiyimdir.",
+        "Sadece kafamın uyuştuğu, zeki insanlarla konuşmayı severim.", "Stresliyken insanlardan tamamen kopabilirim.",
+        "Rahatsam bilgimi paylaşan, çok zeki ve esprili biri olurum.", "Derin ve felsefi tartışmalara bayılırım.",
+        "Grup ödevi yerine bireysel ödevi tercih ederim.", "Kararlarımı hislerimle değil, aklımla veririm."
     ],
     6: [
-        "Sorumluluk bilincim yüksektir.", "Her ihtimale hazırlıklı olmaya çalışırım.",
-        "Başkalarının niyetlerinden şüphe ederim.", "Karar vermekte zorlanırım.",
-        "Güvenlik benim için önemlidir.", "Kendi kararlarımdan şüphe duyarım.",
-        "Gruba ait olmayı önemserim.", "Her şeyin yoluna gireceğine inanırım ama endişelenirim.",
-        "Aile ve arkadaşlarım bana destek olur.", "Küçük sorunlara fazla tepki verebilirim.",
-        "Yeni insanlara hemen güvenmem.", "Tehlikeleri önceden fark ederim.",
-        "Stresli zamanlarda kaygılı olurum.", "Rahatken sıcak ve sadık olurum.",
-        "Kaygılı olduğumda kontrolcü olurum.", "Rahatken dostça davranırım.",
-        "İlişkilerde bağlılığa güvenmekte zorlanırım.", "Korkumu yenmek için çaba gösteririm.",
-        "Çoğu insandan daha fazla endişelenirim.", "Güvenlik ve destekle motive olurum."
+        "Sorumluluklarımı asla aksatmam, ödevimi son ana bırakmam.", "Her zaman 'B planım', hatta 'C planım' vardır.",
+        "İnsanların niyetini hemen anlamam, biraz şüpheciyimdir.", "Karar verirken çok düşünürüm, hata yapmaktan korkarım.",
+        "Güvende hissetmek benim için en önemli şeydir.", "Kendi kararımdan emin olamayıp başkalarına danışırım.",
+        "Bir gruba veya takıma ait olmak beni rahatlatır.", "Kötü bir şey olacakmış gibi endişelenirim.",
+        "Ailem ve arkadaşlarım benim güvenli limanımdır.", "Küçük sorunları kafamda büyütüp felaket senaryoları yazabilirim.",
+        "Yeni tanıştığım insanlara hemen güvenmem, zaman tanırım.", "Tehlikeyi ve riski önceden sezerim.",
+        "Stresliyken çok kaygılı ve evhamlı olurum.", "Rahatsam dünyanın en sadık ve eğlenceli dostu olurum.",
+        "Korktuğum zaman ya donup kalırım ya da saldırganlaşabilirim.", "Kurallara uyan, düzenli biriyimdir.",
+        "Biri bana söz verip tutmazsa çok sinirlenirim.", "Korkularımın üzerine gitmek için çabalarım.",
+        "Çoğu insandan daha tedbirliyimdir.", "Bana destek olan, arkamda duran insanları asla bırakmam."
     ],
     7: [
-        "Hayattan keyif almayı önemserim.", "Neşeli ve konuşkan bir yapım vardır.",
-        "Seçeneklerimi açık tutmayı severim.", "Çok arkadaşım vardır.",
-        "Yeni ve heyecan verici şeyler severim.", "İyimser bir insanım.",
-        "Eğlendirmeyi ve güldürmeyi severim.", "Çok enerjik olabilirim.",
-        "Farklı şeyler denemekten hoşlanırım.", "Sıkılmaktan nefret ederim.",
-        "Aşırıya kaçabilirim.", "Kısıtlanmaktan rahatsız olurum.",
-        "Stresli zamanlarda disiplinsiz olurum.", "Rahatken eğlenceli ve hayalperest olurum.",
-        "Sevdiğim işte çok üretken olurum.", "Acıdan kaçınırım.",
-        "Yeterli zaman olmaması beni üzür.", "Olumsuz insanlardan hoşlanmam.",
-        "Planları hemen uygulamak isterim.", "Heyecan ve mutlulukla motive olurum."
+        "Hayatın tadını çıkarmak, eğlenmek benim işim.", "Çok konuşkan, neşeli ve fıkır fıkır biriyimdir.",
+        "Planlarımın kesinleşmesinden hoşlanmam, seçeneklerim açık olsun isterim.", "Çevrem geniştir, her yerden arkadaşım vardır.",
+        "Sürekli yeni şeyler denemek, maceralara atılmak isterim.", "Geleceğe hep umutla bakarım, bardağın dolu tarafını görürüm.",
+        "İnsanları güldürmeyi, hikayeler anlatmayı severim.", "Yerimde duramam, enerjim hiç bitmez.",
+        "Farklı hobiler, farklı tatlar denemeye bayılırım.", "Sıkılmak benim en büyük düşmanımdır.",
+        "Bazen ölçüyü kaçırıp aşırıya kaçabilirim (çok yemek, çok gezmek).", "Özgürlüğümün kısıtlanmasına asla gelemem.",
+        "Stresliyken daldan dala atlar, hiçbir işi bitiremem.", "Rahatsam çok yaratıcı ve vizyoner olurum.",
+        "Sevdiğim bir işse harikalar yaratırım ama sıkılırsam bırakırım.", "Acıdan, üzüntüden kaçmak için kendimi eğlenceye veririm.",
+        "Bir güne çok fazla plan sığdırmaya çalışırım.", "Negatif ve sürekli şikayet eden insanlardan kaçarım.",
+        "Aklıma bir fikir gelince hemen yapmak isterim.", "Mutluluk ve heyecan benim yakıtımdır."
     ],
     8: [
-        "İstediklerim için mücadele ederim.", "Cesur ve lider bir yapım vardır.",
-        "Bağımsız ve güçlü olmayı severim.", "Kararsız insanlardan sabırsızlanırım.",
-        "Rekabet etmeyi ve kazanmayı severim.", "Sevdiklerimi korurum.",
-        "Kontrolü elimde tutmayı severim.", "Güven kazanmak gerekir.",
-        "Risk almaktan hoşlanırım.", "Sıkı çalışırım.",
-        "Meydan okumayı severim.", "Saygı duyulmayı tercih ederim.",
-        "Grupta liderlik yaparım.", "Doğrudan konuşurum.",
-        "Stresli zamanlarda kontrolcü olurum.", "Rahatken enerjik ve yardımcı olurum.",
-        "Duygularımı pek göstermem.", "Güvendiğimde hassas olurum.",
-        "Eğlenceye düşkün olabilirim.", "Kendimi korumakla motive olurum."
+        "İstediğim şeyi almak için sonuna kadar mücadele ederim.", "Doğuştan liderimdir, yönetmeyi severim.",
+        "Güçlü görünmek hoşuma gider, zayıflıktan nefret ederim.", "Mızmız ve kararsız insanlara tahammülüm yoktur.",
+        "Yarışmayı ve kazanmayı severim, kaybetmek kitabımda yazmaz.", "Sevdiklerimi canım pahasına korurum, onlara laf ettirmem.",
+        "İplerin elimde olmasını, kontrolün bende olmasını isterim.", "Saygı benim için sevgiden önce gelir.",
+        "Risk almaktan korkmam, cesurumdur.", "Çok çalışırım, yorulmak nedir bilmem.",
+        "Biri bana meydan okursa cevabını fazlasıyla alır.", "Lafı dolandırmam, neysem oyum, yüzüne söylerim.",
+        "Bir grubun başına geçip organize etmekte iyiyimdir.", "Dobra konuşurum, bazen bu yüzden insanlar kırılabilir.",
+        "Stresliyken çok baskıcı ve sinirli olabilirim.", "Rahatsam koca yürekli, koruyucu bir kahraman olurum.",
+        "Duygularımı göstermeyi zayıflık olarak görürüm.", "Sadece gerçekten güvendiğim insanlara kalbimi açarım.",
+        "Hayatı dolu dolu, yüksek sesle yaşamayı severim.", "Haksızlığa asla gelemem, hemen müdahale ederim."
     ],
     9: [
-        "Çatışmadan kaçınırım.", "Rahat ve iyimser bir yapım vardır.",
-        "İyi bir dinleyiciyim.", "Ertelemeye meyilliyim.",
-        "Rutinlerden hoşlanırım.", "Karar vermekte zorlanırım.",
-        "Yapı ve rutin bana yardımcı olur.", "Detayları unutabilirim.",
-        "Öfkemi pek göstermem.", "Dinlenmeyi severim.",
-        "Evde vakit geçirmekten hoşlanırım.", "Uyum ararım.",
-        "Dırdır edilmekten hoşlanmam.", "Önemsiz işlerle oyalanırım.",
-        "Stresli zamanlarda inatçı olurum.", "Rahatken sabırlı ve açık fikirli olurum.",
-        "Başkalarını memnun etmeye çalışırım.", "Çok karar vermek beni yorar.",
-        "Herkesle iyi geçinirim.", "Huzur ve uyumla motive olurum."
+        "Kavgadan, gürültüden hiç hoşlanmam, huzur isterim.", "Herkes 'Çok sakinsin' der, kolay kolay sinirlenmem.",
+        "İnsanları çok iyi dinlerim, herkesin derdini anlarım.", "Önemli işleri son ana kadar erteleyebilirim.",
+        "Alışkanlıklarımı severim, düzenimin bozulmasını istemem.", "Karar vermek bana zor gelir, 'Fark etmez' demek daha kolaydır.",
+        "Acele ettirilmekten nefret ederim, kendi hızımda gitmek isterim.", "Bazen detayları unuturum, dalgın olabilirim.",
+        "Öfkemi içime atarım, dışarı pek yansıtmam.", "Boş zamanımda hiçbir şey yapmadan uzanmayı severim.",
+        "Evde vakit geçirmek, kendi halimde olmak hoşuma gider.", "Ortam gerilmesin diye alttan alırım.",
+        "Birinin bana sürekli ne yapacağımı söylemesi beni inatçı yapar.", "Önemsiz işlerle oyalanıp asıl işi kaçırabilirim.",
+        "Stresliyken pasifleşirim, hiçbir şey yapasım gelmez.", "Rahatsam çok üretken ve herkesi birleştiren biri olurum.",
+        "Başkalarını memnun etmek için kendi isteğimden vazgeçebilirim.", "Çok fazla seçenek arasında kalmak beni yorar.",
+        "Herkesle iyi geçinmeye çalışırım, düşmanım yoktur.", "Huzurlu ve sakin bir hayat hayalimdir."
     ]
 }
 
@@ -218,15 +305,15 @@ ENNEAGRAM_DATA = {
 }
 
 WING_DESCRIPTIONS = {
-    "1w9": "Daha sakin ve filozofik mükemmeliyetçi.", "1w2": "Daha yardımsever ve dışa dönük.",
-    "2w1": "Daha prensipli ve sorumlu yardımcı.", "2w3": "Daha hırslı ve sosyal.",
-    "3w2": "Daha ilişki odaklı ve sıcakkanlı.", "3w4": "Daha sanatsal ve bireysel.",
-    "4w3": "Daha hırslı ve performans odaklı.", "4w5": "Daha analitik ve içe dönük.",
-    "5w4": "Daha yaratıcı ve duygusal araştırmacı.", "5w6": "Daha planlı ve sadık.",
-    "6w5": "Daha bağımsız ve mesafeli.", "6w7": "Daha sosyal ve iyimser.",
-    "7w6": "Daha sorumlu ve grup odaklı.", "7w8": "Daha lider ruhlu ve kararlı.",
-    "8w7": "Daha enerjik ve eğlenceli lider.", "8w9": "Daha barışçıl ve sakin güç.",
-    "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
+    "1w9": "Sakin ve barışçıl mükemmeliyetçi.", "1w2": "Yardımsever ve dışa dönük reformcu.",
+    "2w1": "Prensipli ve ciddi yardımcı.", "2w3": "Hırslı ve popüler yardımcı.",
+    "3w2": "Sıcakkanlı ve insan odaklı başarılı.", "3w4": "Sanatsal ve duygusal başarılı.",
+    "4w3": "Hırslı ve sahne ışığı seven bireyci.", "4w5": "İçe dönük ve entelektüel bireyci.",
+    "5w4": "Yaratıcı ve hayalperest araştırmacı.", "5w6": "Planlı ve güvenilir araştırmacı.",
+    "6w5": "Bağımsız ve ciddi sadık.", "6w7": "Eğlenceli ve sosyal sadık.",
+    "7w6": "Sorumluluk sahibi ve dost canlısı maceracı.", "7w8": "Lider ruhlu ve cesur maceracı.",
+    "8w7": "Enerjik ve dışa dönük lider.", "8w9": "Sakin güç ve babacan lider.",
+    "9w8": "Kararlı ve sınır koyan barışçı.", "9w1": "İdealist ve düzenli barışçı."
 }
 
 # --- YARDIMCI FONKSİYONLAR ---
@@ -268,17 +355,25 @@ def calculate_enneagram_report(all_answers):
     wing_txt = WING_DESCRIPTIONS.get(f"{main_type}w{wing_type}", "Dengeli kanat.")
     
     report = f"""
-    # 🌟 ENNEAGRAM SONUÇ RAPORU 🌟
-    **Baskın Tip:** {data['title']} (%{main_score})
-    **Profil:** {full_type_str}
+    # 🌟 ENNEAGRAM KİŞİLİK RAPORU 🌟
+    **Senin Tipin:** {data['title']} (%{main_score})
+    **Tam Profilin:** {full_type_str}
     
     ---
-    **Kimsin Sen?** {data['desc']}
-    **Kanat Etkisi:** {wing_txt}
-    **Süper Güçler:** {', '.join(data['strengths'])}
-    **Gelişim Alanları:** {', '.join(data['weaknesses'])}
-    **Çalışma Tarzın:** {data['work_style']}
-    **Reçete:** {', '.join(data['prescription'])}
+    ### 📖 Sen Kimsin?
+    {data['desc']}
+    
+    ### 🦅 Kanat Etkisi
+    {wing_txt}
+    
+    ### 💪 Süper Güçlerin (Bunları Kullan!)
+    {', '.join(data['strengths'])}
+    
+    ### 🚧 Dikkat Etmen Gerekenler
+    {', '.join(data['weaknesses'])}
+    
+    ### 💊 Sana Özel Taktikler
+    {', '.join(data['prescription'])}
     """
     return scores, report
 
@@ -296,25 +391,24 @@ def app():
     # --- FAZ SİSTEMİ MANTIĞI ---
     lc = st.session_state.get('login_phase', 1)
     
-    if lc <= 1: # İlk kayıt ve ilk giriş
+    if lc <= 1: 
         current_tests = PHASE_1_TESTS
         phase_name = "1. AŞAMA: Kişilik ve Zihin Yapısı"
-    elif lc == 2: # İkinci giriş
+    elif lc == 2: 
         current_tests = PHASE_2_TESTS
         phase_name = "2. AŞAMA: Öğrenme ve Kaygı Durumu"
-    else: # Üçüncü ve sonraki girişler
+    else: 
         current_tests = PHASE_3_TESTS
         phase_name = "3. AŞAMA: Yetenek ve Kariyer Eğilimi"
 
     # --- SAYFA 1: ANA MENÜ (HOME) ---
     if st.session_state.page == "home":
         st.markdown(f"## 👤 Merhaba, {st.session_state.student_name}")
-        st.info(f"Şu an **{phase_name}** testlerini görüntülüyorsunuz.")
+        st.info(f"Şu an **{phase_name}** ekranındasınız.")
         st.write("Lütfen çözmek istediğiniz testi seçiniz:")
         
         col1, col2 = st.columns(2)
         
-        # Testleri dinamik listele
         for idx, test in enumerate(current_tests):
             is_done = check_test_completed(st.session_state.student_id, test)
             target_col = col1 if idx % 2 == 0 else col2
@@ -326,13 +420,13 @@ def app():
                     st.session_state.selected_test = test
                     st.session_state.intro_passed = False
                     
-                    with st.spinner("Test Yükleniyor..."):
+                    with st.spinner("Yapay Zeka Senin İçin Özel Sorular Hazırlıyor..."):
                         if "Enneagram" in test:
                             st.session_state.enneagram_type_idx = 1
                             st.session_state.enneagram_answers = {}
                             st.session_state.current_test_data = {"type": "enneagram_fixed"}
                         else:
-                            # Grok'tan soru çek
+                            # Grok'tan YENİ ve GÜÇLÜ Prompt ile soru çek
                             prompt = SORU_URETIM_PROMPT.format(test_adi=test)
                             raw = get_data_from_ai(prompt)
                             try:
@@ -342,7 +436,7 @@ def app():
                                 st.session_state.cevaplar = {}
                                 st.session_state.sayfa = 0
                             except:
-                                st.error("Test soruları yüklenirken hata oluştu.")
+                                st.error("Test soruları yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")
                                 return
                     
                     st.session_state.page = "test"
@@ -350,13 +444,13 @@ def app():
 
     # --- SAYFA 2: BAŞARI EKRANI ---
     elif st.session_state.page == "success_screen":
-        st.markdown("<div class='success-box'><h1>🎉 Tebrikler!</h1><p>Testi başarıyla tamamladınız. Sonuçlar öğretmen paneline iletildi.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='success-box'><h1>🎉 Harika İş Çıkardın!</h1><p>Testi başarıyla tamamladın. Sonuçların öğretmenine iletildi.</p></div>", unsafe_allow_html=True)
         st.markdown("---")
         c1, c2 = st.columns(2)
-        if c1.button("🏠 Ana Menüye Dön"):
+        if c1.button("🏠 Diğer Teste Geç"):
             st.session_state.page = "home"
             st.rerun()
-        if c2.button("🚪 Güvenli Çıkış"):
+        if c2.button("🚪 Çıkış Yap"):
             st.session_state.clear()
             st.rerun()
 
@@ -367,8 +461,8 @@ def app():
         # Giriş
         if not st.session_state.intro_passed:
             st.title(f"📘 {t_name}")
-            st.info("Lütfen tüm soruları samimiyetle cevaplayınız. Boş bırakılan sorular sistem tarafından tespit edilir.")
-            if st.button("TESTİ BAŞLAT", type="primary"):
+            st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın. Boş bırakılan soruları sistem otomatik yakalar.")
+            if st.button("HAZIRIM, BAŞLA!", type="primary"):
                 st.session_state.intro_passed = True
                 st.rerun()
         
@@ -412,19 +506,18 @@ def app():
                         # Sayfa içi kontrol
                         missing = [qid for qid in page_q_ids if qid not in st.session_state.cevaplar]
                         if missing:
-                            st.error("⚠️ Lütfen bu sayfadaki tüm soruları cevaplayınız!")
+                            st.error("⚠️ Hop! Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin. 😉")
                         else:
                             st.session_state.sayfa += 1
                             st.rerun()
                 else:
-                    if c2.button("Bitir ve Gönder ✅", type="primary"):
+                    if c2.button("Testi Bitir ✅", type="primary"):
                         # Final kontrol
                         missing_q = next((q for q in qs if q['id'] not in st.session_state.cevaplar), None)
                         if missing_q:
-                            st.error("⚠️ Eksik sorular var! Lütfen kontrol ediniz.")
-                            # İstenirse burada sayfa yönlendirmesi de yapılabilir ama sayfa içi kontrol olduğu için gerek kalmayabilir.
+                            st.error("⚠️ Eksik sorular var! Lütfen kontrol et.")
                         else:
-                            with st.spinner("Analiz yapılıyor..."):
+                            with st.spinner("Yapay zeka sonuçlarını analiz ediyor..."):
                                 rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=t_name, cevaplar_json=json.dumps(st.session_state.cevaplar)))
                                 save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.cevaplar, None, rep)
                                 st.session_state.page = "success_screen"
@@ -456,16 +549,16 @@ def app():
                 if curr_type < 9:
                     if c2.button("Sonraki Bölüm ➡️"):
                         if not all_answered:
-                            st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevaplayınız!")
+                            st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevapla.")
                         else:
                             st.session_state.enneagram_type_idx += 1
                             st.rerun()
                 else:
-                    if c2.button("Bitir ✅", type="primary"):
+                    if c2.button("Bitir ve Gönder ✅", type="primary"):
                         if not all_answered:
-                            st.error("⚠️ Lütfen tüm soruları cevaplayınız!")
+                            st.error("⚠️ Lütfen tüm soruları cevapla.")
                         else:
-                            with st.spinner("Kişilik analizi yapılıyor..."):
+                            with st.spinner("Kişilik haritan çıkarılıyor..."):
                                 scores, rep = calculate_enneagram_report(st.session_state.enneagram_answers)
                                 save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.enneagram_answers, scores, rep)
                                 st.session_state.page = "success_screen"
