@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time  # <--- İşte hatayı çözen sihirli satır burası
 from db_utils import get_all_students_with_results, reset_database, delete_specific_students
 from openai import OpenAI
 import os
@@ -40,11 +41,10 @@ def plot_scores(data_dict, title):
     
     # Veriyi hazırla
     labels = [str(k) for k in data_dict.keys()]
-    # Değerleri sayıya çevirmeyi dene (Enneagram'da float olabilir)
     try:
         values = [float(v) for v in data_dict.values()]
     except:
-        return None # Sayısal veri yoksa grafik çizme
+        return None 
 
     # Grafik Ayarları
     sns.set_theme(style="whitegrid")
@@ -63,6 +63,23 @@ def plot_scores(data_dict, title):
 # --- ANA ÖĞRETMEN UYGULAMASI ---
 
 def app():
+    # --- CSS: MOUSE İŞARETÇİSİ VE STİL AYARLARI ---
+    st.markdown("""
+    <style>
+        /* Selectbox (Açılır Liste) üzerine gelince el işareti çıksın */
+        div[data-baseweb="select"] {
+            cursor: pointer !important;
+        }
+        /* Dropdown içindeki öğelere de el işareti */
+        div[role="listbox"] li {
+            cursor: pointer !important;
+        }
+        .stSelectbox > div > div {
+            cursor: pointer !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.title("👨‍🏫 Öğretmen Yönetim Paneli")
     st.markdown("---")
 
@@ -81,48 +98,54 @@ def app():
             if not student_names_all:
                 st.info("Sistemde kayıtlı öğrenci yok.")
             else:
-                st.warning("Seçilen öğrencilerin tüm verileri (testler, raporlar) silinecektir.")
-                
-                # Çoklu Seçim
-                selected_to_delete = st.multiselect(
-                    "Silinecek Öğrencileri Seç:", 
-                    options=student_names_all
-                )
+                st.warning("Seçilen öğrencilerin tüm verileri silinecektir.")
+                selected_to_delete = st.multiselect("Silinecekleri Seç:", options=student_names_all)
                 
                 if selected_to_delete:
                     if st.button("SEÇİLENLERİ KALICI OLARAK SİL", type="primary"):
                         if delete_specific_students(selected_to_delete):
-                            st.success("Seçilen kayıtlar başarıyla silindi.")
-                            time.sleep(1)
+                            st.success("Kayıtlar başarıyla silindi.")
+                            time.sleep(1) # Artık hata vermeyecek
                             st.rerun()
                         else:
-                            st.error("Silme işlemi başarısız oldu.")
+                            st.error("Silme başarısız.")
 
         st.markdown("---")
         
         # 2. TAM SIFIRLAMA
         with st.expander("⚠️ Fabrika Ayarlarına Dön"):
-            st.error("DİKKAT: Veritabanındaki HER ŞEY silinir.")
+            st.error("DİKKAT: Her şey silinir.")
             if st.button("TÜM SİSTEMİ SIFIRLA"):
                 if reset_database():
-                    st.success("Sistem tamamen sıfırlandı.")
+                    st.success("Sistem sıfırlandı.")
                     time.sleep(1)
                     st.rerun()
 
     # --- ANA EKRAN İÇERİĞİ ---
     
     if not data:
-        st.info("📂 Henüz kayıtlı öğrenci verisi bulunmamaktadır. Öğrenciler kayıt olduğunda burada görünecektir.")
+        st.info("📂 Henüz kayıtlı öğrenci verisi bulunmamaktadır.")
         return
 
-    # 1. ÖĞRENCİ SEÇİMİ
+    # 1. ÖĞRENCİ SEÇİMİ (VARSAYILAN BOŞ VE İŞARET PARMAĞI İKONLU)
     st.subheader("📂 Öğrenci Dosyası Görüntüle")
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        selected_name = st.selectbox("Öğrenci Seçiniz:", student_names_all)
+        # index=None ile varsayılan boş gelir
+        selected_name = st.selectbox(
+            "İncelemek İstediğiniz Öğrenciyi Seçiniz:", 
+            student_names_all, 
+            index=None, 
+            placeholder="Listeden bir öğrenci seçin..."
+        )
     
-    # Seçilen öğrencinin verilerini al
+    # EĞER SEÇİM YAPILMADIYSA BURADA DUR VE BİLGİ VER
+    if not selected_name:
+        st.info("👆 Lütfen analizlerini görmek istediğiniz öğrenciyi yukarıdaki listeden seçiniz.")
+        return
+
+    # SEÇİM YAPILDIYSA DEVAM ET
     student_data = next(d for d in data if d["info"].name == selected_name)
     info = student_data["info"]
     tests = student_data["tests"]
@@ -140,7 +163,7 @@ def app():
         c3.caption("Şifre")
         c3.write(f"**{info.password}**")
         
-        c4.caption("Durum (Faz)")
+        c4.caption("Durum")
         c4.write(f"**{info.login_count}. Giriş**")
     
     st.divider()
@@ -151,34 +174,29 @@ def app():
     if not tests:
         st.warning("⚠️ Bu öğrenci henüz hiç test tamamlamamış.")
     else:
-        st.write("Aşağıdaki listeden analiz etmek istediğiniz testleri seçin. İsterseniz tek bir testi, isterseniz hepsini seçip **Bütüncül Rapor** oluşturabilirsiniz.")
+        st.write("Aşağıdaki listeden analiz etmek istediğiniz testleri seçin.")
         
-        # Test Seçim Kutusu
         test_names = [t["test_name"] for t in tests]
         selected_tests = st.multiselect(
             "Analize Dahil Edilecek Testler:",
             options=test_names,
-            default=test_names # Varsayılan olarak hepsi seçili gelir
+            default=test_names
         )
         
         if st.button("🧠 SEÇİLEN TESTLERİ ANALİZ ET", type="primary"):
             if not selected_tests:
                 st.error("Lütfen en az bir test seçiniz.")
             else:
-                # Seçilen test verilerini filtrele
                 analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
                 
                 # --- A. GRAFİK GÖSTERİMİ ---
                 st.markdown("### 📊 Grafiksel Sonuçlar")
-                
-                # Grafikleri 2'li kolonlar halinde göster
                 cols = st.columns(2)
                 for idx, t in enumerate(analyzed_data):
-                    if t["scores"]: # Eğer sayısal puan varsa grafik çiz
+                    if t["scores"]:
                         fig = plot_scores(t["scores"], t["test_name"])
                         if fig:
                             cols[idx % 2].pyplot(fig)
-                             
                         else:
                             cols[idx % 2].info(f"{t['test_name']} için grafik verisi yok.")
                 
@@ -186,7 +204,6 @@ def app():
                 st.markdown("### 📝 Yapay Zeka Destekli Bütüncül Rapor")
                 
                 with st.spinner("Yapay zeka verileri harmanlıyor ve raporu yazıyor..."):
-                    # Veriyi JSON formatına çevir
                     ai_input_data = []
                     for t in analyzed_data:
                         ai_input_data.append({
@@ -195,7 +212,6 @@ def app():
                             "Puanlar/Sonuçlar": t["scores"] if t["scores"] else t["raw_answers"]
                         })
                     
-                    # Prompt Hazırla
                     prompt = f"""
                     Sen uzman bir eğitim psikoloğu ve rehberlikçisin.
                     
@@ -207,7 +223,7 @@ def app():
                     
                     GÖREV:
                     Yukarıdaki test sonuçlarını BİRLEŞTİREREK (Sentezleyerek) bu öğrenci için bütüncül bir analiz raporu yaz.
-                    Testleri tek tek anlatma; sonuçların birbiriyle ilişkisini kur (Örn: Enneagram tipi ile Zeka türü arasındaki bağlantı).
+                    Testleri tek tek anlatma; sonuçların birbiriyle ilişkisini kur.
                     
                     RAPOR DİLİ:
                     Son derece yalın, akıcı, motive edici ve anlaşılır bir Türkçe kullan.
@@ -221,13 +237,9 @@ def app():
                     6. **Öğretmene ve Aileye Özel Tavsiyeler**
                     """
                     
-                    # Analizi Al
                     report_text = get_ai_analysis(prompt)
-                    
-                    # Ekrana Yaz
                     st.markdown(report_text)
                     
-                    # İndirme Butonu
                     st.download_button(
                         label="📥 Bu Raporu İndir (.txt)",
                         data=report_text,
@@ -240,6 +252,5 @@ def app():
     with st.expander("🗂️ Test Geçmişi ve Ham Veriler (Detaylı Liste)"):
         if tests:
             df_tests = pd.DataFrame(tests)
-            # Tarihi stringe çevir
             df_tests['date'] = pd.to_datetime(df_tests['date']).dt.strftime('%d.%m.%Y')
             st.dataframe(df_tests[["test_name", "date"]], use_container_width=True)
