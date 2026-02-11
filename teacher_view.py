@@ -3,8 +3,8 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
-import time  # <--- İşte hatayı çözen sihirli satır burası
-from db_utils import get_all_students_with_results, reset_database, delete_specific_students
+import time
+from db_utils import get_all_students_with_results, reset_database, delete_specific_students, get_holistic_analysis, save_holistic_analysis
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -49,14 +49,11 @@ def plot_scores(data_dict, title):
     # Grafik Ayarları
     sns.set_theme(style="whitegrid")
     fig, ax = plt.subplots(figsize=(8, 4))
-    
-    # Renk paleti
     sns.barplot(x=values, y=labels, ax=ax, palette="viridis", orient='h')
     
     ax.set_title(f"{title} - Puan Dağılımı", fontsize=14, fontweight='bold')
     ax.set_xlabel("Puan / Yüzde")
     ax.set_ylabel("Kategoriler / Tipler")
-    
     plt.tight_layout()
     return fig
 
@@ -66,16 +63,15 @@ def app():
     # --- CSS: MOUSE İŞARETÇİSİ VE STİL AYARLARI ---
     st.markdown("""
     <style>
-        /* Selectbox (Açılır Liste) üzerine gelince el işareti çıksın */
-        div[data-baseweb="select"] {
+        .stSelectbox div, .stMultiSelect div, div[data-baseweb="select"], div[role="listbox"] li, div[data-baseweb="tag"] {
             cursor: pointer !important;
         }
-        /* Dropdown içindeki öğelere de el işareti */
-        div[role="listbox"] li {
-            cursor: pointer !important;
-        }
-        .stSelectbox > div > div {
-            cursor: pointer !important;
+        .saved-report-box {
+            background-color: #f0fdf4;
+            border: 2px solid #22c55e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -83,88 +79,59 @@ def app():
     st.title("👨‍🏫 Öğretmen Yönetim Paneli")
     st.markdown("---")
 
-    # Verileri Çek
     data = get_all_students_with_results()
-    
-    # Öğrenci İsim Listesi
     student_names_all = [d["info"].name for d in data] if data else []
 
-    # --- SIDEBAR: YÖNETİM VE SİLME ---
+    # --- SIDEBAR ---
     with st.sidebar:
         st.header("⚙️ Yönetim Araçları")
-        
-        # 1. ÖĞRENCİ SİLME MODÜLÜ
         with st.expander("🗑️ Öğrenci Dosyası Sil"):
             if not student_names_all:
-                st.info("Sistemde kayıtlı öğrenci yok.")
+                st.info("Kayıtlı öğrenci yok.")
             else:
-                st.warning("Seçilen öğrencilerin tüm verileri silinecektir.")
+                st.warning("Veriler silinecektir.")
                 selected_to_delete = st.multiselect("Silinecekleri Seç:", options=student_names_all)
-                
                 if selected_to_delete:
-                    if st.button("SEÇİLENLERİ KALICI OLARAK SİL", type="primary"):
+                    if st.button("SİL"):
                         if delete_specific_students(selected_to_delete):
-                            st.success("Kayıtlar başarıyla silindi.")
-                            time.sleep(1) # Artık hata vermeyecek
+                            st.success("Silindi.")
+                            time.sleep(1)
                             st.rerun()
-                        else:
-                            st.error("Silme başarısız.")
-
-        st.markdown("---")
         
-        # 2. TAM SIFIRLAMA
-        with st.expander("⚠️ Fabrika Ayarlarına Dön"):
-            st.error("DİKKAT: Her şey silinir.")
-            if st.button("TÜM SİSTEMİ SIFIRLA"):
+        st.markdown("---")
+        with st.expander("⚠️ Fabrika Ayarları"):
+            if st.button("SIFIRLA"):
                 if reset_database():
-                    st.success("Sistem sıfırlandı.")
+                    st.success("Sıfırlandı.")
                     time.sleep(1)
                     st.rerun()
 
-    # --- ANA EKRAN İÇERİĞİ ---
-    
     if not data:
         st.info("📂 Henüz kayıtlı öğrenci verisi bulunmamaktadır.")
         return
 
-    # 1. ÖĞRENCİ SEÇİMİ (VARSAYILAN BOŞ VE İŞARET PARMAĞI İKONLU)
+    # 1. ÖĞRENCİ SEÇİMİ
     st.subheader("📂 Öğrenci Dosyası Görüntüle")
-    
     col1, col2 = st.columns([1, 2])
     with col1:
-        # index=None ile varsayılan boş gelir
-        selected_name = st.selectbox(
-            "İncelemek İstediğiniz Öğrenciyi Seçiniz:", 
-            student_names_all, 
-            index=None, 
-            placeholder="Listeden bir öğrenci seçin..."
-        )
+        selected_name = st.selectbox("Öğrenci Seçiniz:", student_names_all, index=None, placeholder="Listeden seçin...")
     
-    # EĞER SEÇİM YAPILMADIYSA BURADA DUR VE BİLGİ VER
     if not selected_name:
         st.info("👆 Lütfen analizlerini görmek istediğiniz öğrenciyi yukarıdaki listeden seçiniz.")
         return
 
-    # SEÇİM YAPILDIYSA DEVAM ET
     student_data = next(d for d in data if d["info"].name == selected_name)
     info = student_data["info"]
     tests = student_data["tests"]
 
-    # 2. ÖĞRENCİ KİMLİK KARTI
+    # 2. KİMLİK KARTI
     with st.container():
         st.markdown(f"### 🆔 {info.name}")
         c1, c2, c3, c4 = st.columns(4)
-        c1.caption("Yaş / Cinsiyet")
-        c1.write(f"**{info.age} / {info.gender}**")
-        
-        c2.caption("Kullanıcı Adı")
-        c2.write(f"**{info.username}**")
-        
-        c3.caption("Şifre")
-        c3.write(f"**{info.password}**")
-        
-        c4.caption("Durum")
-        c4.write(f"**{info.login_count}. Giriş**")
+        c1.write(f"Yaş/Cinsiyet: **{info.age} / {info.gender}**")
+        c2.write(f"Kullanıcı: **{info.username}**")
+        c3.write(f"Şifre: **{info.password}**")
+        c4.write(f"Durum: **{info.login_count}. Giriş**")
     
     st.divider()
 
@@ -175,81 +142,80 @@ def app():
         st.warning("⚠️ Bu öğrenci henüz hiç test tamamlamamış.")
     else:
         st.write("Aşağıdaki listeden analiz etmek istediğiniz testleri seçin.")
-        
         test_names = [t["test_name"] for t in tests]
-        selected_tests = st.multiselect(
-            "Analize Dahil Edilecek Testler:",
-            options=test_names,
-            default=test_names
-        )
+        selected_tests = st.multiselect("Analize Dahil Edilecek Testler:", options=test_names, default=test_names)
         
-        if st.button("🧠 SEÇİLEN TESTLERİ ANALİZ ET", type="primary"):
+        # ANALİZ BUTONU VE MANTIĞI
+        if st.button("🧠 ANALİZİ GÖRÜNTÜLE", type="primary"):
             if not selected_tests:
                 st.error("Lütfen en az bir test seçiniz.")
             else:
                 analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
                 
-                # --- A. GRAFİK GÖSTERİMİ ---
+                # A. GRAFİK
                 st.markdown("### 📊 Grafiksel Sonuçlar")
                 cols = st.columns(2)
                 for idx, t in enumerate(analyzed_data):
                     if t["scores"]:
                         fig = plot_scores(t["scores"], t["test_name"])
-                        if fig:
-                            cols[idx % 2].pyplot(fig)
-                        else:
-                            cols[idx % 2].info(f"{t['test_name']} için grafik verisi yok.")
+                        if fig: cols[idx % 2].pyplot(fig)
+                        else: cols[idx % 2].info(f"{t['test_name']} grafik verisi yok.")
                 
-                # --- B. YAPAY ZEKA RAPORU ---
-                st.markdown("### 📝 Yapay Zeka Destekli Bütüncül Rapor")
+                # B. RAPOR (KAYITLI MI YOKSA YENİ Mİ?)
+                st.markdown("### 📝 Bütüncül Analiz Raporu")
                 
-                with st.spinner("Yapay zeka verileri harmanlıyor ve raporu yazıyor..."):
-                    ai_input_data = []
-                    for t in analyzed_data:
-                        ai_input_data.append({
-                            "Test Adı": t["test_name"],
-                            "Tarih": str(t["date"]),
-                            "Puanlar/Sonuçlar": t["scores"] if t["scores"] else t["raw_answers"]
-                        })
-                    
-                    prompt = f"""
-                    Sen uzman bir eğitim psikoloğu ve rehberlikçisin.
-                    
-                    ÖĞRENCİ PROFİLİ:
-                    Ad: {info.name}, Yaş: {info.age}, Cinsiyet: {info.gender}
-                    
-                    YAPILAN TESTLER VE SONUÇLARI:
-                    {json.dumps(ai_input_data, ensure_ascii=False)}
-                    
-                    GÖREV:
-                    Yukarıdaki test sonuçlarını BİRLEŞTİREREK (Sentezleyerek) bu öğrenci için bütüncül bir analiz raporu yaz.
-                    Testleri tek tek anlatma; sonuçların birbiriyle ilişkisini kur.
-                    
-                    RAPOR DİLİ:
-                    Son derece yalın, akıcı, motive edici ve anlaşılır bir Türkçe kullan.
-                    
-                    RAPOR BAŞLIKLARI:
-                    1. **Öğrenci Profil Özeti:** (Kişilik, zeka ve ilgi alanlarının özeti)
-                    2. **Güçlü Yönlerin Sentezi:** (Farklı testlerden gelen güçlü yanların uyumu)
-                    3. **Gelişim Alanları ve Destek Noktaları:** (Dikkat edilmesi gerekenler)
-                    4. **Öğrenme ve Çalışma Stratejisi:** (Bu öğrenci en iyi nasıl öğrenir?)
-                    5. **Kariyer ve İlgi Eğilimleri:** (Hangi alanlara yatkın?)
-                    6. **Öğretmene ve Aileye Özel Tavsiyeler**
-                    """
-                    
-                    report_text = get_ai_analysis(prompt)
-                    st.markdown(report_text)
-                    
-                    st.download_button(
-                        label="📥 Bu Raporu İndir (.txt)",
-                        data=report_text,
-                        file_name=f"{info.name}_Bütüncül_Analiz_Raporu.txt",
-                        mime="text/plain"
-                    )
+                # 1. Önce Veritabanına Bak: Bu kombinasyon için rapor var mı?
+                saved_report = get_holistic_analysis(info.id, selected_tests)
+                
+                if saved_report:
+                    # VARSA DİREKT GÖSTER (API Harcamaz)
+                    st.markdown(f"<div class='saved-report-box'>💾 <b>KAYITLI RAPOR GETİRİLDİ</b><br>Bu test kombinasyonu için daha önce oluşturulmuş analiz aşağıdadır.</div>", unsafe_allow_html=True)
+                    st.markdown(saved_report)
+                    report_to_download = saved_report
+                else:
+                    # YOKSA YENİ OLUŞTUR
+                    with st.spinner("Yeni analiz yapılıyor ve öğrenci dosyasına kaydediliyor..."):
+                        ai_input_data = []
+                        for t in analyzed_data:
+                            ai_input_data.append({
+                                "Test Adı": t["test_name"],
+                                "Tarih": str(t["date"]),
+                                "Puanlar/Sonuçlar": t["scores"] if t["scores"] else t["raw_answers"]
+                            })
+                        
+                        prompt = f"""
+                        Sen uzman bir eğitim psikoloğu ve rehberlikçisin.
+                        ÖĞRENCİ: {info.name}, {info.age} yaş, {info.gender}.
+                        VERİLER: {json.dumps(ai_input_data, ensure_ascii=False)}
+                        GÖREV: Bu verileri BİRLEŞTİREREK bütüncül analiz yaz.
+                        FORMAT:
+                        1. Öğrenci Profil Özeti
+                        2. Güçlü Yönlerin Sentezi
+                        3. Gelişim Alanları
+                        4. Öğrenme Stratejisi
+                        5. Kariyer Eğilimleri
+                        6. Tavsiyeler
+                        """
+                        
+                        new_report = get_ai_analysis(prompt)
+                        st.markdown(new_report)
+                        report_to_download = new_report
+                        
+                        # VERİTABANINA KAYDET
+                        save_holistic_analysis(info.id, selected_tests, new_report)
+                        st.success("✅ Rapor öğrenci dosyasına başarıyla kaydedildi.")
+
+                # İNDİRME BUTONU
+                st.download_button(
+                    label="📥 Raporu İndir (.txt)",
+                    data=report_to_download,
+                    file_name=f"{info.name}_Analiz_Raporu.txt",
+                    mime="text/plain"
+                )
 
     # 4. GEÇMİŞ TABLOSU
     st.divider()
-    with st.expander("🗂️ Test Geçmişi ve Ham Veriler (Detaylı Liste)"):
+    with st.expander("🗂️ Test Geçmişi ve Ham Veriler"):
         if tests:
             df_tests = pd.DataFrame(tests)
             df_tests['date'] = pd.to_datetime(df_tests['date']).dt.strftime('%d.%m.%Y')
