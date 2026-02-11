@@ -1,8 +1,9 @@
 import streamlit as st
+import time
 from database import init_db
 from db_utils import login_student, register_student
 
-# --- SAYFA YAPILANDIRMASI (EN ÜSTTE OLMALI) ---
+# --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
     page_title="Psikometrik Test Platformu",
     page_icon="🧠",
@@ -10,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Veritabanını başlat (Tablolar yoksa oluşturur)
+# Veritabanını başlat
 init_db()
 
 # --- CSS VE TASARIM AYARLARI ---
@@ -22,7 +23,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE (OTURUM DEĞİŞKENLERİ) ---
+# --- SESSION STATE ---
 if 'role' not in st.session_state: st.session_state.role = None
 if 'student_id' not in st.session_state: st.session_state.student_id = None
 if 'student_name' not in st.session_state: st.session_state.student_name = None
@@ -50,17 +51,15 @@ def main_login():
                     status, student_obj = login_student(user, pw)
                     if status:
                         st.success(f"Giriş başarılı! Hoşgeldin {student_obj.name}")
-                        # Session bilgilerini kaydet
                         st.session_state.role = "student"
                         st.session_state.student_id = student_obj.id
                         st.session_state.student_name = student_obj.name
-                        # Öğrencinin kaçıncı girişi olduğunu al (Faz sistemi için)
                         st.session_state.login_phase = student_obj.login_count
                         st.rerun()
                     else:
                         st.error("Kullanıcı adı veya şifre hatalı.")
 
-    # --- SEKME 2: ÖĞRENCİ KAYIT ---
+    # --- SEKME 2: ÖĞRENCİ KAYIT (OTOMATİK YÖNLENDİRMELİ) ---
     with tab2:
         st.subheader("Yeni Hesap Oluştur 🚀")
         st.info("Testlere başlamak için lütfen aşağıdaki formu doldurarak kayıt olun.")
@@ -76,18 +75,30 @@ def main_login():
                 new_pw = st.text_input("Şifre Belirle", type="password")
             
             st.markdown("---")
-            reg_submit = st.form_submit_button("Kayıt Ol", type="secondary", use_container_width=True)
+            reg_submit = st.form_submit_button("Kayıt Ol ve Başla", type="secondary", use_container_width=True)
             
             if reg_submit:
                 if not name or not new_user or not new_pw:
                     st.warning("Lütfen tüm alanları doldurunuz.")
                 else:
-                    success, msg = register_student(name.title(), new_user, new_pw, age, gender)
+                    # register_student artık (Durum, Nesne/Mesaj) döndürüyor
+                    success, result = register_student(name.title(), new_user, new_pw, age, gender)
+                    
                     if success:
-                        st.success(msg)
-                        st.balloons()
+                        # result burada yeni oluşturulan student objesidir
+                        st.success(f"Kayıt Başarılı! Hoşgeldin {result.name}. Test Paneline Yönlendiriliyorsun...")
+                        
+                        # Otomatik Giriş İşlemi
+                        st.session_state.role = "student"
+                        st.session_state.student_id = result.id
+                        st.session_state.student_name = result.name
+                        st.session_state.login_phase = 1 # Yeni kayıt olduğu için 1. Faz
+                        
+                        time.sleep(1.5) # Kullanıcı mesajı okusun diye kısa bekleme
+                        st.rerun()      # Sayfayı yenile ve öğrenci paneline git
                     else:
-                        st.error(msg)
+                        # result burada hata mesajıdır
+                        st.error(result)
 
     # --- SEKME 3: ÖĞRETMEN GİRİŞİ ---
     with tab3:
@@ -99,9 +110,7 @@ def main_login():
                 submitted_t = st.form_submit_button("Yönetim Paneline Git", type="secondary", use_container_width=True)
                 
                 if submitted_t:
-                    # Şifre kontrolü (Varsayılan: admin123)
                     secret_pass = "admin123"
-                    # Streamlit Cloud secrets varsa oradan al
                     if "teacher_password" in st.secrets:
                         secret_pass = st.secrets["teacher_password"]
                     
