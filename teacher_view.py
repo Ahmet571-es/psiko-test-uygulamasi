@@ -59,9 +59,8 @@ def plot_scores(data_dict, title):
     # Renk paleti ve çizim
     sns.barplot(x=values, y=labels, ax=ax, palette="viridis", orient='h')
     
-    ax.set_title(f"{title} - Puan Dağılımı", fontsize=14, fontweight='bold')
+    ax.set_title(f"{title}", fontsize=12, fontweight='bold')
     ax.set_xlabel("Puan / Yüzde")
-    ax.set_ylabel("Kategoriler / Tipler")
     
     plt.tight_layout()
     return fig
@@ -203,7 +202,7 @@ def app():
     st.divider()
 
     # ============================================================
-    # 3. KAYITLI RAPOR ARŞİVİ (VERİTABANINDAN ÇEKİLENLER)
+    # 3. KAYITLI RAPOR ARŞİVİ (GRAFİK DESTEKLİ)
     # ============================================================
     st.subheader("📂 Kayıtlı Rapor Arşivi")
     
@@ -220,7 +219,28 @@ def app():
             btn_label = f"📄 Rapor {idx+1}: {record['combination']} ({record['date']})"
             
             with st.expander(btn_label):
-                st.markdown(f"<div class='report-header'><b>ANALİZ EDİLEN TESTLER:</b> {record['combination']}</div>", unsafe_allow_html=True)
+                # Başlık
+                st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {record['combination']}</div>", unsafe_allow_html=True)
+                
+                # --- GRAFİK GÖSTERİMİ (ARŞİVDE) ---
+                # Kayıtlı kombinasyon stringini parçala (Örn: "Enneagram + VARK" -> ["Enneagram", "VARK"])
+                # Not: Split ederken tam eşleşme için dikkatli oluyoruz.
+                archived_test_names = record['combination'].split(' + ')
+                
+                # Bu testlerin güncel verilerini (skorlarını) bul
+                archived_test_data = [t for t in tests if t["test_name"] in archived_test_names]
+                
+                if archived_test_data:
+                    st.markdown("#### 📊 İlgili Test Grafikleri")
+                    g_cols = st.columns(2)
+                    for i, t_data in enumerate(archived_test_data):
+                        if t_data["scores"]:
+                            fig = plot_scores(t_data["scores"], t_data["test_name"])
+                            if fig:
+                                g_cols[i % 2].pyplot(fig)
+                    st.markdown("---")
+                
+                # Rapor Metni
                 st.markdown(record['report'])
                 
                 # İndirme Butonu
@@ -235,7 +255,7 @@ def app():
     st.divider()
 
     # ============================================================
-    # 4. YENİ ANALİZ OLUŞTURMA MERKEZİ (SEÇENEKLİ)
+    # 4. YENİ ANALİZ OLUŞTURMA MERKEZİ (SEÇENEKLİ & SÜPER PROMPT)
     # ============================================================
     st.subheader("⚡ Yeni Analiz Oluştur")
     
@@ -288,9 +308,9 @@ def app():
                 # ====================================================
                 if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
                     
-                    st.info(f"⏳ Yapay Zeka, seçilen **{len(selected_tests)} testi** birbiriyle ilişkilendirerek bütüncül bir rapor yazıyor. Lütfen bekleyin...")
+                    st.info(f"⏳ Yapay Zeka, seçilen **{len(selected_tests)} testi** birbiriyle ilişkilendirerek görselleştirilmiş bütüncül bir rapor yazıyor. Lütfen bekleyin...")
                     
-                    with st.spinner("Analiz sentezleniyor..."):
+                    with st.spinner("Veriler sentezleniyor ve görselleştiriliyor..."):
                         # Yapay Zekaya gidecek veriyi hazırla
                         ai_input = []
                         for t in analyzed_data:
@@ -300,12 +320,12 @@ def app():
                                 "SONUÇLAR": t["scores"] if t["scores"] else t["raw_answers"]
                             })
                         
-                        # --- DÜNYA STANDARTLARINDA SÜPER PROMPT ---
+                        # --- DÜNYA STANDARTLARINDA SÜPER ANALİZ PROMPTU ---
                         prompt = f"""
-                        Sen dünyanın en prestijli eğitim kurumlarında (Harvard, MIT, Cambridge) kullanılan analiz tekniklerine hakim, uzman bir baş psikolog ve veri bilimcisisin.
+                        Sen, dünyanın en prestijli eğitim ve psikoloji enstitülerinde (Harvard, Oxford) kullanılan, **çok boyutlu veri görselleştirme ve kişilik analizi** konusunda uzmanlaşmış kıdemli bir 'Baş Psikolog' ve 'Veri Bilimcisi'sin.
 
                         GÖREVİN:
-                        Aşağıda verileri sunulan öğrenci için "Kişiye Özel Bütüncül (Holistik) Gelişim Raporu" hazırlamak.
+                        Aşağıda verileri sunulan öğrenci için, farklı test sonuçlarını birbiriyle harmanlayan, sadece metin değil **GÖRSEL ÖĞELERLE ZENGİNLEŞTİRİLMİŞ** (Tablolar, Progress Barlar, İkonlar) bir "Bütüncül Gelişim Raporu" hazırlamak.
                         
                         ÖĞRENCİ KİMLİĞİ:
                         Ad: {info.name}, Yaş: {info.age}, Cinsiyet: {info.gender}
@@ -314,106 +334,90 @@ def app():
                         {json.dumps(ai_input, ensure_ascii=False)}
 
                         ----------------------------------------------------------
-                        ⚠️ KRİTİK ANALİZ KURALLARI (BUNLARA KESİNLİKLE UY):
+                        ⚠️ ANALİZ VE GÖRSELLEŞTİRME KURALLARI:
                         
-                        1. **HARMANLAMA (SENTEZ) ZORUNLULUĞU:**
-                           - Asla "Enneagram sonucun bu, Çoklu Zeka sonucun şu" diye alt alta sıralama yapma.
-                           - Testler arasındaki **GİZLİ BAĞLANTILARI** bul.
-                           - Örn: "Matematiksel zekan yüksek (Çoklu Zeka) ama Mükemmeliyetçi yapın (Enneagram Tip 1) yüzünden işlem hatası yapmaktan korkuyorsun."
+                        1. **GÖRSEL DİL KULLANIMI (MARKDOWN):**
+                           - **Progress Bar:** Puanları veya etki düzeylerini göstermek için `████████░░` (%80) gibi karakterler kullan.
+                           - **Tablolar:** Verileri karşılaştırırken mutlaka Markdown Tablosu kullan.
+                           - **İkonlar:** Her başlığın ve önemli maddenin başına uygun emoji koy (🧠, 🚀, 💡, ⚠️).
                         
-                        2. **DERİNLİK VE İÇGÖRÜ:**
-                           - Yüzeysel cümleler kurma. "Ders çalışmalısın" deme; "Görsel hafızan (VARK) güçlü olduğu için, formülleri renkli post-it'lere yazıp duvara asmalısın" de.
-                        
-                        3. **TON VE ÜSLUP:**
-                           - Samimi, motive edici ama son derece profesyonel ol. Koçluk dili kullan.
+                        2. **SENTEZ VE HARMANLAMA:**
+                           - Testleri birbirinden kopuk anlatma. Gizli bağlantıları bul.
+                           - Örn: "Matematiksel zekan yüksek ama Tip 6 kaygın yüzünden işlem hatası yapıyorsun."
+
+                        3. **DERİNLİK VE SOMUTLUK:**
+                           - Jenerik tavsiyeler YASAK. "Kitap oku" deme; "Görsel hafızan güçlü olduğu için tarih dersini belgesel izleyerek çalış" de.
 
                         ----------------------------------------------------------
-                        ### 🌟 ANALİZ İÇİN FEW-SHOT (ÖRNEK VAKA) KÜTÜPHANESİ 🌟
-                        (Analiz yaparken aşağıdaki 20 mükemmel örneğin mantığını kopyala)
+                        ### 🌟 ANALİZ İÇİN 'FEW-SHOT' (ÖRNEK VAKA) KÜTÜPHANESİ (30 ADET) 🌟
+                        (Aşağıdaki örneklerin mantığını kopyala)
 
-                        **Vaka 1: (Enneagram Tip 5 + Görsel Öğrenme)**
-                        ❌ Kötü: "Tip 5 olduğun için araştırmayı seversin. Görsel öğrenirsin."
-                        ✅ İyi: "Tip 5 Araştırmacı kimliğin sayesinde konuların derinliğine inmeye bayılıyorsun. Ancak zihnin kelimelerden çok resimlerle çalışıyor (Görsel). Bu yüzden, uzun makaleler okumak yerine belgesel izleyerek veya infografik inceleyerek 3 kat daha hızlı öğrenebilirsin."
-
-                        **Vaka 2: (Sınav Kaygısı Yüksek + Mükemmeliyetçi Tip 1)**
-                        ❌ Kötü: "Sınavda heyecanlanma."
-                        ✅ İyi: "Sınavlarda yaşadığın o yoğun çarpıntı (Fiziksel Kaygı), aslında başarısızlık korkusu değil; Tip 1'den gelen 'Hata yapma lüksüm yok' inancından kaynaklanıyor. Hata yapmanın, öğrenmenin bir parçası olduğunu kabul ettiğin an o el titremelerin geçecek."
-
-                        **Vaka 3: (Sosyal Zeka Düşük + İçsel Zeka Yüksek)**
-                        ❌ Kötü: "Arkadaş edinmelisin."
-                        ✅ İyi: "Kalabalık gruplar seni yoruyor olabilir çünkü İçsel Zekan çok baskın; sen kendi iç dünyanda şarj oluyorsun. Sosyalleşmek için zorlama partiler yerine, birebir derin sohbet edebileceğin sakin ortamları tercih etmelisin."
-
-                        **Vaka 4: (Bedensel Zeka Yüksek + Dikkat Dağınıklığı)**
-                        ❌ Kötü: "Yerinde duramıyorsun."
-                        ✅ İyi: "Ders çalışırken sürekli kalem çevirmen veya ayağını sallaman bir yaramazlık değil; Bedensel Zekan (Kinestetik) böyle çalışıyor. Hatta ders çalışırken elinde bir stres topu olması odağını artıracaktır."
-
-                        **Vaka 5: (Müziksel Zeka + Sözel Zeka)**
-                        ✅ İyi: "Kelimelerle aran çok iyi ama onları bir ritimle duyduğunda hafızana kazıyorsun. Tarih derslerini ezberlemek yerine, olayları rap şarkısı gibi ritmik bir şekilde mırıldanmayı dene."
-
-                        **Vaka 6: (Doğacı Zeka + Tip 9 Barışçı)**
-                        ✅ İyi: "Kaos ve gürültü senin en büyük düşmanın (Tip 9). Doğacı zekan da eklenince, senin için en verimli çalışma ortamı kütüphane değil; penceresi ağaca bakan sessiz bir oda veya parktaki bir banktır."
-
-                        **Vaka 7: (Tip 3 Başarılı + Mantıksal Zeka)**
-                        ✅ İyi: "Rekabet senin yakıtın (Tip 3). Mantıksal zekanla birleşince, hedeflerini bir video oyunu gibi 'Level 1, Level 2' şeklinde basamaklara bölmelisin. Her tamamladığın konu sana bir zafer hissi vermeli."
-
-                        **Vaka 8: (Tip 2 Yardımcı + Sosyal Zeka)**
-                        ✅ İyi: "Başkalarına ders anlatırken, kendin tek başına çalışmaktan çok daha iyi anlıyorsun. Çünkü Tip 2 yanın 'yardım etmeyi', Sosyal zekan ise 'etkileşimi' seviyor. Çalışma grubunun öğretmeni sen olmalısın."
-
-                        **Vaka 9: (Tip 7 Hevesli + Düşük Çalışma Disiplini)**
-                        ✅ İyi: "Zihnin bir lunapark gibi (Tip 7), sürekli eğlence arıyor. Masaya oturduğun an sıkılman çok normal. Pomodoro tekniği senin için değil; sen '15 dakika çalış, 5 dakika dans et' taktiğiyle enerjini atmalısın."
-
-                        **Vaka 10: (Tip 6 Sadık + Yüksek Kaygı)**
-                        ✅ İyi: "Sürekli 'Ya sınav kötü geçerse?' senaryoları kurman, Tip 6'nın güvenlik arayışından geliyor. Senin ilacın belirsizliği yok etmektir. Konuları bitirdikçe bir listeye tik atmak sana 'Güvendeyim, her şey kontrol altında' hissi verecektir."
-
-                        **Vaka 11: (Görsel Zeka + Tip 4 Bireyci)**
-                        ✅ İyi: "Sıradan notlar seni boğar. Tip 4 estetik arayışınla birleşen görsel zekan için defterin rengarenk, çizimlerle dolu ve sana özel olmalı. Kendi özgün not alma stilini yarat."
-
-                        **Vaka 12: (Tip 8 Meydan Okuyan + Bedensel Zeka)**
-                        ✅ İyi: "Sana 'Şunu yap' denmesinden nefret ediyorsun (Tip 8). Ders çalışmayı bir zorunluluk değil, kazanılacak bir güç savaşı olarak gör. Yürüyüş yaparken sesli notlar dinleyerek o enerjini bilgiye dönüştür."
-
-                        **Vaka 13: (Sözel Zeka + Tip 1 Mükemmeliyetçi)**
-                        ✅ İyi: "Kelimeleri seçerken o kadar titizsin ki (Tip 1), bazen kompozisyon yazarken takılıp kalıyorsun. Sözel zekan akmak istiyor. İlk taslakta hata yapmaya izin ver, düzeltmeyi sonraya bırak."
-
-                        **Vaka 14: (İçsel Zeka + Tip 5 Gözlemci)**
-                        ✅ İyi: "Sen tam bir stratejistsin. Kimseyle konuşmadan saatlerce odanda vakit geçirebilirsin. Bu izolasyon, derinlemesine öğrenme (Deep Work) için harika bir süper güç. Bunu bozma, sadece dozunu ayarla."
-
-                        **Vaka 15: (Kinestetik Öğrenme + Tip 7)**
-                        ✅ İyi: "Sadece okumak sana yetmez, yapman lazım! Deney setleri, maketler veya simülasyonlar tam sana göre. Tip 7 merakınla birleşince, dokunarak öğrendiğin hiçbir şeyi unutmazsın."
-
-                        **Vaka 16: (Tip 2 + Düşük Sınav Kaygısı)**
-                        ✅ İyi: "Sınavdan korkmuyorsun ama 'Ailemi hayal kırıklığına uğratır mıyım?' korkusu (Tip 2) seni yiyip bitiriyor. Unutma, sen notlarından ibaret değilsin ve sevilmek için başarılı olmak zorunda değilsin."
-
-                        **Vaka 17: (Mantıksal Zeka + Tip 6)**
-                        ✅ İyi: "Her bilginin mantıklı bir kanıtını istiyorsun. Ezber yapmak sana işkence gibi geliyor. Neden-sonuç ilişkisi kuramadığın hiçbir konuyu öğrenemezsin. Öğretmenine 'Neden?' diye sormaktan çekinme."
-
-                        **Vaka 18: (Müziksel + Tip 4)**
-                        ✅ İyi: "Duygusal iniş çıkışların (Tip 4) çalışma düzenini bozabilir. Ancak müziksel zekan burada devreye giriyor: Moduna uygun (Sakinleşmek için klasik, enerji için rock) müzik listeleriyle beynini hackleyebilirsin."
-
-                        **Vaka 19: (Tip 9 + Düşük Motivasyon)**
-                        ✅ İyi: "Harekete geçmek (Eylemsizlik) senin en büyük sınavın. Tip 9 konfor alanını sever. Masanın başına oturana kadar zorlanırsın ama oturduktan sonra nehir gibi akarsın. Sadece başla, gerisi gelecek."
-
-                        **Vaka 20: (Tip 8 + Sosyal Zeka)**
-                        ✅ İyi: "Liderlik vasfın (Tip 8) ve sosyal zekan seni okul kulüplerinin doğal başkanı yapıyor. Bu enerjiyi proje ödevlerini yönetirken kullanırsan hem eğlenir hem de yüksek not alırsın."
+                        **1. (Tip 5 + Görsel):** "Zihnin kelimelerden çok resimlerle çalışıyor. Klasik not tutma yerine 'Zihin Haritaları' (Mind Maps) kullanmalısın."
+                        **2. (Sınav Kaygısı + Tip 1):** "Kalp çarpıntın bilgisizlikten değil, Tip 1 'Hata yapma korkusundan' geliyor. Stratejin: Hata yapma izni."
+                        **3. (Sosyal Düşük + İçsel Yüksek):** "Kalabalık seni yorar. Şarj olmak için yalnız kalmalısın. Sosyalleşmek için satranç kulübü gibi sakin yerleri seç."
+                        **4. (Bedensel Zeka + DEHB):** "Ayak sallaman yaramazlık değil, beyninin çalışma şekli. Ders çalışırken elinde stres topu olsun."
+                        **5. (Müziksel + Sözel):** "Ezber yaparken bilgileri şarkı sözüne çevirip ritimle mırıldan. Asla unutmazsın."
+                        **6. (Doğacı + Tip 9):** "Kapalı alan seni boğar. Penceresi ağaca bakan bir odada veya parkta çalış."
+                        **7. (Tip 3 + Mantıksal):** "Hedeflerini 'Level 1, Level 2' gibi oyunlaştır. Her başarı sana zafer hissi vermeli."
+                        **8. (Tip 2 + Sosyal):** "Başkasına anlatarak öğreniyorsun. Sınıfın gönüllü hocası ol."
+                        **9. (Tip 7 + Disiplinsiz):** "Sıkılmak senin doğanda var. Pomodoro yerine 'Gamification' teknikleri kullan."
+                        **10. (Tip 6 + Kaygı):** "Belirsizlik düşmanın. Yapılacaklar listesi hazırla ve her biten işe tik at. Bu sana güvenlik hissi verir."
+                        **11. (Görsel + Tip 4):** "Sıradan defter seni sıkar. Renkli kalemler ve çizimlerle notlarını sanat eserine dönüştür."
+                        **12. (Tip 8 + Bedensel):** "Ders çalışmayı 'Otoriteye itaat' değil, 'Güç kazanma savaşı' olarak gör."
+                        **13. (Sözel + Tip 1):** "Mükemmel cümle kurmaya çalışma, akışına bırak. Taslak yazmaktan korkma."
+                        **14. (İçsel + Tip 5):** "İzolasyon senin süper gücün (Deep Work). Sadece dozunu kaçırma."
+                        **15. (Kinestetik + Tip 7):** "Söküp takarak, dokunarak öğren. Deney setleri tam sana göre."
+                        **16. (Tip 2 + Aile Baskısı):** "Sevilmek için başarılı olmak zorunda değilsin. Sen notlarından ibaret değilsin."
+                        **17. (Mantıksal + Tip 6):** "Mantığını anlamadığın şeyi ezberleme. 'Neden?' diye sormaktan çekinme."
+                        **18. (Müziksel + Tip 4):** "Moduna uygun 'Study Playlist' hazırla. Müzik senin duygu regülatörün."
+                        **19. (Tip 9 + Eylemsizlik):** "Başlamak en zoru. 'Sadece 5 dakika bakacağım' diye otur, gerisi gelir."
+                        **20. (Tip 8 + Sosyal):** "Liderlik enerjini proje ödevlerini yönetirken kullan."
+                        **21. (VARK Okuma/Yazma + Tip 5):** "Bilgiyi okuyarak sünger gibi çekiyorsun. Kendi kendine özet çıkararak ve 'blog yazısı yazar gibi' not tutarak uzmanlaş."
+                        **22. (Mantıksal + Tip 4):** "Sayıların içindeki estetiği gör. Matematik senin için kuru işlem değil, evrenin şiiridir."
+                        **23. (Sosyal + Tip 9):** "Çatışma sevmediğin için grupta 'Barış Elçisi' olursun. Liderliği sessizce ve uzlaştırarak yap."
+                        **24. (Kinestetik + Yüksek Kaygı):** "Adrenalin birikmesi seni kilitliyor. Sınavdan hemen önce 5 dakika hızlı yürüyüş yap veya zıpla."
+                        **25. (Görsel + Tip 8):** "Büyük resmi görmek istersin. Odanın duvarına dev bir 'Vizyon Panosu' (Vision Board) as ve hedeflerini oraya çiz."
+                        **26. (Müziksel + Düşük Odak):** "Arka planda sözsüz 'Lo-Fi' veya 'Klasik' müzik çalması, beynindeki gürültüyü susturur ve odaklanmanı sağlar."
+                        **27. (İçsel + Tip 3):** "Başkalarıyla değil, dünkü kendinle yarış. Kendi rekorlarını kırmak seni motive eder."
+                        **28. (Doğacı + Tip 6):** "Doğa sana güven verir. Kaygılandığında toprağa basmak veya bir bitkiyle ilgilenmek seni anında sakinleştirir."
+                        **29. (Sözel + Tip 7):** "Sıkıcı tarih konularını, arkadaşlarına heyecanlı bir dedikodu veya hikaye anlatır gibi anlat. Eğlenerek öğren."
+                        **30. (Mantıksal + Tip 2):** "Karmaşık problemleri çözüp arkadaşlarına yardım etmekten keyif alırsın. 'Sınıfın Problem Çözücüsü' rolünü üstlen."
 
                         ----------------------------------------------------------
                         
-                        İSTENEN RAPOR FORMATI:
-                        1. **BÜTÜNCÜL PROFİL HARİTASI:** (Öğrencinin tüm özelliklerinin kesişim kümesi)
-                        2. **SÜPER GÜÇLERİN SENTEZİ:** (Farklı testlerden gelen güçlü yanların birbirini nasıl beslediği)
-                        3. **GİZLİ ENGELLER VE KİLİT ÇÖZÜMLER:** (Zayıf yönlerin analizi ve nokta atışı çözümler)
-                        4. **KİŞİYE ÖZEL ÖĞRENME STRATEJİSİ:** (VARK ve Zeka türüne göre reçete)
-                        5. **GELECEK VİZYONU VE KARİYER:** (Kişilik ve yeteneğe uygun meslekler)
-                        6. **AİLE VE ÖĞRETMENE NOT:** (Bu öğrenciye nasıl yaklaşılmalı?)
+                        ### 📝 İSTENEN GÖRSEL RAPOR FORMATI (MARKDOWN):
 
-                        Dil: Türkçe. Üslup: Profesyonel, Akıcı, İlham Verici ve Analitik.
+                        1. **🧠 BÜTÜNCÜL PROFİL HARİTASI (TABLO)**
+                           - Öğrencinin "Kim Olduğunun" özeti.
+                           - *Format: Markdown Tablosu (Özellik | Tespit | Etki Düzeyi)*
+
+                        2. **💪 SÜPER GÜÇLERİN SENTEZİ (GRAFİK)**
+                           - En güçlü yanlar ve birbirini nasıl beslediği.
+                           - *Format: Özellik Adı `████████░░` (Açıklama)*
+
+                        3. **🚧 GİZLİ ENGELLER VE KİLİT ÇÖZÜMLER (OKLAR)**
+                           - *Format: 🔴 Sorun -> 🟢 Çözüm*
+
+                        4. **🎓 KİŞİYE ÖZEL ÖĞRENME STRATEJİSİ (TABLO)**
+                           - VARK ve Zeka türüne göre somut reçete.
+                           - *Format: Markdown Tablosu (Yöntem | Araç | Sıklık)*
+
+                        5. **🚀 GELECEK VİZYONU VE KARİYER (YILDIZLAR)**
+                           - En uygun 3 meslek.
+                           - *Format: Meslek Adı ⭐⭐⭐⭐⭐ (Neden Uygun?)*
+
+                        6. **👨‍👩‍👦 AİLE VE ÖĞRETMENE NOT**
+                           - *Format: > Blockquote içinde motivasyon notu.*
+
+                        Dil: Türkçe. Üslup: Profesyonel, Akıcı, Görsel Olarak Zengin.
                         """
                         
                         final_report = get_ai_analysis(prompt)
                         
-                        # Bütüncül raporu veritabanına kaydet
+                        # Veritabanına Kaydet
                         save_holistic_analysis(info.id, selected_tests, final_report)
                         
-                        st.success("✅ Bütüncül analiz başarıyla tamamlandı ve Arşiv'e kaydedildi.")
+                        st.success("✅ Görselleştirilmiş bütüncül analiz tamamlandı ve Arşiv'e kaydedildi.")
                         time.sleep(1.5)
                         st.rerun()
 
@@ -437,18 +441,19 @@ def app():
                         
                         # Tekil Analiz Promptu
                         prompt = f"""
-                        Sen uzman bir psikologsun. Aşağıdaki TEST SONUCUNA göre öğrenciyi detaylı analiz et.
+                        Sen uzman bir eğitim psikoloğusun.
                         
                         ÖĞRENCİ: {info.name}, {info.age}, {info.gender}
                         TEST: {test_name}
                         VERİLER: {json.dumps(ai_input, ensure_ascii=False)}
 
                         GÖREV: Sadece bu teste odaklanarak derinlemesine bir yorum yap.
+                        
                         RAPOR FORMATI:
-                        1. Test Sonucunun Anlamı
-                        2. Güçlü Yönler
-                        3. Gelişim Alanları
-                        4. Bu Teste Özel Tavsiyeler
+                        1. 📊 Test Sonucunun Anlamı (Kısa Özet)
+                        2. 💪 Güçlü Yönler (Maddeler halinde, İkonlu)
+                        3. 🚧 Gelişim Alanları
+                        4. 🎯 Bu Teste Özel Somut Tavsiyeler
                         
                         Dil: Türkçe.
                         """
