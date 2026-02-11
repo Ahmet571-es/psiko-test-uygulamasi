@@ -9,150 +9,289 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
-# --- API AYARLARI ---
+# --- API VE BAĞLANTI AYARLARI ---
 load_dotenv()
 if "GROK_API_KEY" in st.secrets:
     GROK_API_KEY = st.secrets["GROK_API_KEY"]
 else:
     GROK_API_KEY = os.getenv("GROK_API_KEY")
 
+# xAI (Grok) İstemcisi
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 # --- YARDIMCI FONKSİYONLAR ---
+
 def get_ai_analysis(prompt):
-    if not GROK_API_KEY: return "Hata: API Key bulunamadı."
+    """
+    Yapay Zekaya analiz isteği gönderir.
+    Hata durumunda kullanıcıya bilgi döner.
+    """
+    if not GROK_API_KEY:
+        return "Hata: API Key bulunamadı. Lütfen sistem yöneticisiyle görüşün."
     try:
         response = client.chat.completions.create(
-            model="grok-4-1-fast-reasoning", # En güçlü akıl yürütme modeli
+            model="grok-4-1-fast-reasoning", # Akıl yürütme yeteneği en yüksek model
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.1 # Yaratıcılık düşük, tutarlılık yüksek
+            temperature=0.1 # Daha tutarlı ve analitik sonuçlar için düşük sıcaklık
         )
         return response.choices[0].message.content.strip()
-    except Exception as e: return f"Analiz Hatası: {e}"
+    except Exception as e:
+        return f"Analiz sırasında bir hata oluştu: {str(e)}"
 
 def plot_scores(data_dict, title):
-    if not data_dict or not isinstance(data_dict, dict): return None
+    """
+    Test sonuçlarını görselleştirmek için Bar Grafiği oluşturur.
+    """
+    if not data_dict or not isinstance(data_dict, dict):
+        return None
+    
+    # Veriyi hazırla
     labels = [str(k) for k in data_dict.keys()]
-    try: values = [float(v) for v in data_dict.values()]
-    except: return None 
+    try:
+        values = [float(v) for v in data_dict.values()]
+    except:
+        return None 
+
+    # Grafik Ayarları (Seaborn & Matplotlib)
     sns.set_theme(style="whitegrid")
     fig, ax = plt.subplots(figsize=(8, 4))
+    
+    # Renk paleti ve çizim
     sns.barplot(x=values, y=labels, ax=ax, palette="viridis", orient='h')
+    
     ax.set_title(f"{title} - Puan Dağılımı", fontsize=14, fontweight='bold')
+    ax.set_xlabel("Puan / Yüzde")
+    ax.set_ylabel("Kategoriler / Tipler")
+    
     plt.tight_layout()
     return fig
 
-# --- ANA UYGULAMA ---
+# --- ANA ÖĞRETMEN UYGULAMASI ---
+
 def app():
+    # --- CSS: MOUSE İŞARETÇİSİ VE ARAYÜZ İYİLEŞTİRMELERİ ---
     st.markdown("""
     <style>
-        .stSelectbox div, .stMultiSelect div, div[data-baseweb="select"] { cursor: pointer !important; }
-        .archive-box { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        .report-header { color: #155724; background-color: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #c3e6cb; }
-        div[role="listbox"] li { cursor: pointer !important; }
+        /* Tüm Seçim Kutuları (Selectbox, Multiselect) üzerine gelince el işareti çıksın */
+        .stSelectbox div, .stMultiSelect div {
+            cursor: pointer !important;
+        }
+        div[data-baseweb="select"] {
+            cursor: pointer !important;
+        }
+        /* Açılır liste elemanları */
+        div[role="listbox"] li {
+            cursor: pointer !important;
+        }
+        /* Radyo Butonları */
+        .stRadio > label {
+            font-weight: bold;
+            font-size: 16px;
+            color: #2E86C1;
+            cursor: pointer !important;
+        }
+        .stRadio div[role="radiogroup"] > label {
+            cursor: pointer !important;
+        }
+        /* Rapor Arşiv Kutusu */
+        .archive-box {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        /* Rapor Başlıkları */
+        .report-header {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #c3e6cb;
+            font-weight: bold;
+        }
     </style>
     """, unsafe_allow_html=True)
 
     st.title("👨‍🏫 Öğretmen Yönetim Paneli")
     st.markdown("---")
 
+    # Veritabanından verileri çek
     data = get_all_students_with_results()
+    
+    # Öğrenci İsim Listesini Oluştur
     student_names_all = [d["info"].name for d in data] if data else []
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR: YÖNETİM VE SİLME ARAÇLARI ---
     with st.sidebar:
-        st.header("⚙️ Yönetim")
-        with st.expander("🗑️ Öğrenci Sil"):
-            if not student_names_all: st.info("Öğrenci yok.")
+        st.header("⚙️ Yönetim Araçları")
+        
+        # 1. ÖĞRENCİ SİLME
+        with st.expander("🗑️ Öğrenci Dosyası Sil"):
+            if not student_names_all:
+                st.info("Sistemde kayıtlı öğrenci yok.")
             else:
-                to_del = st.multiselect("Seç:", student_names_all)
-                if to_del and st.button("SİL"):
-                    delete_specific_students(to_del)
-                    st.success("Silindi."); time.sleep(1); st.rerun()
-        with st.expander("⚠️ Sıfırla"):
-            if st.button("TÜMÜNÜ SIFIRLA"):
-                reset_database(); st.success("Sıfırlandı."); time.sleep(1); st.rerun()
+                st.warning("Seçilen öğrencilerin tüm verileri (testler, raporlar) silinecektir.")
+                selected_to_delete = st.multiselect("Silinecekleri Seç:", options=student_names_all)
+                
+                if selected_to_delete:
+                    if st.button("SEÇİLENLERİ KALICI OLARAK SİL", type="primary"):
+                        if delete_specific_students(selected_to_delete):
+                            st.success("Kayıtlar başarıyla silindi.")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("Silme işlemi başarısız oldu.")
 
-    if not data:
-        st.info("📂 Henüz kayıtlı veri yok.")
-        return
+        st.markdown("---")
+        
+        # 2. TAM SIFIRLAMA
+        with st.expander("⚠️ Fabrika Ayarlarına Dön"):
+            st.error("DİKKAT: Bu işlem tüm veritabanını temizler.")
+            if st.button("TÜM SİSTEMİ SIFIRLA"):
+                if reset_database():
+                    st.success("Sistem tamamen sıfırlandı.")
+                    time.sleep(1)
+                    st.rerun()
 
-    # 1. ÖĞRENCİ SEÇİMİ
-    st.subheader("📂 Öğrenci Dosyası")
-    selected_name = st.selectbox("Öğrenci Seçiniz:", student_names_all, index=None, placeholder="Listeden seçin...")
+    # --- ANA EKRAN AKIŞI ---
     
-    if not selected_name:
-        st.info("👆 Analiz için bir öğrenci seçiniz.")
+    if not data:
+        st.info("📂 Henüz kayıtlı öğrenci verisi bulunmamaktadır.")
         return
 
+    # 1. ÖĞRENCİ SEÇİMİ (VARSAYILAN BOŞ)
+    st.subheader("📂 Öğrenci Dosyası Görüntüle")
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        # index=None ile varsayılan boş gelir, placeholder görünür
+        selected_name = st.selectbox(
+            "İncelemek İstediğiniz Öğrenciyi Seçiniz:", 
+            student_names_all, 
+            index=None, 
+            placeholder="Listeden bir öğrenci seçin..."
+        )
+    
+    # EĞER SEÇİM YAPILMADIYSA BURADA DUR
+    if not selected_name:
+        st.info("👆 Lütfen analizlerini görmek istediğiniz öğrenciyi yukarıdaki listeden seçiniz.")
+        return
+
+    # SEÇİLEN ÖĞRENCİNİN VERİLERİNİ AL
     student_data = next(d for d in data if d["info"].name == selected_name)
     info = student_data["info"]
     tests = student_data["tests"]
 
-    # 2. KİMLİK KARTI
+    # 2. ÖĞRENCİ KİMLİK KARTI
     with st.container():
+        st.markdown(f"### 🆔 {info.name}")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Öğrenci", info.name)
-        c2.metric("Yaş/Cinsiyet", f"{info.age} / {info.gender}")
-        c3.metric("Kullanıcı Adı", info.username)
-        c4.metric("Giriş Sayısı", info.login_count)
+        c1.metric("Yaş / Cinsiyet", f"{info.age} / {info.gender}")
+        c1.caption("Demografik Bilgi")
+        
+        c2.metric("Kullanıcı Adı", info.username)
+        c2.caption("Sistem Girişi")
+        
+        c3.write(f"**Şifre:** {info.password}")
+        c3.caption("Güvenlik")
+        
+        c4.metric("Toplam Giriş", info.login_count)
+        c4.caption("Aktiflik Durumu")
+    
     st.divider()
 
     # ============================================================
-    # 3. KAYITLI RAPOR ARŞİVİ
+    # 3. KAYITLI RAPOR ARŞİVİ (VERİTABANINDAN ÇEKİLENLER)
     # ============================================================
     st.subheader("📂 Kayıtlı Rapor Arşivi")
+    
+    # Bu öğrencinin geçmiş raporlarını veritabanından getir
     history = get_student_analysis_history(info.id)
-    analyzed_combinations = [] 
     
     if not history:
-        st.info("Bu öğrenci için henüz oluşturulmuş bütüncül bir analiz raporu yok.")
+        st.info("Bu öğrenci için henüz oluşturulmuş bütüncül veya detaylı bir analiz raporu bulunmamaktadır.")
     else:
-        st.markdown(f"Bu öğrenci için **{len(history)} adet** kayıtlı rapor bulundu.")
+        st.markdown(f"Bu öğrenci için **{len(history)} adet** kayıtlı rapor bulundu. Görüntülemek için aşağıdan seçim yapabilirsiniz:")
+        
         for idx, record in enumerate(history):
-            analyzed_combinations.append(record['combination'])
+            # Buton etiketi: Kombinasyon + Tarih
             btn_label = f"📄 Rapor {idx+1}: {record['combination']} ({record['date']})"
+            
             with st.expander(btn_label):
                 st.markdown(f"<div class='report-header'><b>ANALİZ EDİLEN TESTLER:</b> {record['combination']}</div>", unsafe_allow_html=True)
                 st.markdown(record['report'])
-                st.download_button(label=f"📥 İndir ({idx+1})", data=record['report'], file_name=f"{info.name}_Rapor_{idx+1}.txt", mime="text/plain", key=f"dl_{idx}")
+                
+                # İndirme Butonu
+                st.download_button(
+                    label=f"📥 Raporu İndir ({idx+1})",
+                    data=record['report'],
+                    file_name=f"{info.name}_Rapor_{idx+1}.txt",
+                    mime="text/plain",
+                    key=f"dl_{idx}"
+                )
 
     st.divider()
 
     # ============================================================
-    # 4. YENİ ANALİZ OLUŞTURMA (SÜPER PROMPT İLE GÜÇLENDİRİLDİ)
+    # 4. YENİ ANALİZ OLUŞTURMA MERKEZİ (SEÇENEKLİ)
     # ============================================================
     st.subheader("⚡ Yeni Analiz Oluştur")
     
     if not tests:
-        st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş.")
+        st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş. Analiz yapılamaz.")
     else:
+        # Öğrencinin çözdüğü tüm testleri listele
         all_completed_tests = [t["test_name"] for t in tests]
-        already_analyzed_singles = [ac for ac in analyzed_combinations if " + " not in ac]
-        available_tests = [t for t in all_completed_tests if t not in already_analyzed_singles]
         
-        if not available_tests:
-            st.success("✅ Tüm testlerin tekil analizleri tamamlanmış.")
-            st.info("💡 İpucu: Çoklu analiz (Kombinasyon) yapmak istiyorsanız ama testler burada görünmüyorsa, yukarıdaki arşivden mevcut raporları inceleyebilirsiniz.")
-        else:
-            st.write("Henüz analiz edilmemiş testler:")
-            selected_tests = st.multiselect("Testleri Seç:", options=available_tests, default=available_tests)
+        st.write("Analiz raporu oluşturmak istediğiniz testleri seçiniz:")
+        
+        # Çoklu Seçim Kutusu
+        selected_tests = st.multiselect(
+            "Test Listesi:", 
+            options=all_completed_tests, 
+            default=all_completed_tests # Kolaylık olsun diye hepsi seçili gelsin
+        )
+        
+        if selected_tests:
+            st.markdown("---")
+            st.write("📊 **Analiz Yöntemini Seçiniz:**")
             
-            if st.button("🧠 YENİ ANALİZ OLUŞTUR VE KAYDET", type="primary"):
-                if not selected_tests:
-                    st.error("En az bir test seçmelisiniz.")
-                else:
-                    analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
-                    st.info(f"⏳ Şu testler analiz ediliyor: **{', '.join(selected_tests)}**")
-                    
-                    st.markdown("### 📊 Puan Grafikleri")
-                    gc = st.columns(2)
-                    for i, t in enumerate(analyzed_data):
-                        if t["scores"]:
-                            fig = plot_scores(t["scores"], t["test_name"])
-                            if fig: gc[i%2].pyplot(fig)
+            # --- YÖNTEM SEÇİMİ (RADIO BUTTON) ---
+            analysis_mode = st.radio(
+                "Nasıl bir rapor istiyorsunuz?",
+                options=["BÜTÜNCÜL (Harmanlanmış) Rapor", "AYRI AYRI (Tekil) Raporlar"],
+                index=0,
+                help="Bütüncül: Seçilen tüm testleri birleştirip tek bir sentez rapor yazar.\nAyrı Ayrı: Seçilen her test için sırayla ayrı ayrı raporlar oluşturur ve kaydeder."
+            )
+            
+            st.markdown("<br>", unsafe_allow_html=True) # Boşluk
+            
+            if st.button("🚀 ANALİZİ BAŞLAT", type="primary"):
+                # Seçilen testlerin verilerini filtrele
+                analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
+                
+                # --- ORTAK ADIM: PUAN GRAFİKLERİNİ GÖSTER ---
+                st.markdown("### 📊 Puan Grafikleri")
+                gc = st.columns(2)
+                for i, t in enumerate(analyzed_data):
+                    if t["scores"]:
+                        fig = plot_scores(t["scores"], t["test_name"])
+                        if fig:
+                            gc[i % 2].pyplot(fig)
+                        else:
+                            gc[i % 2].info(f"{t['test_name']} için grafik verisi yok.")
 
-                    with st.spinner("Yapay zeka verileri sentezliyor (Bu işlem 30-40 saniye sürebilir)..."):
+                # ====================================================
+                # MOD 1: BÜTÜNCÜL (HARMANLANMIŞ) ANALİZ
+                # ====================================================
+                if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
+                    
+                    st.info(f"⏳ Yapay Zeka, seçilen **{len(selected_tests)} testi** birbiriyle ilişkilendirerek bütüncül bir rapor yazıyor. Lütfen bekleyin...")
+                    
+                    with st.spinner("Analiz sentezleniyor..."):
+                        # Yapay Zekaya gidecek veriyi hazırla
                         ai_input = []
                         for t in analyzed_data:
                             ai_input.append({
@@ -161,7 +300,7 @@ def app():
                                 "SONUÇLAR": t["scores"] if t["scores"] else t["raw_answers"]
                             })
                         
-                        # --- DÜNYA STANDARTLARINDA ANALİZ PROMPTU ---
+                        # --- DÜNYA STANDARTLARINDA SÜPER PROMPT ---
                         prompt = f"""
                         Sen dünyanın en prestijli eğitim kurumlarında (Harvard, MIT, Cambridge) kullanılan analiz tekniklerine hakim, uzman bir baş psikolog ve veri bilimcisisin.
 
@@ -270,16 +409,64 @@ def app():
                         """
                         
                         final_report = get_ai_analysis(prompt)
+                        
+                        # Bütüncül raporu veritabanına kaydet
                         save_holistic_analysis(info.id, selected_tests, final_report)
                         
-                        st.success("✅ Analiz tamamlandı ve kaydedildi.")
-                        time.sleep(1)
+                        st.success("✅ Bütüncül analiz başarıyla tamamlandı ve Arşiv'e kaydedildi.")
+                        time.sleep(1.5)
                         st.rerun()
 
-    # 5. LİSTE
+                # ====================================================
+                # MOD 2: AYRI AYRI (TEKİL) ANALİZLER
+                # ====================================================
+                else:
+                    progress_text = "Testler sırayla analiz ediliyor. Lütfen bekleyin..."
+                    my_bar = st.progress(0, text=progress_text)
+                    total_ops = len(analyzed_data)
+                    
+                    for idx, t in enumerate(analyzed_data):
+                        test_name = t["test_name"]
+                        my_bar.progress((idx + 1) / total_ops, text=f"**{test_name}** analiz ediliyor... ({idx+1}/{total_ops})")
+                        
+                        ai_input = [{
+                            "TEST ADI": test_name, 
+                            "TARİH": str(t["date"]),
+                            "SONUÇLAR": t["scores"] if t["scores"] else t["raw_answers"]
+                        }]
+                        
+                        # Tekil Analiz Promptu
+                        prompt = f"""
+                        Sen uzman bir psikologsun. Aşağıdaki TEST SONUCUNA göre öğrenciyi detaylı analiz et.
+                        
+                        ÖĞRENCİ: {info.name}, {info.age}, {info.gender}
+                        TEST: {test_name}
+                        VERİLER: {json.dumps(ai_input, ensure_ascii=False)}
+
+                        GÖREV: Sadece bu teste odaklanarak derinlemesine bir yorum yap.
+                        RAPOR FORMATI:
+                        1. Test Sonucunun Anlamı
+                        2. Güçlü Yönler
+                        3. Gelişim Alanları
+                        4. Bu Teste Özel Tavsiyeler
+                        
+                        Dil: Türkçe.
+                        """
+                        
+                        single_report = get_ai_analysis(prompt)
+                        
+                        # Tek başına (Liste içinde tek eleman olarak) kaydet
+                        save_holistic_analysis(info.id, [test_name], single_report)
+                    
+                    my_bar.empty()
+                    st.success(f"✅ Seçilen {total_ops} test başarıyla AYRI AYRI analiz edildi ve Arşiv'e eklendi.")
+                    time.sleep(2)
+                    st.rerun()
+
+    # 5. TEST GEÇMİŞİ LİSTESİ (ALT KISIM)
     st.divider()
-    with st.expander("🗂️ Test Geçmişi (Liste)"):
+    with st.expander("🗂️ Test Geçmişi ve Ham Veriler (Liste)"):
         if tests:
-            df = pd.DataFrame(tests)
-            df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y')
-            st.dataframe(df[["test_name", "date"]], use_container_width=True)
+            df_tests = pd.DataFrame(tests)
+            df_tests['date'] = pd.to_datetime(df_tests['date']).dt.strftime('%d.%m.%Y')
+            st.dataframe(df_tests[["test_name", "date"]], use_container_width=True)
