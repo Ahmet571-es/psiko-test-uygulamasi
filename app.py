@@ -17,112 +17,143 @@ init_db()
 # --- CSS VE TASARIM AYARLARI ---
 st.markdown("""
 <style>
-    .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; }
-    div[data-testid="stForm"] { border: 2px solid #e0e0e0; padding: 30px; border-radius: 15px; background-color: #f9f9f9; }
-    .header-text { text-align: center; color: #2E86C1; }
+    .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; width: 100%; }
+    .auth-container { border: 2px solid #e0e0e0; padding: 40px; border-radius: 15px; background-color: #ffffff; max-width: 600px; margin: auto; }
+    .header-text { text-align: center; color: #2E86C1; margin-bottom: 20px; }
+    .sub-link { text-align: center; margin-top: 10px; cursor: pointer; color: #555; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE ---
+# --- SESSION STATE (OTURUM DEĞİŞKENLERİ) ---
 if 'role' not in st.session_state: st.session_state.role = None
 if 'student_id' not in st.session_state: st.session_state.student_id = None
 if 'student_name' not in st.session_state: st.session_state.student_name = None
 if 'login_phase' not in st.session_state: st.session_state.login_phase = 1
 
-# --- ANA GİRİŞ EKRANI FONKSİYONU ---
-def main_login():
+# Sayfa Modu Kontrolü (Varsayılan: 'register' -> İlk açılışta Kayıt Ekranı gelir)
+if 'auth_mode' not in st.session_state: st.session_state.auth_mode = 'register' 
+
+# --- NAVİGASYON FONKSİYONLARI ---
+def go_to_login():
+    st.session_state.auth_mode = 'login'
+
+def go_to_register():
+    st.session_state.auth_mode = 'register'
+
+def go_to_teacher():
+    st.session_state.auth_mode = 'teacher'
+
+# --- ANA GİRİŞ SİSTEMİ ---
+def main_auth_flow():
     st.markdown("<h1 class='header-text'>🧠 Psikometrik Test ve Analiz Merkezi</h1>", unsafe_allow_html=True)
-    st.markdown("---")
     
-    # 3 Sekmeli Yapı
-    tab1, tab2, tab3 = st.tabs(["🔑 Öğrenci Girişi", "📝 Yeni Öğrenci Kaydı", "👨‍🏫 Öğretmen Girişi"])
+    # Ortalamak için kolon yapısı
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    # --- SEKME 1: ÖĞRENCİ GİRİŞİ ---
-    with tab1:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.subheader("Öğrenci Girişi 👋")
-            with st.form("student_login_form"):
+    with col2:
+        # ---------------------------------------------------------
+        # 1. MOD: KAYIT OL (VARSAYILAN AÇILIŞ)
+        # ---------------------------------------------------------
+        if st.session_state.auth_mode == 'register':
+            st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
+            st.subheader("📝 Yeni Öğrenci Kaydı")
+            st.info("Testlere katılmak için önce profilinizi oluşturun.")
+            
+            with st.form("register_form"):
+                name = st.text_input("Ad Soyad (Tam İsim)")
+                c1, c2 = st.columns(2)
+                age = c1.number_input("Yaş", min_value=5, max_value=99, step=1, value=15)
+                gender = c2.selectbox("Cinsiyet", ["Kız", "Erkek"])
+                
+                st.markdown("---")
+                new_user = st.text_input("Kullanıcı Adı Belirle")
+                new_pw = st.text_input("Şifre Belirle", type="password")
+                
+                submit = st.form_submit_button("Kayıt Ol", type="primary")
+                
+                if submit:
+                    if not name or not new_user or not new_pw:
+                        st.warning("Lütfen tüm alanları doldurunuz.")
+                    else:
+                        success, result = register_student(name.title(), new_user, new_pw, age, gender)
+                        if success:
+                            st.success("✅ Kayıt Başarılı! Giriş ekranına yönlendiriliyorsunuz...")
+                            time.sleep(2)
+                            st.session_state.auth_mode = 'login' # Otomatik yönlendirme
+                            st.rerun()
+                        else:
+                            st.error(result)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Alt Linkler
+            st.markdown("---")
+            if st.button("Zaten hesabın var mı? OTURUM AÇ ➡️", on_click=go_to_login): pass
+            if st.button("👨‍🏫 Öğretmen Girişi", type="secondary", on_click=go_to_teacher): pass
+
+        # ---------------------------------------------------------
+        # 2. MOD: ÖĞRENCİ GİRİŞİ
+        # ---------------------------------------------------------
+        elif st.session_state.auth_mode == 'login':
+            st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
+            st.subheader("🔑 Öğrenci Girişi")
+            
+            with st.form("login_form"):
                 user = st.text_input("Kullanıcı Adı")
                 pw = st.text_input("Şifre", type="password")
-                submitted = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
                 
-                if submitted:
+                submit = st.form_submit_button("Giriş Yap", type="primary")
+                
+                if submit:
                     status, student_obj = login_student(user, pw)
                     if status:
-                        st.success(f"Giriş başarılı! Hoşgeldin {student_obj.name}")
+                        st.success(f"Hoşgeldin {student_obj.name}!")
                         st.session_state.role = "student"
                         st.session_state.student_id = student_obj.id
                         st.session_state.student_name = student_obj.name
                         st.session_state.login_phase = student_obj.login_count
+                        time.sleep(0.5)
                         st.rerun()
                     else:
                         st.error("Kullanıcı adı veya şifre hatalı.")
-
-    # --- SEKME 2: ÖĞRENCİ KAYIT (OTOMATİK YÖNLENDİRMELİ) ---
-    with tab2:
-        st.subheader("Yeni Hesap Oluştur 🚀")
-        st.info("Testlere başlamak için lütfen aşağıdaki formu doldurarak kayıt olun.")
-        
-        with st.form("register_form"):
-            c1, c2 = st.columns(2)
-            with c1:
-                name = st.text_input("Ad Soyad (Tam İsim)")
-                age = st.number_input("Yaş", min_value=5, max_value=99, step=1, value=15)
-                gender = st.selectbox("Cinsiyet", ["Kız", "Erkek"])
-            with c2:
-                new_user = st.text_input("Kullanıcı Adı Belirle (Giriş için gerekli)")
-                new_pw = st.text_input("Şifre Belirle", type="password")
             
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Alt Linkler
             st.markdown("---")
-            reg_submit = st.form_submit_button("Kayıt Ol ve Başla", type="secondary", use_container_width=True)
-            
-            if reg_submit:
-                if not name or not new_user or not new_pw:
-                    st.warning("Lütfen tüm alanları doldurunuz.")
-                else:
-                    # register_student artık (Durum, Nesne/Mesaj) döndürüyor
-                    success, result = register_student(name.title(), new_user, new_pw, age, gender)
-                    
-                    if success:
-                        # result burada yeni oluşturulan student objesidir
-                        st.success(f"Kayıt Başarılı! Hoşgeldin {result.name}. Test Paneline Yönlendiriliyorsun...")
-                        
-                        # Otomatik Giriş İşlemi
-                        st.session_state.role = "student"
-                        st.session_state.student_id = result.id
-                        st.session_state.student_name = result.name
-                        st.session_state.login_phase = 1 # Yeni kayıt olduğu için 1. Faz
-                        
-                        time.sleep(1.5) # Kullanıcı mesajı okusun diye kısa bekleme
-                        st.rerun()      # Sayfayı yenile ve öğrenci paneline git
-                    else:
-                        # result burada hata mesajıdır
-                        st.error(result)
+            if st.button("⬅️ Hesabın yok mu? KAYIT OL", on_click=go_to_register): pass
 
-    # --- SEKME 3: ÖĞRETMEN GİRİŞİ ---
-    with tab3:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.subheader("Yönetici Erişimi 🔒")
-            with st.form("teacher_login_form"):
-                password_input = st.text_input("Yönetici Şifresi:", type="password")
-                submitted_t = st.form_submit_button("Yönetim Paneline Git", type="secondary", use_container_width=True)
+        # ---------------------------------------------------------
+        # 3. MOD: ÖĞRETMEN GİRİŞİ
+        # ---------------------------------------------------------
+        elif st.session_state.auth_mode == 'teacher':
+            st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
+            st.subheader("🔒 Yönetici Girişi")
+            
+            with st.form("teacher_form"):
+                pw = st.text_input("Yönetici Şifresi", type="password")
+                submit = st.form_submit_button("Panele Git")
                 
-                if submitted_t:
+                if submit:
                     secret_pass = "admin123"
                     if "teacher_password" in st.secrets:
                         secret_pass = st.secrets["teacher_password"]
                     
-                    if password_input == secret_pass:
+                    if pw == secret_pass:
                         st.session_state.role = "teacher"
                         st.rerun()
                     else:
                         st.error("Hatalı şifre.")
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Alt Linkler
+            st.markdown("---")
+            if st.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register): pass
 
-# --- SAYFA YÖNLENDİRME MANTIĞI ---
+# --- YÖNLENDİRME MANTIĞI ---
 if st.session_state.role is None:
-    main_login()
+    main_auth_flow()
 
 elif st.session_state.role == "student":
     import student_view
@@ -132,10 +163,12 @@ elif st.session_state.role == "teacher":
     import teacher_view
     teacher_view.app()
 
-# --- SIDEBAR: ÇIKIŞ BUTONU ---
+# --- ÇIKIŞ İŞLEMİ ---
 if st.session_state.role:
     with st.sidebar:
         st.write(f"Kullanıcı: **{st.session_state.get('student_name', 'Yönetici')}**")
         if st.button("Güvenli Çıkış", type="secondary"):
             st.session_state.clear()
+            # Çıkış yapınca tekrar kayıt ekranına dönmesi için:
+            st.session_state.auth_mode = 'register' 
             st.rerun()
