@@ -15,7 +15,7 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- TÜM TESTLER LİSTESİ (TEK LİSTE) ---
+# --- TÜM TESTLER LİSTESİ ---
 ALL_TESTS = [
     "Enneagram Kişilik Testi",
     "Çalışma Davranışı Ölçeği (Baltaş)",
@@ -523,15 +523,37 @@ def app():
                 st.progress(curr_type / 9)
                 st.subheader(f"Bölüm {curr_type}: Tip {curr_type} Soruları")
                 
+                # SÖZEL ŞIKLAR İÇİN MAPPING
+                ennea_map = {
+                    1: "Kesinlikle Katılmıyorum",
+                    2: "Katılmıyorum",
+                    3: "Kararsızım",
+                    4: "Katılıyorum",
+                    5: "Kesinlikle Katılıyorum"
+                }
+                
+                # Seçenekler (Rakam Olarak)
                 opts = [1, 2, 3, 4, 5]
-                labels = ["1 (Hiç)", "2", "3", "4", "5 (Çok)"]
+                
                 all_answered = True
                 
                 for i, q_text in enumerate(questions):
                     q_key = f"{curr_type}_{i}"
                     st.write(f"**{i+1}. {q_text}**")
+                    
                     prev = st.session_state.enneagram_answers.get(q_key)
-                    val = st.radio(f"Soru {i+1}", opts, key=f"rad_{q_key}", index=opts.index(prev) if prev else None, horizontal=True, format_func=lambda x: labels[x-1], label_visibility="collapsed")
+                    # Radio butonu
+                    val = st.radio(
+                        f"Soru {i+1}", 
+                        opts, 
+                        key=f"rad_{q_key}", 
+                        # Eğer daha önce seçildiyse onu işaretle
+                        index=opts.index(prev) if prev else None, 
+                        horizontal=True, 
+                        # Rakamı alıp Sözel İfadeye çeviren fonksiyon
+                        format_func=lambda x: ennea_map[x], 
+                        label_visibility="collapsed"
+                    )
                     
                     if val: st.session_state.enneagram_answers[q_key] = val
                     else: all_answered = False
