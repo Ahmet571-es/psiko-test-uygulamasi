@@ -49,6 +49,7 @@ def app():
         .stSelectbox div, .stMultiSelect div, div[data-baseweb="select"] { cursor: pointer !important; }
         .archive-box { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
         .report-header { color: #155724; background-color: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #c3e6cb; }
+        div[role="listbox"] li { cursor: pointer !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -98,28 +99,30 @@ def app():
     st.divider()
 
     # ============================================================
-    # 3. YENİ ÖZELLİK: KAYITLI RAPOR ARŞİVİ (BURASI EKLENDİ)
+    # 3. YENİ ÖZELLİK: KAYITLI RAPOR ARŞİVİ
     # ============================================================
     st.subheader("📂 Kayıtlı Rapor Arşivi")
     
     # Veritabanından bu öğrencinin geçmiş raporlarını çek
     history = get_student_analysis_history(info.id)
     
+    # Geçmişte analiz edilmiş test kombinasyonlarını (String listesi olarak) saklayalım
+    # Örnek: ["Enneagram", "VARK + Enneagram"]
+    analyzed_combinations = [] 
+    
     if not history:
         st.info("Bu öğrenci için henüz oluşturulmuş bütüncül bir analiz raporu yok.")
     else:
         st.markdown(f"Bu öğrenci için **{len(history)} adet** kayıtlı rapor bulundu. Görüntülemek için aşağıdan seçiniz:")
         
-        # Raporları listele (Expander içinde veya butonlarla)
         for idx, record in enumerate(history):
-            # Başlık Örneği: "Enneagram + VARK (12.02.2024)"
+            analyzed_combinations.append(record['combination']) # Listeye ekle (Filtreleme için kullanacağız)
+            
             btn_label = f"📄 Rapor {idx+1}: {record['combination']} ({record['date']})"
             
             with st.expander(btn_label):
                 st.markdown(f"<div class='report-header'><b>ANALİZ EDİLEN TESTLER:</b> {record['combination']}</div>", unsafe_allow_html=True)
                 st.markdown(record['report'])
-                
-                # İndirme Butonu
                 st.download_button(
                     label=f"📥 Raporu İndir ({idx+1})",
                     data=record['report'],
@@ -131,60 +134,76 @@ def app():
     st.divider()
 
     # ============================================================
-    # 4. YENİ ANALİZ OLUŞTURMA MODÜLÜ
+    # 4. YENİ ANALİZ OLUŞTURMA MODÜLÜ (FİLTRELİ)
     # ============================================================
     st.subheader("⚡ Yeni Analiz Oluştur")
     
     if not tests:
         st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş. Analiz yapılamaz.")
     else:
-        st.write("Yeni bir rapor oluşturmak için analiz edilecek testleri seçin:")
+        # FİLTRELEME MANTIĞI:
+        # Öğrencinin çözdüğü tüm testlerin isimlerini al
+        all_completed_tests = [t["test_name"] for t in tests]
         
-        test_names = [t["test_name"] for t in tests]
-        selected_tests = st.multiselect("Testleri Seç:", options=test_names, default=test_names)
+        # Daha önce TEK BAŞINA raporu alınmış testleri bul (Kombinasyon stringinde '+' yoksa tekildir)
+        already_analyzed_singles = [ac for ac in analyzed_combinations if " + " not in ac]
         
-        if st.button("🧠 YENİ ANALİZ OLUŞTUR VE KAYDET", type="primary"):
-            if not selected_tests:
-                st.error("En az bir test seçmelisiniz.")
-            else:
-                analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
-                
-                # Grafik
-                st.markdown("### 📊 Puan Grafikleri")
-                gc = st.columns(2)
-                for i, t in enumerate(analyzed_data):
-                    if t["scores"]:
-                        fig = plot_scores(t["scores"], t["test_name"])
-                        if fig: gc[i%2].pyplot(fig)
+        # Henüz analizi yapılmamış testleri filtrele
+        available_tests_for_new_analysis = [t for t in all_completed_tests if t not in already_analyzed_singles]
+        
+        if not available_tests_for_new_analysis:
+            st.success("✅ Harika! Öğrencinin tamamladığı **TÜM** testlerin tekil analizleri zaten yapılmış ve arşive kaydedilmiş.")
+            st.info("💡 Farklı bir **kombinasyon** (Bütüncül Analiz) denemek istiyorsanız, yukarıdaki arşivden mevcut raporları inceleyebilirsiniz. Ancak sistem, mükerrer tekil analiz yapmanızı engellemek için listeyi boşalttı.")
+        else:
+            st.write("Aşağıdaki listede, henüz **tekil analizi yapılmamış** veya rapora dökülmemiş testler listelenmektedir:")
+            
+            # Filtrelenmiş listeyi göster
+            selected_tests = st.multiselect(
+                "Analiz Edilecek Testleri Seç:", 
+                options=available_tests_for_new_analysis, 
+                default=available_tests_for_new_analysis
+            )
+            
+            if st.button("🧠 YENİ ANALİZ OLUŞTUR VE KAYDET", type="primary"):
+                if not selected_tests:
+                    st.error("En az bir test seçmelisiniz.")
+                else:
+                    analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
+                    
+                    # Grafik
+                    st.markdown("### 📊 Puan Grafikleri")
+                    gc = st.columns(2)
+                    for i, t in enumerate(analyzed_data):
+                        if t["scores"]:
+                            fig = plot_scores(t["scores"], t["test_name"])
+                            if fig: gc[i%2].pyplot(fig)
 
-                # Yapay Zeka Analizi
-                with st.spinner("Yapay zeka analiz yapıyor ve arşive kaydediyor..."):
-                    ai_input = []
-                    for t in analyzed_data:
-                        ai_input.append({
-                            "Test": t["test_name"],
-                            "Tarih": str(t["date"]),
-                            "Sonuçlar": t["scores"] if t["scores"] else t["raw_answers"]
-                        })
-                    
-                    prompt = f"""
-                    Sen uzman bir eğitim psikoloğusun.
-                    ÖĞRENCİ: {info.name}, {info.age}, {info.gender}.
-                    VERİLER: {json.dumps(ai_input, ensure_ascii=False)}
-                    GÖREV: Bütüncül analiz raporu yaz.
-                    BAŞLIKLAR: Profil Özeti, Güçlü Yönler, Gelişim Alanları, Öğrenme Stratejisi, Kariyer, Tavsiyeler.
-                    """
-                    
-                    final_report = get_ai_analysis(prompt)
-                    
-                    # Veritabanına Kaydet
-                    save_holistic_analysis(info.id, selected_tests, final_report)
-                    
-                    st.success("✅ Analiz tamamlandı ve arşive kaydedildi! Yukarıdaki 'Kayıtlı Rapor Arşivi' bölümünden her zaman ulaşabilirsiniz.")
-                    
-                    # Anlık Gösterim
-                    st.markdown("### 📝 Oluşturulan Rapor")
-                    st.markdown(final_report)
+                    # Yapay Zeka Analizi
+                    with st.spinner("Yapay zeka analiz yapıyor ve arşive kaydediyor..."):
+                        ai_input = []
+                        for t in analyzed_data:
+                            ai_input.append({
+                                "Test": t["test_name"],
+                                "Tarih": str(t["date"]),
+                                "Sonuçlar": t["scores"] if t["scores"] else t["raw_answers"]
+                            })
+                        
+                        prompt = f"""
+                        Sen uzman bir eğitim psikoloğusun.
+                        ÖĞRENCİ: {info.name}, {info.age}, {info.gender}.
+                        VERİLER: {json.dumps(ai_input, ensure_ascii=False)}
+                        GÖREV: Bütüncül analiz raporu yaz.
+                        BAŞLIKLAR: Profil Özeti, Güçlü Yönler, Gelişim Alanları, Öğrenme Stratejisi, Kariyer, Tavsiyeler.
+                        """
+                        
+                        final_report = get_ai_analysis(prompt)
+                        
+                        # Veritabanına Kaydet
+                        save_holistic_analysis(info.id, selected_tests, final_report)
+                        
+                        st.success("✅ Analiz tamamlandı ve arşive kaydedildi! Yukarıdaki 'Kayıtlı Rapor Arşivi' bölümünden her zaman ulaşabilirsiniz.")
+                        time.sleep(2)
+                        st.rerun() # Listeyi güncellemek için sayfayı yenile
 
     # 5. HAM VERİLER TABLOSU
     st.divider()
