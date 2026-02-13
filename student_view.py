@@ -15,17 +15,6 @@ else:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- TÜM TESTLER LİSTESİ ---
-ALL_TESTS = [
-    "Enneagram Kişilik Testi",
-    "Çalışma Davranışı Ölçeği (Baltaş)",
-    "Sağ-Sol Beyin Dominansı Testi",
-    "Sınav Kaygısı Ölçeği (DuSKÖ)",
-    "VARK Öğrenme Stilleri Testi",
-    "Çoklu Zeka Testi (Gardner)",
-    "Holland Mesleki İlgi Envanteri (RIASEC)"
-]
-
 # --- GELİŞMİŞ, FEW-SHOT DESTEKLİ PROMPTLAR ---
 SORU_URETIM_PROMPT = """
 Sen dünyanın en iyi çocuk ve ergen psikolojisi uzmanı, aynı zamanda ödüllü bir test tasarımcısısın.
@@ -413,9 +402,8 @@ def app():
             font-style: italic;
         }
     </style>
-    """
-    
     """, unsafe_allow_html=True)
+    
     st.markdown("<h1 class='main-header'>🏥 EĞİTİM KLİNİK</h1>", unsafe_allow_html=True)
     st.markdown(f"<div class='sub-header'>Hoşgeldin, <b>{st.session_state.student_name}</b>. Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
@@ -616,4 +604,3 @@ def app():
                                 save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.enneagram_answers, scores, rep)
                                 st.session_state.page = "success_screen"
                                 st.rerun()
-
