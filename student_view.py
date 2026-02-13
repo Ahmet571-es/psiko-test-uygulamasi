@@ -375,10 +375,49 @@ def calculate_enneagram_report(all_answers):
 def app():
     st.markdown("""
     <style>
-        .stButton > button { width: 100%; border-radius: 12px; height: 60px; font-size: 18px; font-weight: bold; }
-        .success-box { background-color: #dcfce7; padding: 25px; border-radius: 12px; border: 2px solid #16a34a; text-align: center; }
+        .test-card {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .test-card:hover {
+            background-color: #e9ecef;
+            border-color: #2E86C1;
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .completed-badge {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .main-header {
+            color: #2E86C1;
+            text-align: center;
+            font-weight: bold;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .sub-header {
+            color: #555;
+            text-align: center;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
     </style>
+    """
+    
     """, unsafe_allow_html=True)
+    st.markdown("<h1 class='main-header'>🏥 EĞİTİM KLİNİK</h1>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>Hoşgeldin, <b>{st.session_state.student_name}</b>. Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
     if "page" not in st.session_state: st.session_state.page = "home"
     
@@ -577,3 +616,4 @@ def app():
                                 save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.enneagram_answers, scores, rep)
                                 st.session_state.page = "success_screen"
                                 st.rerun()
+
