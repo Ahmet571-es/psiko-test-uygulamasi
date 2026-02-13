@@ -25,23 +25,11 @@ st.markdown("""
         text-align: center; 
         color: #2E86C1; 
         margin-top: 10px; 
-        margin-bottom: 5px; 
-        font-weight: 800; /* Daha kalın */
-        font-size: 2.5rem; /* Daha büyük */
-        text-transform: uppercase; /* Hepsi BÜYÜK HARF */
-    }
-    
-    .brand-text { 
-        text-align: center; 
-        color: #1F618D; 
-        font-size: 1.5rem; 
-        font-weight: 600; 
-        letter-spacing: 2px; 
-        margin-top: 0;
-        margin-bottom: 20px;
-        border-bottom: 3px solid #AED6F1;
-        display: inline-block;
-        padding-bottom: 5px;
+        margin-bottom: 20px; 
+        font-weight: 900; 
+        font-size: 3rem; 
+        text-transform: uppercase; 
+        letter-spacing: 1px;
     }
     
     .sub-link { text-align: center; margin-top: 10px; cursor: pointer; color: #555; }
@@ -69,11 +57,10 @@ def go_to_teacher():
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
-    # --- KURUMSAL BAŞLIK ALANI (GÜNCELLENDİ) ---
+    # --- KURUMSAL BAŞLIK ALANI (SADELEŞTİRİLDİ) ---
     st.markdown("""
         <div style="padding: 20px; text-align: center;">
             <h1 class='header-text'>🧠 EĞİTİM KLİNİK MERKEZİ</h1>
-            <div class='brand-text'>BALABAN EĞİTİM-KOÇLUK</div>
         </div>
     """, unsafe_allow_html=True)
     
