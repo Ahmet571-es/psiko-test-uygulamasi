@@ -5,7 +5,7 @@ from db_utils import login_student, register_student
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
-    page_title="BALABAN EĞİTİM-KOÇLUK",
+    page_title="EĞİTİM KLİNİK MERKEZİ",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -201,3 +201,4 @@ if st.session_state.role:
             st.session_state.clear()
             st.session_state.auth_mode = 'register' 
             st.rerun()
+
