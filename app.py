@@ -57,7 +57,7 @@ def go_to_teacher():
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
-    # --- KURUMSAL BAŞLIK ALANI (SADELEŞTİRİLDİ) ---
+    # --- KURUMSAL BAŞLIK ALANI ---
     st.markdown("""
         <div style="padding: 20px; text-align: center;">
             <h1 class='header-text'>🧠 EĞİTİM KLİNİK MERKEZİ</h1>
@@ -154,7 +154,10 @@ def main_auth_flow():
                 submit = st.form_submit_button("Panele Git")
                 
                 if submit:
-                    secret_pass = "admin123"
+                    # --- ŞİFRE GÜNCELLEMESİ BURADA YAPILDI ---
+                    secret_pass = "Anka2026." 
+                    
+                    # Eğer secrets.toml dosyası varsa oradan okur, yoksa yukarıdaki varsayılanı kullanır
                     if "teacher_password" in st.secrets:
                         secret_pass = st.secrets["teacher_password"]
                     
