@@ -1,169 +1,34 @@
 import streamlit as st
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
 import json
 import time
 from db_utils import check_test_completed, save_test_result_to_db
 
-# --- API VE AYARLAR ---
-load_dotenv()
-if "GROK_API_KEY" in st.secrets:
-    GROK_API_KEY = st.secrets["GROK_API_KEY"]
-else:
-    GROK_API_KEY = os.getenv("GROK_API_KEY")
+# --- TEST VERİLERİ MODÜLÜ (YENİ) ---
+from test_data import (
+    # Sağ-Sol Beyin
+    SAG_SOL_BEYIN_QUESTIONS, SAG_SOL_BEYIN_DATA,
+    calculate_sag_sol_beyin,
+    # Çalışma Davranışı
+    CALISMA_DAVRANISI_QUESTIONS, CALISMA_DAVRANISI_CATEGORIES,
+    calculate_calisma_davranisi,
+    # Sınav Kaygısı
+    SINAV_KAYGISI_QUESTIONS, SINAV_KAYGISI_CATEGORIES,
+    calculate_sinav_kaygisi,
+    # Çoklu Zeka
+    COKLU_ZEKA_QUESTIONS_LISE, COKLU_ZEKA_QUESTIONS_ILKOGRETIM,
+    COKLU_ZEKA_DATA, ZEKA_SIRA,
+    calculate_coklu_zeka_lise, calculate_coklu_zeka_ilkogretim,
+    # VARK
+    VARK_QUESTIONS, VARK_SCORING, VARK_STYLES,
+    calculate_vark,
+    # Holland RIASEC
+    HOLLAND_QUESTIONS, HOLLAND_TYPES, HOLLAND_ORDER,
+    calculate_holland,
+)
 
-client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
-
-# --- GELİŞMİŞ, FEW-SHOT DESTEKLİ PROMPTLAR ---
-SORU_URETIM_PROMPT = """
-Sen dünyanın en iyi çocuk ve ergen psikolojisi uzmanı, aynı zamanda ödüllü bir test tasarımcısısın.
-
-GÖREV: Belirtilen test ({test_adi}) için, orijinal yapısına sadık kalarak YEPYENİ sorular üret.
-
-⚠️ KRİTİK KURALLAR (HAYATİ ÖNEM TAŞIR):
-1. **DİL VE ANLATIM (İLKOKUL SEVİYESİ):** Sorular o kadar sade, duru ve net olsun ki, ilkokula giden bir çocuk bile tek seferde anlasın. Asla "akademik" kelime kullanma.
-2. **MANİPÜLASYON KALKANI:** Öğrencinin "bunu seçersem havalı görünürüm" diyemeyeceği, **dolaylı** ve **zekice** kurgulanmış durumlar sun.
-3. **PSİKOLOJİK DERİNLİK:** Dil basit olsun ama ölçtüğü şey derin olsun.
-
----
-### 🌟 REFERANS ÖRNEK HAVUZU (FEW-SHOT EXAMPLES) 🌟
-(Soruları üretirken aşağıdaki örneklerin sadeliğini, doğallığını ve dolaylı anlatım tarzını kopyala. Asla sıkıcı olma!)
-
-**Örnek 1 (Çoklu Zeka - Mantıksal):**
-❌ Kötü Soru: "Matematik problemlerini çözmeyi severim." (Çok bariz)
-✅ İyi Soru: "Sayılarla oynamak bana bulmaca çözmek gibi eğlenceli gelir."
-
-**Örnek 2 (Çoklu Zeka - Sosyal):**
-❌ Kötü Soru: "Liderlik özelliklerim vardır."
-✅ İyi Soru: "Arkadaşlarım bir oyun oynayacağı zaman kuralları genelde ben koyarım."
-
-**Örnek 3 (Çoklu Zeka - İçsel):**
-❌ Kötü Soru: "Kendi duygularımın farkındayımdır."
-✅ İyi Soru: "Bazen odama çekilip 'Bugün neler hissettim?' diye düşünmeyi severim."
-
-**Örnek 4 (Çoklu Zeka - Doğacı):**
-❌ Kötü Soru: "Botanik ile ilgilenirim."
-✅ İyi Soru: "Yerdeki farklı taşları veya yaprakları toplayıp incelemek hoşuma gider."
-
-**Örnek 5 (Holland - Gerçekçi):**
-❌ Kötü Soru: "Mekanik aletleri tamir ederim."
-✅ İyi Soru: "Bozulan bir oyuncağın içini açıp 'Bu nasıl çalışıyor?' diye bakmak isterim."
-
-**Örnek 6 (Holland - Araştırmacı):**
-❌ Kötü Soru: "Bilimsel deneyleri severim."
-✅ İyi Soru: "Gökyüzündeki yıldızların veya karıncaların nasıl yaşadığını merak edip araştırırım."
-
-**Örnek 7 (Holland - Yaratıcı):**
-❌ Kötü Soru: "Sanatsal faaliyetlere katılırım."
-✅ İyi Soru: "Boş bir kağıt gördüğümde dayanamam, hemen renkli kalemlerle bir şeyler çizerim."
-
-**Örnek 8 (Sınav Kaygısı):**
-❌ Kötü Soru: "Sınavlarda fizyolojik semptomlar gösteririm."
-✅ İyi Soru: "Sınav kağıdı önüme gelince kalbim sanki yerinden çıkacakmış gibi hızlı atar."
-
-**Örnek 9 (Sınav Kaygısı):**
-❌ Kötü Soru: "Odaklanma sorunu yaşarım."
-✅ İyi Soru: "Sınavda bildiğim soruları bile heyecandan unutur, sonra hatırlarım."
-
-**Örnek 10 (VARK - Görsel):**
-❌ Kötü Soru: "Görerek öğrenirim."
-✅ İyi Soru: "Bir yeri bulmak için bana adres tarif edilmesi yerine harita gösterilmesini isterim."
-
-**Örnek 11 (VARK - Kinestetik):**
-❌ Kötü Soru: "Dokunarak öğrenirim."
-✅ İyi Soru: "Müzedeki eşyalara dokunmak yasak olduğunda orayı gezmekten sıkılırım."
-
-**Örnek 12 (Sağ-Sol Beyin):**
-❌ Kötü Soru: "Analitik düşünürüm."
-✅ İyi Soru: "Odamdaki eşyaların her zaman aynı yerde ve düzenli durmasını isterim."
-
-**Örnek 13 (Sağ-Sol Beyin):**
-❌ Kötü Soru: "Sezgiselimdir."
-✅ İyi Soru: "Birinin yalan söylediğini, o konuşmasa bile yüzünden anlarım."
-
-**Örnek 14 (Çalışma Davranışı):**
-❌ Kötü Soru: "Planlı çalışırım."
-✅ İyi Soru: "Ödevlerimi son güne bırakmam, azar azar yapıp bitiririm."
-
-**Örnek 15 (Çalışma Davranışı):**
-❌ Kötü Soru: "Ders çalışırken dikkatim dağılır."
-✅ İyi Soru: "Dersin başındayken aklım sürekli telefona veya oyuna gidiyor."
-
-**Örnek 16 (Holland - Girişimci):**
-❌ Kötü Soru: "Satış yapmayı severim."
-✅ İyi Soru: "Eski eşyalarımı veya yaptığım bileklikleri başkalarına satmak hoşuma gider."
-
-**Örnek 17 (Çoklu Zeka - Müziksel):**
-❌ Kötü Soru: "Müzik kulağım iyidir."
-✅ İyi Soru: "Duyduğum bir şarkının ritmini hemen parmaklarımla tutmaya başlarım."
-
-**Örnek 18 (Çoklu Zeka - Bedensel):**
-❌ Kötü Soru: "Spor aktivitelerinde başarılıyımdır."
-✅ İyi Soru: "Sıramda otururken bile ayaklarımı sallar veya elimle bir şeylerle oynarım, duramam."
-
-**Örnek 19 (Holland - Sosyal):**
-❌ Kötü Soru: "İnsanlara yardım ederim."
-✅ İyi Soru: "Sınıfta biri üzgünse hemen yanına gidip onu güldürmeye çalışırım."
-
-**Örnek 20 (Çalışma Davranışı):**
-❌ Kötü Soru: "Motivasyonum yüksektir."
-✅ İyi Soru: "Zor bir ödevle karşılaşınca pes etmem, 'Bunu çözeceğim' derim."
----
-
-TESTLERE ÖZEL YAPILANDIRMA:
-- **Çoklu Zeka (Gardner):** 80 soru. 8 zeka türü için 10'ar adet. Her soruya "area" etiketi ekle.
-- **Holland (RIASEC):** 90 soru. 6 tip için 15'er adet. Her soruya "area" etiketi ekle.
-- **VARK:** 16 soru.
-- **Sağ-Sol Beyin:** 30 soru.
-- **Çalışma Davranışı:** 73 soru.
-- **Sınav Kaygısı:** 50 soru.
-
-JSON ÇIKTI FORMATI:
-{{
-  "type": "likert",
-  "questions": [
-    {{"id": 1, "text": "Üretilen soru..."}} 
-  ]
-}}
-
-Sadece JSON formatında çıktı ver.
-Test Adı: {test_adi}
-"""
-
-TEK_RAPOR_PROMPT = """
-Sen öğrencilerin en sevdiği, onları çok iyi anlayan uzman bir psikologsun.
-
-GÖREV: Verilen test sonuçlarını analiz et ve öğrenciye özel bir rapor yaz.
-
----
-### 🌟 RAPOR DİLİ ÖRNEĞİ (FEW-SHOT) 🌟
-(Raporu yazarken aynen bu tonu ve samimiyeti kullan)
-
-**Örnek Giriş:**
-"Merhaba! Test sonuçlarına baktım ve gerçekten çok ilginç şeyler gördüm. Sanki zihninin içinde kocaman, rengarenk bir kütüphane var ama bazen aradığın kitabı bulmakta zorlanıyorsun gibi..."
-
-**Örnek Güçlü Yön Anlatımı:**
-"Sayısal zekan harika çıkmış! Bu ne demek biliyor musun? Sen olaylara bir dedektif gibi bakıyorsun. Başkalarının 'çok karışık' dediği problemleri sen parçalara ayırıp şıp diye çözüyorsun."
-
-**Örnek Gelişim Alanı Anlatımı:**
-"Biraz sınav kaygın var gibi görünüyor. Sınav kağıdı önüne gelince, aslında bildiğin şeyler saklambaç oynuyor gibi aklından kaçıyor olabilir. Ama merak etme, bunu basit nefes taktikleriyle yeneceğiz."
----
-
-RAPOR FORMATI:
-1. **Senin Dünyan (Genel Bakış):** Sonuçların özeti.
-2. **Sayısal Tablo:** Puanların listesi.
-3. **Süper Güçlerin:** En iyi olduğun alanlar ve hayattaki karşılığı.
-4. **Geliştirebileceğin Yanlar:** Zorlandığın yerler ve çözüm yolları.
-5. **Hayatına Yansımaları:** Okulda, evde, arkadaşlarınla nasılsın?
-6. **Sana Özel Tavsiyeler:** Hemen bugün yapabileceğin basit öneriler.
-7. **Son Söz:** Motive edici kapanış.
-
-Test: {test_adi}
-Veriler: {cevaplar_json}
-"""
-
-# --- SABİT ENNEAGRAM VERİLERİ ---
+# ============================================================
+# SABİT ENNEAGRAM VERİLERİ (MEVCUT — DOKUNULMADI)
+# ============================================================
 ENNEAGRAM_QUESTIONS = {
     1: [
         "Hata yaptığımda kendime çok kızarım.", "Neyin doğru neyin yanlış olduğunu hemen hissederim.",
@@ -299,21 +164,7 @@ WING_DESCRIPTIONS = {
     "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
 }
 
-# --- YARDIMCI FONKSİYONLAR ---
-def get_data_from_ai(prompt):
-    if not GROK_API_KEY: return "Hata: API Key yok."
-    try:
-        response = client.chat.completions.create(
-            model="grok-4-1-fast-reasoning",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0
-        )
-        content = response.choices[0].message.content.strip()
-        if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
-        return content
-    except Exception as e: return f"Hata: {e}"
-
+# --- ENNEAGRAM PUANLAMA (MEVCUT — DOKUNULMADI) ---
 def calculate_enneagram_report(all_answers):
     scores = {t: 0 for t in range(1, 10)}
     for q_id, val in all_answers.items():
@@ -360,47 +211,18 @@ def calculate_enneagram_report(all_answers):
     """
     return scores, report
 
-# --- ANA APP FONKSİYONU ---
+
+# ============================================================
+# ANA APP FONKSİYONU
+# ============================================================
 def app():
     st.markdown("""
     <style>
-        .test-card {
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-            transition: 0.3s;
-            cursor: pointer;
-        }
-        .test-card:hover {
-            background-color: #e9ecef;
-            border-color: #2E86C1;
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .completed-badge {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-        .main-header {
-            color: #2E86C1;
-            text-align: center;
-            font-weight: bold;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        .sub-header {
-            color: #555;
-            text-align: center;
-            margin-bottom: 30px;
-            font-style: italic;
-        }
+        .test-card { background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-bottom: 15px; text-align: center; transition: 0.3s; cursor: pointer; }
+        .test-card:hover { background-color: #e9ecef; border-color: #2E86C1; transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .completed-badge { background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
+        .main-header { color: #2E86C1; text-align: center; font-weight: bold; font-size: 2.5rem; margin-bottom: 10px; }
+        .sub-header { color: #555; text-align: center; margin-bottom: 30px; font-style: italic; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -409,7 +231,7 @@ def app():
 
     if "page" not in st.session_state: st.session_state.page = "home"
     
-    # --- TÜM TESTLER TEK LİSTEDE ---
+    # --- TÜM TESTLER TEK LİSTEDE (İSİMLER AYNEN KORUNDU) ---
     ALL_TESTS = [
         "Enneagram Kişilik Testi",
         "Çalışma Davranışı Ölçeği (Baltaş)",
@@ -420,14 +242,15 @@ def app():
         "Holland Mesleki İlgi Envanteri (RIASEC)"
     ]
 
-    # --- SAYFA 1: ANA MENÜ (HOME) ---
+    # ============================================================
+    # SAYFA 1: ANA MENÜ (HOME)
+    # ============================================================
     if st.session_state.page == "home":
         st.markdown(f"## 👤 Merhaba, {st.session_state.student_name}")
         st.info("Aşağıdaki listeden dilediğin testi seçip çözebilirsin. Başarılar!")
         
         col1, col2 = st.columns(2)
         
-        # Testleri dinamik listele
         for idx, test in enumerate(ALL_TESTS):
             is_done = check_test_completed(st.session_state.student_id, test)
             target_col = col1 if idx % 2 == 0 else col2
@@ -439,31 +262,67 @@ def app():
                     st.session_state.selected_test = test
                     st.session_state.intro_passed = False
                     
-                    with st.spinner("Yapay Zeka Senin İçin Özel Sorular Hazırlıyor..."):
-                        if "Enneagram" in test:
-                            st.session_state.enneagram_type_idx = 1
-                            st.session_state.enneagram_answers = {}
-                            st.session_state.current_test_data = {"type": "enneagram_fixed"}
+                    # === YENİ: SABİT SORU SETLERİ (GROK YOK) ===
+                    if "Enneagram" in test:
+                        st.session_state.enneagram_type_idx = 1
+                        st.session_state.enneagram_answers = {}
+                        st.session_state.current_test_data = {"type": "enneagram_fixed"}
+                    
+                    elif "Sağ-Sol Beyin" in test:
+                        st.session_state.current_test_data = {"type": "ab_choice", "questions": SAG_SOL_BEYIN_QUESTIONS}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
+                    
+                    elif "Çalışma Davranışı" in test:
+                        st.session_state.current_test_data = {"type": "true_false", "questions": CALISMA_DAVRANISI_QUESTIONS}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
+                    
+                    elif "Sınav Kaygısı" in test:
+                        st.session_state.current_test_data = {"type": "true_false", "questions": SINAV_KAYGISI_QUESTIONS}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
+                    
+                    elif "Çoklu Zeka" in test:
+                        # Yaşa göre versiyon seç
+                        student_age = getattr(st.session_state, 'student_age', 15)
+                        if student_age and student_age <= 13:
+                            qs = []
+                            for zk in ZEKA_SIRA:
+                                qs.extend(COKLU_ZEKA_QUESTIONS_ILKOGRETIM[zk])
+                            st.session_state.current_test_data = {"type": "coklu_zeka_ilk", "questions": qs}
                         else:
-                            # Grok'tan YENİ ve GÜÇLÜ Prompt ile soru çek
-                            prompt = SORU_URETIM_PROMPT.format(test_adi=test)
-                            raw = get_data_from_ai(prompt)
-                            try:
-                                td = json.loads(raw)
-                                td["type"] = "likert"
-                                st.session_state.current_test_data = td
-                                st.session_state.cevaplar = {}
-                                st.session_state.sayfa = 0
-                            except:
-                                st.error("Test soruları yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")
-                                return
+                            qs = []
+                            for zk in ZEKA_SIRA:
+                                qs.extend(COKLU_ZEKA_QUESTIONS_LISE[zk])
+                            st.session_state.current_test_data = {"type": "coklu_zeka_lise", "questions": qs}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
+                    
+                    elif "VARK" in test:
+                        st.session_state.current_test_data = {"type": "vark_multi", "questions": VARK_QUESTIONS}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
+                    
+                    elif "Holland" in test:
+                        st.session_state.current_test_data = {"type": "holland_3", "questions": HOLLAND_QUESTIONS}
+                        st.session_state.cevaplar = {}
+                        st.session_state.sayfa = 0
                     
                     st.session_state.page = "test"
                     st.rerun()
 
-    # --- SAYFA 2: BAŞARI EKRANI ---
+    # ============================================================
+    # SAYFA 2: BAŞARI EKRANI
+    # ============================================================
     elif st.session_state.page == "success_screen":
-        st.markdown("<div class='success-box'><h1>🎉 Harika İş Çıkardın!</h1><p>Testi başarıyla tamamladın. Sonuçların öğretmenine iletildi.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; padding:40px;'><h1>🎉 Harika İş Çıkardın!</h1><p>Testi başarıyla tamamladın. Sonuçların öğretmenine iletildi.</p></div>", unsafe_allow_html=True)
+        
+        # Raporu göster
+        if "last_report" in st.session_state and st.session_state.last_report:
+            with st.expander("📋 Raporunu Görüntüle", expanded=True):
+                st.markdown(st.session_state.last_report)
+        
         st.markdown("---")
         c1, c2 = st.columns(2)
         if c1.button("🏠 Diğer Teste Geç"):
@@ -473,115 +332,44 @@ def app():
             st.session_state.clear()
             st.rerun()
 
-    # --- SAYFA 3: TEST ÇÖZME EKRANI ---
+    # ============================================================
+    # SAYFA 3: TEST ÇÖZME EKRANI
+    # ============================================================
     elif st.session_state.page == "test":
         t_name = st.session_state.selected_test
         
-        # Giriş
+        # --- GİRİŞ EKRANI ---
         if not st.session_state.intro_passed:
             st.title(f"📘 {t_name}")
-            st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın. Boş bırakılan soruları sistem otomatik yakalar.")
+            st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın.")
             if st.button("HAZIRIM, BAŞLA!", type="primary"):
                 st.session_state.intro_passed = True
                 st.rerun()
         
-        # Sorular
+        # --- SORULAR ---
         else:
             data = st.session_state.current_test_data
             q_type = data.get("type")
 
-            # --- TİP 1: LIKERT TESTLERİ (Grok) ---
-            if q_type == "likert":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs)//PER_PAGE) + 1
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start+PER_PAGE]
-                
-                st.progress((st.session_state.sayfa+1)/tot_p)
-                
-                # Sayfa içi boş kontrolü için ID listesi
-                page_q_ids = []
-                
-                opts = {"Kesinlikle Katılmıyorum": 1, "Katılmıyorum": 2, "Kararsızım": 3, "Katılıyorum": 4, "Kesinlikle Katılıyorum": 5}
-                
-                for q in curr_qs:
-                    st.write(f"**{q['text']}**")
-                    page_q_ids.append(q['id'])
-                    k = f"q_{q['id']}"
-                    
-                    saved = st.session_state.cevaplar.get(q['id'])
-                    idx = list(opts.values()).index(saved) if saved else None
-                    
-                    val = st.radio("Cevap", list(opts.keys()), key=k, index=idx, horizontal=True, label_visibility="collapsed")
-                    if val: st.session_state.cevaplar[q['id']] = opts[val]
-                    st.divider()
-                
-                c1, c2 = st.columns(2)
-                
-                # Navigasyon
-                if st.session_state.sayfa < tot_p - 1:
-                    if c2.button("İleri ➡️"):
-                        # Sayfa içi kontrol
-                        missing = [qid for qid in page_q_ids if qid not in st.session_state.cevaplar]
-                        if missing:
-                            st.error("⚠️ Hop! Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin. 😉")
-                        else:
-                            st.session_state.sayfa += 1
-                            st.rerun()
-                else:
-                    if c2.button("Testi Bitir ✅", type="primary"):
-                        # Final kontrol
-                        missing_q = next((q for q in qs if q['id'] not in st.session_state.cevaplar), None)
-                        if missing_q:
-                            st.error("⚠️ Eksik sorular var! Lütfen kontrol et.")
-                        else:
-                            with st.spinner("Yapay zeka sonuçlarını analiz ediyor..."):
-                                rep = get_data_from_ai(TEK_RAPOR_PROMPT.format(test_adi=t_name, cevaplar_json=json.dumps(st.session_state.cevaplar)))
-                                save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.cevaplar, None, rep)
-                                st.session_state.page = "success_screen"
-                                st.rerun()
-
-            # --- TİP 2: ENNEAGRAM (Sabit) ---
-            elif q_type == "enneagram_fixed":
+            # ========================================
+            # TİP: ENNEAGRAM (SABİT — AYNEN KORUNDU)
+            # ========================================
+            if q_type == "enneagram_fixed":
                 curr_type = st.session_state.enneagram_type_idx
                 questions = ENNEAGRAM_QUESTIONS[curr_type]
                 
                 st.progress(curr_type / 9)
                 st.subheader(f"Bölüm {curr_type}: Tip {curr_type} Soruları")
                 
-                # SÖZEL ŞIKLAR İÇİN MAPPING
-                ennea_map = {
-                    1: "Kesinlikle Katılmıyorum",
-                    2: "Katılmıyorum",
-                    3: "Kararsızım",
-                    4: "Katılıyorum",
-                    5: "Kesinlikle Katılıyorum"
-                }
-                
-                # Seçenekler (Rakam Olarak)
+                ennea_map = {1: "Kesinlikle Katılmıyorum", 2: "Katılmıyorum", 3: "Kararsızım", 4: "Katılıyorum", 5: "Kesinlikle Katılıyorum"}
                 opts = [1, 2, 3, 4, 5]
                 
                 all_answered = True
-                
                 for i, q_text in enumerate(questions):
                     q_key = f"{curr_type}_{i}"
                     st.write(f"**{i+1}. {q_text}**")
-                    
                     prev = st.session_state.enneagram_answers.get(q_key)
-                    # Radio butonu
-                    val = st.radio(
-                        f"Soru {i+1}", 
-                        opts, 
-                        key=f"rad_{q_key}", 
-                        # Eğer daha önce seçildiyse onu işaretle
-                        index=opts.index(prev) if prev else None, 
-                        horizontal=True, 
-                        # Rakamı alıp Sözel İfadeye çeviren fonksiyon
-                        format_func=lambda x: ennea_map[x], 
-                        label_visibility="collapsed"
-                    )
-                    
+                    val = st.radio(f"Soru {i+1}", opts, key=f"rad_{q_key}", index=opts.index(prev) if prev else None, horizontal=True, format_func=lambda x: ennea_map[x], label_visibility="collapsed")
                     if val: st.session_state.enneagram_answers[q_key] = val
                     else: all_answered = False
                     st.divider()
@@ -602,6 +390,285 @@ def app():
                             with st.spinner("Kişilik haritan çıkarılıyor..."):
                                 scores, rep = calculate_enneagram_report(st.session_state.enneagram_answers)
                                 save_test_result_to_db(st.session_state.student_id, t_name, st.session_state.enneagram_answers, scores, rep)
+                                st.session_state.last_report = rep
                                 st.session_state.page = "success_screen"
                                 st.rerun()
 
+            # ========================================
+            # TİP: A/B SEÇİMLİ (Sağ-Sol Beyin)
+            # ========================================
+            elif q_type == "ab_choice":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                page_q_ids = []
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid)
+                    options = [f"a) {q['option_a']}", f"b) {q['option_b']}"]
+                    idx = 0 if prev == "a" else (1 if prev == "b" else None)
+                    
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+                    if val:
+                        st.session_state.cevaplar[qid] = "a" if val.startswith("a)") else "b"
+                    st.divider()
+                
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: DOĞRU/YANLIŞ (Çalışma Davranışı, Sınav Kaygısı)
+            # ========================================
+            elif q_type == "true_false":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                page_q_ids = []
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid)
+                    options = ["Doğru", "Yanlış"]
+                    idx = 0 if prev == "D" else (1 if prev == "Y" else None)
+                    
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+                    if val:
+                        st.session_state.cevaplar[qid] = "D" if val == "Doğru" else "Y"
+                    st.divider()
+                
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: ÇOKLU ZEKA LİSE (0-4 Likert)
+            # ========================================
+            elif q_type == "coklu_zeka_lise":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                page_q_ids = []
+                
+                likert_labels = {0: "0 - Asla", 1: "1 - Çok Az", 2: "2 - Bazen", 3: "3 - Çoğu Kez", 4: "4 - Daima"}
+                likert_opts = [0, 1, 2, 3, 4]
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid)
+                    idx = likert_opts.index(prev) if prev is not None else None
+                    
+                    val = st.radio(f"Soru {qid}", likert_opts, key=f"q_{qid}", index=idx, horizontal=True, format_func=lambda x: likert_labels[x], label_visibility="collapsed")
+                    if val is not None:
+                        st.session_state.cevaplar[qid] = val
+                    st.divider()
+                
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: ÇOKLU ZEKA İLKÖĞRETİM (Evet/Hayır)
+            # ========================================
+            elif q_type == "coklu_zeka_ilk":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                page_q_ids = []
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid)
+                    options = ["Evet", "Hayır"]
+                    idx = 0 if prev == "E" else (1 if prev == "H" else None)
+                    
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+                    if val:
+                        st.session_state.cevaplar[qid] = "E" if val == "Evet" else "H"
+                    st.divider()
+                
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: VARK (Çoklu Seçim)
+            # ========================================
+            elif q_type == "vark_multi":
+                qs = data["questions"]
+                PER_PAGE = 8  # VARK 16 soru, 8'er sayfa
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption("💡 Her soruda birden fazla seçenek işaretleyebilirsin.")
+                page_q_ids = []
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid, [])
+                    selected = []
+                    for opt_key, opt_text in q["options"].items():
+                        checked = opt_key in prev
+                        if st.checkbox(f"{opt_key}) {opt_text}", value=checked, key=f"q_{qid}_{opt_key}"):
+                            selected.append(opt_key)
+                    st.session_state.cevaplar[qid] = selected
+                    st.divider()
+                
+                # VARK için boş kontrolü: en az 1 seçenek seçilmeli
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: HOLLAND (Hoşlanırım/Fark etmez/Hoşlanmam)
+            # ========================================
+            elif q_type == "holland_3":
+                qs = data["questions"]
+                PER_PAGE = 10
+                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+                start = st.session_state.sayfa * PER_PAGE
+                curr_qs = qs[start:start+PER_PAGE]
+                
+                st.progress((st.session_state.sayfa + 1) / tot_p)
+                page_q_ids = []
+                
+                holland_opts = ["😊 Hoşlanırım", "😐 Fark etmez", "😕 Hoşlanmam"]
+                holland_score_map = {"😊 Hoşlanırım": 2, "😐 Fark etmez": 1, "😕 Hoşlanmam": 0}
+                
+                for q in curr_qs:
+                    qid = q["id"]
+                    page_q_ids.append(qid)
+                    st.write(f"**{qid}. {q['text']}**")
+                    
+                    prev = st.session_state.cevaplar.get(qid)
+                    idx = {2: 0, 1: 1, 0: 2}.get(prev, None)
+                    
+                    val = st.radio(f"Soru {qid}", holland_opts, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+                    if val:
+                        st.session_state.cevaplar[qid] = holland_score_map[val]
+                    st.divider()
+                
+                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+
+# ============================================================
+# SAYFA NAVİGASYONU + TEST BİTİRME (ORTAK FONKSİYON)
+# ============================================================
+def _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type):
+    """İleri/Geri navigasyon ve test bitirme mantığı."""
+    c1, c2 = st.columns(2)
+    
+    # Geri butonu
+    if st.session_state.sayfa > 0:
+        if c1.button("⬅️ Geri"):
+            st.session_state.sayfa -= 1
+            st.rerun()
+    
+    if st.session_state.sayfa < tot_p - 1:
+        # İleri butonu
+        if c2.button("İleri ➡️"):
+            missing = _check_missing(page_q_ids, q_type)
+            if missing:
+                st.error("⚠️ Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin. 😉")
+            else:
+                st.session_state.sayfa += 1
+                st.rerun()
+    else:
+        # Son sayfa — Bitir butonu
+        if c2.button("Testi Bitir ✅", type="primary"):
+            # Tüm soruların cevaplanıp cevaplanmadığını kontrol et
+            all_ids = [q["id"] for q in qs]
+            missing = _check_missing(all_ids, q_type)
+            if missing:
+                st.error(f"⚠️ Eksik sorular var ({len(missing)} adet)! Lütfen kontrol et.")
+            else:
+                _finish_and_save(t_name, q_type)
+
+
+def _check_missing(q_ids, q_type):
+    """Cevaplanmamış soruları döndürür."""
+    missing = []
+    for qid in q_ids:
+        ans = st.session_state.cevaplar.get(qid)
+        if q_type == "vark_multi":
+            if not ans:  # Boş liste = cevaplanmamış
+                missing.append(qid)
+        else:
+            if ans is None:
+                missing.append(qid)
+    return missing
+
+
+def _finish_and_save(t_name, q_type):
+    """Testi puanla, raporu üret ve veritabanına kaydet."""
+    answers = st.session_state.cevaplar
+    scores = None
+    report = ""
+    
+    with st.spinner("Sonuçların hesaplanıyor..."):
+        
+        if q_type == "ab_choice":
+            # Sağ-Sol Beyin
+            result, report = calculate_sag_sol_beyin(answers)
+            scores = {"sag_beyin": result["sag_beyin"], "sol_beyin": result["sol_beyin"],
+                       "sag_yuzde": result["sag_yuzde"], "dominant": result["dominant"]}
+        
+        elif q_type == "true_false":
+            if "Çalışma Davranışı" in t_name:
+                result, report = calculate_calisma_davranisi(answers)
+                scores = {"total": result["total"], "max_total": result["max_total"],
+                           "categories": result["categories"]}
+            elif "Sınav Kaygısı" in t_name:
+                result, report = calculate_sinav_kaygisi(answers)
+                scores = {"total": result["total"], "total_pct": result["total_pct"],
+                           "level": result["overall_level"], "categories": result["categories"]}
+        
+        elif q_type == "coklu_zeka_lise":
+            result, report = calculate_coklu_zeka_lise(answers)
+            scores = {zk: result["scores"][zk]["pct"] for zk in result["scores"]}
+        
+        elif q_type == "coklu_zeka_ilk":
+            result, report = calculate_coklu_zeka_ilkogretim(answers)
+            scores = {zk: result["scores"][zk]["pct"] for zk in result["scores"]}
+        
+        elif q_type == "vark_multi":
+            result, report = calculate_vark(answers)
+            scores = {"V": result["counts"]["V"], "A": result["counts"]["A"],
+                       "R": result["counts"]["R"], "K": result["counts"]["K"],
+                       "dominant": result["dominant"][0]}
+        
+        elif q_type == "holland_3":
+            result, report = calculate_holland(answers)
+            scores = result["percentages"]
+            scores["holland_code"] = result["holland_code"]
+        
+        # Veritabanına kaydet
+        save_test_result_to_db(st.session_state.student_id, t_name, answers, scores, report)
+        
+        st.session_state.last_report = report
+        st.session_state.page = "success_screen"
+        st.rerun()
