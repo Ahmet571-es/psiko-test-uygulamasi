@@ -1,194 +1,217 @@
-from database import SessionLocal, Student, Test, CompletedTest, Base, engine
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, create_engine, and_
-from sqlalchemy.orm import relationship
-from datetime import date
+import sqlite3
+import json
+import pandas as pd
+from datetime import datetime
+import streamlit as st
 
-# --- TABLO TANIMLARI ---
-class StudentAnalysis(Base):
-    __tablename__ = 'student_analysis'
-    id = Column(Integer, primary_key=True)
-    student_id = Column(Integer, ForeignKey('students.id'))
-    test_combination = Column(String) # Hangi testlerin analizi (Örn: "Enneagram,VARK")
-    report_text = Column(Text)        # Rapor metni
-    created_at = Column(String)       # Tarih (String olarak tutalım: YYYY-MM-DD)
+DB_NAME = "school_data.db"
 
-Base.metadata.create_all(bind=engine)
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Öğrenciler Tablosu
+    c.execute('''CREATE TABLE IF NOT EXISTS students
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  name TEXT, username TEXT, password TEXT, 
+                  age INTEGER, gender TEXT, 
+                  login_count INTEGER DEFAULT 0)''')
+    
+    # Test Sonuçları Tablosu
+    # report sütunu: Python kodunun ürettiği otomatik rapor
+    c.execute('''CREATE TABLE IF NOT EXISTS results
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  student_id INTEGER, 
+                  test_name TEXT, 
+                  raw_answers TEXT, 
+                  scores TEXT, 
+                  report TEXT,
+                  date TIMESTAMP)''')
+    
+    # Öğretmen AI Analiz Arşivi Tablosu
+    c.execute('''CREATE TABLE IF NOT EXISTS analysis_history
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  student_id INTEGER,
+                  combination TEXT,
+                  ai_report TEXT,
+                  date TIMESTAMP)''')
+    conn.commit()
+    conn.close()
 
-# --- KAYIT VE GİRİŞ ---
+# --- ÖĞRENCİ İŞLEMLERİ ---
 def register_student(name, username, password, age, gender):
-    session = SessionLocal()
-    try:
-        existing = session.query(Student).filter_by(username=username).first()
-        if existing:
-            return False, "Bu kullanıcı adı alınmış."
-        new_student = Student(name=name, username=username, password=password, age=age, gender=gender, login_count=1)
-        session.add(new_student)
-        session.commit()
-        session.refresh(new_student)
-        return True, new_student
-    except Exception as e:
-        session.rollback()
-        return False, str(e)
-    finally:
-        session.close()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT * FROM students WHERE username=?", (username,))
+    if c.fetchone():
+        conn.close()
+        return False, "Bu kullanıcı adı zaten alınmış."
+    
+    c.execute("INSERT INTO students (name, username, password, age, gender) VALUES (?, ?, ?, ?, ?)",
+              (name, username, password, age, gender))
+    conn.commit()
+    conn.close()
+    return True, "Kayıt Başarılı"
 
 def login_student(username, password):
-    session = SessionLocal()
-    try:
-        student = session.query(Student).filter_by(username=username, password=password).first()
-        if student:
-            student.login_count += 1
-            session.commit()
-            session.refresh(student)
-            return True, student
-        return False, None
-    except:
-        return False, None
-    finally:
-        session.close()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT * FROM students WHERE username=? AND password=?", (username, password))
+    user = c.fetchone()
+    
+    if user:
+        # Giriş sayısını artır
+        new_count = user[6] + 1
+        c.execute("UPDATE students SET login_count=? WHERE id=?", (new_count, user[0]))
+        conn.commit()
+        
+        # Nesneye çevir
+        class Student:
+            def __init__(self, data):
+                self.id = data[0]
+                self.name = data[1]
+                self.username = data[2]
+                self.password = data[3]
+                self.age = data[4]
+                self.gender = data[5]
+                self.login_count = new_count
+        
+        conn.close()
+        return True, Student(user)
+    
+    conn.close()
+    return False, None
 
-def get_student_details(student_id):
-    session = SessionLocal()
-    try:
-        return session.query(Student).filter_by(id=student_id).first()
-    finally:
-        session.close()
-
-# --- TEST İŞLEMLERİ ---
-def check_test_completed(student_id, test_name):
-    session = SessionLocal()
-    try:
-        test = session.query(Test).filter_by(name=test_name).first()
-        if not test: return False
-        exists = session.query(CompletedTest).filter(and_(CompletedTest.student_id == student_id, CompletedTest.test_id == test.id)).first()
-        return exists is not None
-    finally:
-        session.close()
-
+# --- TEST KAYIT İŞLEMLERİ ---
 def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_text):
-    session = SessionLocal()
-    try:
-        test = session.query(Test).filter_by(name=test_name).first()
-        if not test:
-            test = Test(name=test_name)
-            session.add(test)
-            session.commit()
-            session.refresh(test)
+    """
+    Öğrencinin bitirdiği testi kaydeder.
+    Eğer aynı test daha önce yapılmışsa günceller (veya yeni ekler, tercihe bağlı).
+    Burada her seferinde yeni kayıt ekliyoruz ki gelişim görülsün.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # Önce aynı testten varsa silelim (yer tasarrufu ve son sonucu tutmak için)
+    # İstenirse bu satır silinip tarihçe tutulabilir.
+    c.execute("DELETE FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    
+    c.execute("INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES (?, ?, ?, ?, ?, ?)",
+              (student_id, test_name, str(raw_answers), json.dumps(scores, ensure_ascii=False), report_text, datetime.now()))
+    conn.commit()
+    conn.close()
+    return True
+
+def check_test_completed(student_id, test_name):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT id FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    data = c.fetchone()
+    conn.close()
+    return data is not None
+
+# --- ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ ---
+def get_all_students_with_results():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # Tüm öğrencileri al
+    c.execute("SELECT * FROM students")
+    students_raw = c.fetchall()
+    
+    all_data = []
+    
+    for s in students_raw:
+        class StudentInfo:
+            def __init__(self, data):
+                self.id = data[0]
+                self.name = data[1]
+                self.username = data[2]
+                self.password = data[3]
+                self.age = data[4]
+                self.gender = data[5]
+                self.login_count = data[6]
         
-        exists = session.query(CompletedTest).filter(and_(CompletedTest.student_id == student_id, CompletedTest.test_id == test.id)).first()
-        if exists: return True
-
-        new_record = CompletedTest(
-            student_id=student_id, test_id=test.id, completion_date=date.today(),
-            raw_answers=raw_answers, scores=scores, individual_report=report_text
-        )
-        session.add(new_record)
-        session.commit()
-        return True
-    except:
-        session.rollback()
-        return False
-    finally:
-        session.close()
-
-# --- ANALİZ RAPORU İŞLEMLERİ (YENİLENEN KISIM) ---
-
-def save_holistic_analysis(student_id, test_names_list, report_text):
-    """Analiz raporunu kaydeder."""
-    session = SessionLocal()
-    try:
-        combo_key = " + ".join(sorted(test_names_list)) # İsimleri daha şık birleştirelim
-        today_str = date.today().strftime("%Y-%m-%d")
-
-        existing = session.query(StudentAnalysis).filter(
-            and_(StudentAnalysis.student_id == student_id, StudentAnalysis.test_combination == combo_key)
-        ).first()
+        # Bu öğrencinin testlerini al
+        c.execute("SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?", (s[0],))
+        tests_raw = c.fetchall()
         
-        if existing:
-            existing.report_text = report_text
-            existing.created_at = today_str
-        else:
-            new_analysis = StudentAnalysis(
-                student_id=student_id,
-                test_combination=combo_key,
-                report_text=report_text,
-                created_at=today_str
-            )
-            session.add(new_analysis)
-        session.commit()
-        return True
-    except:
-        session.rollback()
-        return False
-    finally:
-        session.close()
+        tests_list = []
+        for t in tests_raw:
+            try:
+                score_json = json.loads(t[1]) if t[1] else {}
+            except:
+                score_json = {}
+                
+            tests_list.append({
+                "test_name": t[0],
+                "scores": score_json,
+                "raw_answers": t[2],
+                "date": t[3],
+                "report": t[4] # Rapor metnini de listeye ekledik
+            })
+            
+        all_data.append({
+            "info": StudentInfo(s),
+            "tests": tests_list
+        })
+    
+    conn.close()
+    return all_data
 
 def get_student_analysis_history(student_id):
-    """
-    Bir öğrenciye ait TÜM kayıtlı analiz raporlarını liste olarak getirir.
-    Senin istediğin 'Kayıtlı Raporları Getir' butonu için bu fonksiyonu kullanacağız.
-    """
-    session = SessionLocal()
-    try:
-        results = session.query(StudentAnalysis).filter_by(student_id=student_id).all()
-        # Veriyi sözlük listesine çevirip dönelim
-        history = []
-        for r in results:
-            history.append({
-                "combination": r.test_combination,
-                "date": r.created_at,
-                "report": r.report_text
-            })
-        return history
-    finally:
-        session.close()
+    """Öğretmenin yaptığı AI analizlerini getirir."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT combination, ai_report, date FROM analysis_history WHERE student_id=? ORDER BY date DESC", (student_id,))
+    rows = c.fetchall()
+    conn.close()
+    
+    history = []
+    for r in rows:
+        history.append({
+            "combination": r[0],
+            "report": r[1],
+            "date": r[2]
+        })
+    return history
 
-# --- VERİ ÇEKME ---
-def get_all_students_with_results():
-    session = SessionLocal()
-    try:
-        students = session.query(Student).all()
-        data = []
-        for s in students:
-            student_tests = []
-            for t in s.tests:
-                student_tests.append({
-                    "test_name": t.test.name,
-                    "date": t.completion_date,
-                    "report": t.individual_report,
-                    "scores": t.scores,
-                    "raw_answers": t.raw_answers
-                })
-            data.append({"info": s, "tests": student_tests})
-        return data
-    finally:
-        session.close()
+def save_holistic_analysis(student_id, combination_list, report_text):
+    """Öğretmenin yaptığı yeni AI analizini kaydeder."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    comb_str = " + ".join(combination_list)
+    
+    c.execute("INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
+              (student_id, comb_str, report_text, datetime.now()))
+    conn.commit()
+    conn.close()
 
-# --- SİLME ---
+def delete_specific_students(names_list):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    for name in names_list:
+        # ID'yi bul
+        c.execute("SELECT id FROM students WHERE name=?", (name,))
+        sid = c.fetchone()
+        if sid:
+            # Öğrenciyi sil
+            c.execute("DELETE FROM students WHERE id=?", (sid[0],))
+            # Testlerini sil
+            c.execute("DELETE FROM results WHERE student_id=?", (sid[0],))
+            # Analizlerini sil
+            c.execute("DELETE FROM analysis_history WHERE student_id=?", (sid[0],))
+    conn.commit()
+    conn.close()
+    return True
+
 def reset_database():
-    session = SessionLocal()
-    try:
-        session.query(StudentAnalysis).delete()
-        session.query(CompletedTest).delete()
-        session.query(Student).delete()
-        session.query(Test).delete()
-        session.commit()
-        return True
-    except:
-        session.rollback()
-        return False
-    finally:
-        session.close()
-
-def delete_specific_students(student_names_list):
-    session = SessionLocal()
-    try:
-        if not student_names_list: return False
-        session.query(Student).filter(Student.name.in_(student_names_list)).delete(synchronize_session=False)
-        session.commit()
-        return True
-    except:
-        session.rollback()
-        return False
-    finally:
-        session.close()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DROP TABLE IF EXISTS students")
+    c.execute("DROP TABLE IF EXISTS results")
+    c.execute("DROP TABLE IF EXISTS analysis_history")
+    conn.commit()
+    conn.close()
+    init_db()
+    return True
