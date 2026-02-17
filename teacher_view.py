@@ -11,7 +11,7 @@ from db_utils import get_all_students_with_results, reset_database, delete_speci
 # --- API AYARLARI ---
 load_dotenv()
 
-# API Key Kontrolü
+# API Key Kontrolü: Önce secrets.toml, yoksa .env
 if "ANTHROPIC_API_KEY" in st.secrets:
     ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
 else:
@@ -207,19 +207,49 @@ def app():
     st.divider()
 
     # ============================================================
-    # 3. KAYITLI RAPOR ARŞİVİ (Grafikli)
+    # 3. TAMAMLANAN TESTLER VE OTOMATİK SONUÇLAR (OTOMATİK BÖLÜM)
     # ============================================================
-    st.subheader("📂 Kayıtlı Rapor Arşivi")
+    st.subheader("📝 Tamamlanan Testler ve Otomatik Sonuçlar")
+    st.info("Burada öğrencinin bitirdiği testlerin **anlık sistem raporlarını** (yapay zekasız) görebilirsiniz. Öğrenci testi bitirdiği an buraya düşer.")
+    
+    if not tests:
+        st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş.")
+    else:
+        for idx, t in enumerate(tests):
+            btn_label = f"✅ {t['test_name']} (Tarih: {t['date']})"
+            
+            with st.expander(btn_label):
+                # Grafikleri Göster
+                if t['scores']:
+                    fig = plot_scores(t['scores'], t['test_name'])
+                    if fig:
+                        st.pyplot(fig)
+                
+                # Otomatik Rapor Metnini Göster
+                st.markdown("### 📄 Sistem Raporu")
+                if t.get('report'):
+                    st.markdown(t['report'])
+                else:
+                    st.warning("Bu test için otomatik rapor metni bulunamadı.")
+                    st.write("Ham Cevaplar:", t['raw_answers'])
+
+    st.divider()
+
+    # ============================================================
+    # 4. KAYITLI AI RAPOR ARŞİVİ (CLAUDE OPUS ANALİZLERİ)
+    # ============================================================
+    st.subheader("📂 Kayıtlı Yapay Zeka (AI) Rapor Arşivi")
+    st.info("Burada daha önce **Claude Opus** kullanarak oluşturduğunuz detaylı ve bütüncül analizleri bulabilirsiniz.")
     
     history = get_student_analysis_history(info.id)
     
     if not history:
-        st.info("Bu öğrenci için henüz oluşturulmuş analiz raporu bulunmamaktadır.")
+        st.info("Bu öğrenci için henüz oluşturulmuş AI destekli bir analiz raporu bulunmamaktadır. Aşağıdan yeni oluşturabilirsiniz.")
     else:
-        st.markdown(f"Bu öğrenci için **{len(history)} adet** kayıtlı rapor bulundu.")
+        st.markdown(f"**{len(history)} adet** kayıtlı rapor bulundu.")
         
         for idx, record in enumerate(history):
-            btn_label = f"📄 Rapor {idx+1}: {record['combination']} ({record['date']})"
+            btn_label = f"🤖 AI Raporu {idx+1}: {record['combination']} ({record['date']})"
             
             with st.expander(btn_label):
                 st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {record['combination']}</div>", unsafe_allow_html=True)
@@ -242,7 +272,7 @@ def app():
                 st.download_button(
                     label=f"📥 Raporu İndir ({idx+1})",
                     data=record['report'],
-                    file_name=f"{info.name}_Rapor_{idx+1}.txt",
+                    file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
                     mime="text/plain",
                     key=f"dl_{idx}"
                 )
@@ -250,12 +280,12 @@ def app():
     st.divider()
 
     # ============================================================
-    # 4. YENİ ANALİZ OLUŞTURMA
+    # 5. YENİ AI ANALİZİ OLUŞTURMA (CLAUDE OPUS GÜCÜYLE)
     # ============================================================
-    st.subheader("⚡ Yeni Analiz Oluştur")
+    st.subheader("⚡ Yeni AI Analizi Oluştur")
     
     if not tests:
-        st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş. Analiz yapılamaz.")
+        st.write("Analiz yapılacak veri yok.")
     else:
         all_completed_tests = [t["test_name"] for t in tests]
         
@@ -430,9 +460,9 @@ def app():
                     time.sleep(2)
                     st.rerun()
 
-    # 5. GEÇMİŞ TABLOSU
+    # 5. TEST GEÇMİŞİ LİSTESİ
     st.divider()
-    with st.expander("🗂️ Test Geçmişi ve Ham Veriler (Liste)"):
+    with st.expander("🗂️ Ham Veri Listesi"):
         if tests:
             df_tests = pd.DataFrame(tests)
             df_tests['date'] = pd.to_datetime(df_tests['date']).dt.strftime('%d.%m.%Y')
