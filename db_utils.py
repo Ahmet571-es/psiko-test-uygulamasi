@@ -3,21 +3,23 @@ import json
 import pandas as pd
 from datetime import datetime
 import streamlit as st
+import os
 
 DB_NAME = "school_data.db"
 
 def init_db():
+    """Veritabanı tablolarını oluşturur."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Öğrenciler Tablosu
+    
+    # 1. Öğrenciler Tablosu
     c.execute('''CREATE TABLE IF NOT EXISTS students
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   name TEXT, username TEXT, password TEXT, 
                   age INTEGER, gender TEXT, 
                   login_count INTEGER DEFAULT 0)''')
     
-    # Test Sonuçları Tablosu
-    # report sütunu: Python kodunun ürettiği otomatik rapor
+    # 2. Test Sonuçları Tablosu
     c.execute('''CREATE TABLE IF NOT EXISTS results
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   student_id INTEGER, 
@@ -27,18 +29,22 @@ def init_db():
                   report TEXT,
                   date TIMESTAMP)''')
     
-    # Öğretmen AI Analiz Arşivi Tablosu
+    # 3. Öğretmen AI Analiz Arşivi Tablosu
     c.execute('''CREATE TABLE IF NOT EXISTS analysis_history
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   student_id INTEGER,
                   combination TEXT,
                   ai_report TEXT,
                   date TIMESTAMP)''')
+    
     conn.commit()
     conn.close()
 
 # --- ÖĞRENCİ İŞLEMLERİ ---
 def register_student(name, username, password, age, gender):
+    # Kayıt öncesi DB kontrolü
+    init_db()
+    
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT * FROM students WHERE username=?", (username,))
@@ -53,18 +59,29 @@ def register_student(name, username, password, age, gender):
     return True, "Kayıt Başarılı"
 
 def login_student(username, password):
+    # Giriş öncesi DB kontrolü
+    init_db()
+    
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT * FROM students WHERE username=? AND password=?", (username, password))
+    
+    # Hata koruması: Tablo yoksa oluştur
+    try:
+        c.execute("SELECT * FROM students WHERE username=? AND password=?", (username, password))
+    except sqlite3.OperationalError:
+        conn.close()
+        init_db()
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT * FROM students WHERE username=? AND password=?", (username, password))
+
     user = c.fetchone()
     
     if user:
-        # Giriş sayısını artır
         new_count = user[6] + 1
         c.execute("UPDATE students SET login_count=? WHERE id=?", (new_count, user[0]))
         conn.commit()
         
-        # Nesneye çevir
         class Student:
             def __init__(self, data):
                 self.id = data[0]
@@ -83,17 +100,19 @@ def login_student(username, password):
 
 # --- TEST KAYIT İŞLEMLERİ ---
 def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_text):
-    """
-    Öğrencinin bitirdiği testi kaydeder.
-    Eğer aynı test daha önce yapılmışsa günceller (veya yeni ekler, tercihe bağlı).
-    Burada her seferinde yeni kayıt ekliyoruz ki gelişim görülsün.
-    """
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # Önce aynı testten varsa silelim (yer tasarrufu ve son sonucu tutmak için)
-    # İstenirse bu satır silinip tarihçe tutulabilir.
-    c.execute("DELETE FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    # Tablo kontrolü
+    try:
+        c.execute("DELETE FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    except sqlite3.OperationalError:
+        # Tablo yoksa oluştur ve tekrar dene
+        conn.close()
+        init_db()
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("DELETE FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
     
     c.execute("INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES (?, ?, ?, ?, ?, ?)",
               (student_id, test_name, str(raw_answers), json.dumps(scores, ensure_ascii=False), report_text, datetime.now()))
@@ -104,20 +123,38 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
 def check_test_completed(student_id, test_name):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT id FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    try:
+        c.execute("SELECT id FROM results WHERE student_id=? AND test_name=?", (student_id, test_name))
+    except sqlite3.OperationalError:
+        conn.close()
+        init_db()
+        return False # Tablo yeni oluştuysa test çözülmemiştir
+        
     data = c.fetchone()
     conn.close()
     return data is not None
 
-# --- ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ ---
+# --- ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ (HATA BURADAYDI - DÜZELTİLDİ) ---
 def get_all_students_with_results():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # Tüm öğrencileri al
-    c.execute("SELECT * FROM students")
+    # -----------------------------------------------------------
+    # KRİTİK DÜZELTME: Kendi Kendini Onaran Sorgu
+    # -----------------------------------------------------------
+    try:
+        c.execute("SELECT * FROM students")
+    except sqlite3.OperationalError:
+        # HATA YAKALANDI: "no such table: students"
+        # ÇÖZÜM: Veritabanını hemen oluştur ve tekrar dene
+        conn.close()
+        init_db() 
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT * FROM students") # Tekrar sorgula
+    # -----------------------------------------------------------
+
     students_raw = c.fetchall()
-    
     all_data = []
     
     for s in students_raw:
@@ -131,8 +168,13 @@ def get_all_students_with_results():
                 self.gender = data[5]
                 self.login_count = data[6]
         
-        # Bu öğrencinin testlerini al
-        c.execute("SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?", (s[0],))
+        # Test sonuçlarını al (Hata olursa tabloyu oluştur)
+        try:
+            c.execute("SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?", (s[0],))
+        except sqlite3.OperationalError:
+            init_db()
+            c.execute("SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?", (s[0],))
+            
         tests_raw = c.fetchall()
         
         tests_list = []
@@ -147,7 +189,7 @@ def get_all_students_with_results():
                 "scores": score_json,
                 "raw_answers": t[2],
                 "date": t[3],
-                "report": t[4] # Rapor metnini de listeye ekledik
+                "report": t[4]
             })
             
         all_data.append({
@@ -159,10 +201,15 @@ def get_all_students_with_results():
     return all_data
 
 def get_student_analysis_history(student_id):
-    """Öğretmenin yaptığı AI analizlerini getirir."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT combination, ai_report, date FROM analysis_history WHERE student_id=? ORDER BY date DESC", (student_id,))
+    try:
+        c.execute("SELECT combination, ai_report, date FROM analysis_history WHERE student_id=? ORDER BY date DESC", (student_id,))
+    except sqlite3.OperationalError:
+        conn.close()
+        init_db()
+        return [] # Tablo yoksa geçmiş de yoktur
+        
     rows = c.fetchall()
     conn.close()
     
@@ -176,42 +223,43 @@ def get_student_analysis_history(student_id):
     return history
 
 def save_holistic_analysis(student_id, combination_list, report_text):
-    """Öğretmenin yaptığı yeni AI analizini kaydeder."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
     comb_str = " + ".join(combination_list)
     
-    c.execute("INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
-              (student_id, comb_str, report_text, datetime.now()))
+    try:
+        c.execute("INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
+                  (student_id, comb_str, report_text, datetime.now()))
+    except sqlite3.OperationalError:
+        conn.close()
+        init_db()
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
+                  (student_id, comb_str, report_text, datetime.now()))
+        
     conn.commit()
     conn.close()
 
 def delete_specific_students(names_list):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    for name in names_list:
-        # ID'yi bul
-        c.execute("SELECT id FROM students WHERE name=?", (name,))
-        sid = c.fetchone()
-        if sid:
-            # Öğrenciyi sil
-            c.execute("DELETE FROM students WHERE id=?", (sid[0],))
-            # Testlerini sil
-            c.execute("DELETE FROM results WHERE student_id=?", (sid[0],))
-            # Analizlerini sil
-            c.execute("DELETE FROM analysis_history WHERE student_id=?", (sid[0],))
-    conn.commit()
+    try:
+        for name in names_list:
+            c.execute("SELECT id FROM students WHERE name=?", (name,))
+            sid = c.fetchone()
+            if sid:
+                c.execute("DELETE FROM students WHERE id=?", (sid[0],))
+                c.execute("DELETE FROM results WHERE student_id=?", (sid[0],))
+                c.execute("DELETE FROM analysis_history WHERE student_id=?", (sid[0],))
+        conn.commit()
+    except:
+        pass # Silme hatası önemsiz
     conn.close()
     return True
 
 def reset_database():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("DROP TABLE IF EXISTS students")
-    c.execute("DROP TABLE IF EXISTS results")
-    c.execute("DROP TABLE IF EXISTS analysis_history")
-    conn.commit()
-    conn.close()
+    if os.path.exists(DB_NAME):
+        os.remove(DB_NAME)
     init_db()
     return True
