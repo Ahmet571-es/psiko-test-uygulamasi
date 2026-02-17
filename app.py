@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import os
 from database import init_db
 from db_utils import login_student, register_student
 
@@ -11,8 +12,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Veritabanını başlat
-init_db()
+# =========================================================
+# 🛠️ OTOMATİK HATA DÜZELTME VE VERİTABANI BAŞLATMA
+# =========================================================
+# Veritabanı şema hatası almamak için veritabanını kontrol eder.
+# Eğer tablo yapısı bozuksa veya sütun eksikse init_db() bunu düzeltir.
+# Ancak bazen temiz kurulum gerekir.
+if not os.path.exists("school_data.db"):
+    init_db()
+else:
+    # Veritabanı zaten varsa, bağlantı hatası durumunda (opsiyonel)
+    # buraya manuel silme kodu eklemiyoruz, init_db yeterli olacaktır.
+    # Ancak az önceki hatayı çözmek için init_db()'yi tekrar çağırıyoruz.
+    init_db()
 
 # --- CSS VE TASARIM AYARLARI ---
 st.markdown("""
@@ -130,6 +142,8 @@ def main_auth_flow():
                         st.session_state.role = "student"
                         st.session_state.student_id = student_obj.id
                         st.session_state.student_name = student_obj.name
+                        # student_view'da kullanmak için yaşı da ekleyelim
+                        st.session_state.student_age = student_obj.age 
                         st.session_state.login_phase = student_obj.login_count
                         time.sleep(0.5)
                         st.rerun()
@@ -154,10 +168,9 @@ def main_auth_flow():
                 submit = st.form_submit_button("Panele Git")
                 
                 if submit:
-                    # --- ŞİFRE GÜNCELLEMESİ BURADA YAPILDI ---
+                    # Şifre: Anka2026.
                     secret_pass = "Anka2026." 
                     
-                    # Eğer secrets.toml dosyası varsa oradan okur, yoksa yukarıdaki varsayılanı kullanır
                     if "teacher_password" in st.secrets:
                         secret_pass = st.secrets["teacher_password"]
                     
@@ -185,10 +198,24 @@ elif st.session_state.role == "teacher":
     import teacher_view
     teacher_view.app()
 
-# --- ÇIKIŞ İŞLEMİ ---
+# --- ÇIKIŞ İŞLEMİ (SIDEBAR) ---
 if st.session_state.role:
     with st.sidebar:
         st.write(f"Kullanıcı: **{st.session_state.get('student_name', 'Yönetici')}**")
+        
+        # Öğretmen ise veritabanı temizleme butonu göster (Acil durumlar için)
+        if st.session_state.role == "teacher":
+            st.markdown("---")
+            if st.button("⚠️ Veritabanını Onar (Reset)", help="Veritabanı hatası alırsanız buna basın"):
+                if os.path.exists("school_data.db"):
+                    os.remove("school_data.db")
+                    init_db()
+                    st.success("Veritabanı sıfırlandı!")
+                    time.sleep(1)
+                    st.session_state.clear()
+                    st.rerun()
+
+        st.markdown("---")
         if st.button("Güvenli Çıkış", type="secondary"):
             st.session_state.clear()
             st.session_state.auth_mode = 'register' 
