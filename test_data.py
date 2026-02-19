@@ -980,15 +980,17 @@ HOLLAND_QUESTIONS = [
 
 def calculate_holland(answers):
     """
-    DÜZELTME: Key tipi normalize (str → int).
+    DÜZELTME: "E" harfi arama hatası giderildi. 
+    Artık 0, 1, 2 puanları direkt toplanıyor.
     """
     answers = {int(k): v for k, v in answers.items()}
 
     type_scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
+    
     for q in HOLLAND_QUESTIONS:
         ans = answers.get(q["id"])
-        if ans == "E":
-            type_scores[q["type"]] += 1
+        if ans is not None:
+            type_scores[q["type"]] += ans  # Gelen 2, 1, 0 puanını direkt ekle
 
     sorted_types  = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
     top3          = sorted_types[:3]
@@ -1010,13 +1012,15 @@ def generate_holland_report(scores):
     top3         = scores["top3"]
     holland_code = scores["holland_code"]
     sorted_types = scores["sorted_types"]
-    max_per_type = 14
+    
+    # DÜZELTME: Her tipten 14 soru var, max puan 2 olduğu için toplam 28 puan olur.
+    max_per_type = 28 
 
     report = f"# 🧭 HOLLAND MESLEKİ İLGİ ENVANTERİ RAPORU\n\n**Senin Holland Kodun: {holland_code}**\n\n---\n\n## 📊 İlgi Profil Tablon\n\n| Tip | İsim | Puan | Yüzde | Grafik |\n|---|---|---|---|---|\n"
 
     for tkey, tscore in sorted_types:
         t   = HOLLAND_TYPES[tkey]
-        pct = round(tscore / max_per_type * 100, 1)
+        pct = round(tscore / max_per_type * 100, 1) if max_per_type > 0 else 0
         n   = round(pct/10); bar = "█"*n + "░"*(10-n)
         report += f"| {t['icon']} {tkey} | {t['short']} | {tscore}/{max_per_type} | %{pct} | {bar} |\n"
 
@@ -1026,7 +1030,7 @@ def generate_holland_report(scores):
     medals = ["🥇","🥈","🥉"]
     for rank, (tkey, tscore) in enumerate(top3, 1):
         t   = HOLLAND_TYPES[tkey]
-        pct = round(tscore / max_per_type * 100, 1)
+        pct = round(tscore / max_per_type * 100, 1) if max_per_type > 0 else 0
         report += f"### {medals[rank-1]} {rank}. Öncelik: {t['icon']} {t['name']} (%{pct})\n\n{t['description']}\n\n"
         report += "**Temel Özellikler:**\n" + "\n".join(f"- ✅ {c}" for c in t["characteristics"]) + "\n\n"
         report += f"**Öğrenme Ortamı:** {t['study_environment']}\n\n"
