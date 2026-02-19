@@ -838,8 +838,16 @@ def _finish_and_save(t_name, q_type):
 
         elif q_type == "holland_3":
             result, report = calculate_holland(answers)
-            scores = result["percentages"]
-            scores["holland_code"] = result["holland_code"]
+            # DÜZELTME: result["percentages"] yoktur, doğrudan key'ler kullanılıyor
+            scores = {
+                "R": result["R"],
+                "I": result["I"],
+                "A": result["A"],
+                "S": result["S"],
+                "E": result["E"],
+                "C": result["C"],
+                "holland_code": result["holland_code"],
+            }
 
         save_test_result_to_db(st.session_state.student_id, t_name, answers, scores, report)
 
