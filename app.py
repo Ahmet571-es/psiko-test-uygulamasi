@@ -1,8 +1,10 @@
 import streamlit as st
 import time
 import os
-from database import init_db
-from db_utils import login_student, register_student
+
+# DÜZELTME: database.py (SQLAlchemy/psiko_test.db) değil,
+# db_utils.py (sqlite3/school_data.db) import edilmeli.
+from db_utils import init_db, login_student, register_student
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
@@ -13,18 +15,11 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🛠️ OTOMATİK HATA DÜZELTME VE VERİTABANI BAŞLATMA
+# 🛠️ VERİTABANI BAŞLATMA
 # =========================================================
-# Veritabanı şema hatası almamak için veritabanını kontrol eder.
-# Eğer tablo yapısı bozuksa veya sütun eksikse init_db() bunu düzeltir.
-# Ancak bazen temiz kurulum gerekir.
-if not os.path.exists("school_data.db"):
-    init_db()
-else:
-    # Veritabanı zaten varsa, bağlantı hatası durumunda (opsiyonel)
-    # buraya manuel silme kodu eklemiyoruz, init_db yeterli olacaktır.
-    # Ancak az önceki hatayı çözmek için init_db()'yi tekrar çağırıyoruz.
-    init_db()
+# DÜZELTME: if/else her iki dalda da init_db() çağırıyordu, gereksiz.
+# Tek çağrı yeterli — init_db() zaten "CREATE TABLE IF NOT EXISTS" kullanıyor.
+init_db()
 
 # --- CSS VE TASARIM AYARLARI ---
 st.markdown("""
@@ -66,6 +61,26 @@ def go_to_register():
 
 def go_to_teacher():
     st.session_state.auth_mode = 'teacher'
+
+# --- ÖĞRETMEN ŞİFRESİ ALMA FONKSİYONU ---
+def get_teacher_password():
+    """
+    Öğretmen şifresini güvenli şekilde alır.
+    Öncelik sırası:
+    1. Streamlit Secrets (st.secrets["teacher_password"]) — Streamlit Cloud için
+    2. Ortam değişkeni (TEACHER_PASSWORD) — Lokal / Docker için
+    3. Şifre bulunamazsa None döner ve giriş engellenir.
+    
+    DÜZELTME: Şifre artık kod içinde hardcoded değil.
+    Streamlit Cloud'da: Settings > Secrets > teacher_password = "SifrenizBuraya"
+    Lokalde: .env dosyasına TEACHER_PASSWORD=SifrenizBuraya ekleyin.
+    """
+    if "teacher_password" in st.secrets:
+        return st.secrets["teacher_password"]
+    env_pw = os.getenv("TEACHER_PASSWORD")
+    if env_pw:
+        return env_pw
+    return None
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
@@ -142,7 +157,6 @@ def main_auth_flow():
                         st.session_state.role = "student"
                         st.session_state.student_id = student_obj.id
                         st.session_state.student_name = student_obj.name
-                        # student_view'da kullanmak için yaşı da ekleyelim
                         st.session_state.student_age = student_obj.age 
                         st.session_state.login_phase = student_obj.login_count
                         time.sleep(0.5)
@@ -168,13 +182,13 @@ def main_auth_flow():
                 submit = st.form_submit_button("Panele Git")
                 
                 if submit:
-                    # Şifre: Anka2026.
-                    secret_pass = "Anka2026." 
+                    # DÜZELTME: Şifre artık kod içinde hardcoded değil.
+                    # st.secrets["teacher_password"] veya TEACHER_PASSWORD env değişkeni kullanılıyor.
+                    secret_pass = get_teacher_password()
                     
-                    if "teacher_password" in st.secrets:
-                        secret_pass = st.secrets["teacher_password"]
-                    
-                    if pw == secret_pass:
+                    if secret_pass is None:
+                        st.error("⚠️ Yönetici şifresi yapılandırılmamış. Lütfen sistem yöneticisiyle iletişime geçin.")
+                    elif pw == secret_pass:
                         st.session_state.role = "teacher"
                         st.rerun()
                     else:
@@ -209,7 +223,7 @@ if st.session_state.role:
             if st.button("⚠️ Veritabanını Onar (Reset)", help="Veritabanı hatası alırsanız buna basın"):
                 if os.path.exists("school_data.db"):
                     os.remove("school_data.db")
-                    init_db()
+                    init_db()  # DÜZELTME: Artık db_utils.init_db() çağrılıyor (doğru)
                     st.success("Veritabanı sıfırlandı!")
                     time.sleep(1)
                     st.session_state.clear()
