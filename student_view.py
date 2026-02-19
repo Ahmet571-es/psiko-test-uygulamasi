@@ -22,7 +22,7 @@ from test_data import (
     VARK_QUESTIONS, VARK_SCORING, VARK_STYLES,
     calculate_vark,
     # Holland RIASEC
-    HOLLAND_QUESTIONS, HOLLAND_TYPES, HOLLAND_ORDER,
+    HOLLAND_QUESTIONS, HOLLAND_TYPES,
     calculate_holland,
 )
 
@@ -793,10 +793,12 @@ def _finish_and_save(t_name, q_type):
         if q_type == "ab_choice":
             result, report = calculate_sag_sol_beyin(answers)
             scores = {
-                "sag_beyin": result["sag_beyin"],
-                "sol_beyin": result["sol_beyin"],
-                "sag_yuzde": result["sag_yuzde"],
-                "dominant": result["dominant"]
+                "sag_beyin":  result["sag_beyin"],
+                "sol_beyin":  result["sol_beyin"],
+                "sag_yuzde":  result["sag_yuzde"],
+                "sol_yuzde":  result["sol_yuzde"],  # DÜZELTME: eksikti, öğretmen grafiği boş çıkıyordu
+                "dominant":   result["dominant"],
+                "level":      result["level"],
             }
 
         elif q_type == "true_false":
