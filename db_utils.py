@@ -3,26 +3,23 @@ import json
 import hashlib
 import pandas as pd
 from datetime import datetime
-import streamlit as st
 import os
 
 DB_NAME = "school_data.db"
 
-
 # ============================================================
-# DÜZELTME: class tanımları döngü/fonksiyon dışına taşındı.
-# Eskiden her login/her öğrenci döngüsünde yeniden yaratılıyordu.
+# SINIF TANIMLAMALARI
 # ============================================================
 
 class Student:
     """login_student fonksiyonunun döndürdüğü öğrenci nesnesi."""
     def __init__(self, data, login_count):
-        self.id         = data[0]
-        self.name       = data[1]
-        self.username   = data[2]
-        self.password   = data[3]
-        self.age        = data[4]
-        self.gender     = data[5]
+        self.id          = data[0]
+        self.name        = data[1]
+        self.username    = data[2]
+        self.password    = data[3]
+        self.age         = data[4]
+        self.gender      = data[5]
         self.login_count = login_count
 
 
@@ -40,9 +37,6 @@ class StudentInfo:
 
 # ============================================================
 # ŞİFRE YARDIMCI FONKSİYONU
-# DÜZELTME: Şifreler artık SHA-256 hash olarak saklanıyor.
-# ⚠️ ÖNEMLİ: Bu değişiklikten önce kayıtlı tüm öğrenciler
-# yeniden kayıt olmalı VEYA DB sıfırlanmalı.
 # ============================================================
 
 def hash_password(password: str) -> str:
@@ -51,16 +45,23 @@ def hash_password(password: str) -> str:
 
 
 def init_db():
-    """Veritabanı tablolarını oluşturur."""
+    """Veritabanı tablolarını oluşturur ve günceller."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # 1. Öğrenciler Tablosu
+    # 1. Öğrenciler Tablosu (YENİ SÜTUN: secret_word eklendi)
     c.execute('''CREATE TABLE IF NOT EXISTS students
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   name TEXT, username TEXT, password TEXT, 
                   age INTEGER, gender TEXT, 
-                  login_count INTEGER DEFAULT 0)''')
+                  login_count INTEGER DEFAULT 0,
+                  secret_word TEXT)''')
+                  
+    # Mevcut bir veritabanı varsa ve secret_word sütunu yoksa, hata vermeden eklemek için:
+    try:
+        c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
+    except sqlite3.OperationalError:
+        pass # Eğer sütun zaten varsa hata fırlatır, yoksayıyoruz.
     
     # 2. Test Sonuçları Tablosu
     c.execute('''CREATE TABLE IF NOT EXISTS results
@@ -84,12 +85,14 @@ def init_db():
     conn.close()
 
 
-# --- ÖĞRENCİ İŞLEMLERİ ---
+# ============================================================
+# ÖĞRENCİ KİMLİK / KAYIT İŞLEMLERİ
+# ============================================================
 
-def register_student(name, username, password, age, gender):
+def register_student(name, username, password, age, gender, secret_word=""):
     """
     Yeni öğrenci kaydeder.
-    DÜZELTME: Şifre SHA-256 hash olarak saklanıyor.
+    GÜNCELLEME: secret_word veritabanına ekleniyor.
     """
     init_db()
     
@@ -100,11 +103,10 @@ def register_student(name, username, password, age, gender):
         conn.close()
         return False, "Bu kullanıcı adı zaten alınmış."
     
-    # DÜZELTME: Şifre hash'lenerek saklanıyor
     hashed_pw = hash_password(password)
     c.execute(
-        "INSERT INTO students (name, username, password, age, gender) VALUES (?, ?, ?, ?, ?)",
-        (name, username, hashed_pw, age, gender)
+        "INSERT INTO students (name, username, password, age, gender, secret_word) VALUES (?, ?, ?, ?, ?, ?)",
+        (name, username, hashed_pw, age, gender, secret_word)
     )
     conn.commit()
     conn.close()
@@ -112,11 +114,7 @@ def register_student(name, username, password, age, gender):
 
 
 def login_student(username, password):
-    """
-    Öğrenci girişi doğrular.
-    DÜZELTME: Şifre karşılaştırması hash üzerinden yapılıyor.
-    DÜZELTME: except bloğunda c = conn.cursor() eksikti, eklendi.
-    """
+    """Öğrenci girişi doğrular."""
     init_db()
     
     conn = sqlite3.connect(DB_NAME)
@@ -133,7 +131,7 @@ def login_student(username, password):
         conn.close()
         init_db()
         conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()  # DÜZELTME: Yeni conn için cursor yenileniyor
+        c = conn.cursor() 
         c.execute(
             "SELECT * FROM students WHERE username=? AND password=?",
             (username, hashed_pw)
@@ -152,15 +150,47 @@ def login_student(username, password):
     return False, None
 
 
-# --- TEST KAYIT İŞLEMLERİ ---
+def reset_student_password(username, secret_word, new_password):
+    """
+    YENİ FONKSİYON: Öğrenci şifresini sıfırlar.
+    Kullanıcı adı ve kurtarma kelimesini kontrol eder.
+    """
+    init_db()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    c.execute("SELECT id, secret_word FROM students WHERE username=?", (username,))
+    user_data = c.fetchone()
+    
+    if not user_data:
+        conn.close()
+        return False, "Sistemde böyle bir kullanıcı adı bulunamadı."
+        
+    user_id = user_data[0]
+    stored_secret = user_data[1]
+    
+    if not stored_secret:
+        conn.close()
+        return False, "Bu hesaba ait kurtarma kelimesi bulunmuyor (Eski kayıt olabilir). Lütfen yeni hesap açın."
+        
+    if stored_secret.lower().strip() != secret_word.lower().strip():
+        conn.close()
+        return False, "Girilen kurtarma kelimesi yanlış!"
+        
+    new_hashed_pw = hash_password(new_password)
+    c.execute("UPDATE students SET password=? WHERE id=?", (new_hashed_pw, user_id))
+    conn.commit()
+    conn.close()
+    
+    return True, "Şifreniz başarıyla yenilendi."
+
+
+# ============================================================
+# TEST KAYIT İŞLEMLERİ
+# ============================================================
 
 def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_text):
-    """
-    Test sonucunu veritabanına kaydeder.
-    DÜZELTME: raw_answers artık str() değil json.dumps() ile kaydediliyor.
-    str() Python repr formatı üretir ({1: 'a'}) ve geçerli JSON değildir.
-    json.dumps() geçerli JSON üretir ({"1": "a"}) ve geri okunabilir.
-    """
+    """Test sonucunu veritabanına kaydeder."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
@@ -179,13 +209,12 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
             (student_id, test_name)
         )
     
-    # DÜZELTME: str(raw_answers) → json.dumps(raw_answers)
     c.execute(
         "INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES (?, ?, ?, ?, ?, ?)",
         (
             student_id,
             test_name,
-            json.dumps(raw_answers, ensure_ascii=False),   # DÜZELTME
+            json.dumps(raw_answers, ensure_ascii=False),   
             json.dumps(scores, ensure_ascii=False),
             report_text,
             datetime.now()
@@ -214,14 +243,12 @@ def check_test_completed(student_id, test_name):
     return data is not None
 
 
-# --- ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ ---
+# ============================================================
+# ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ
+# ============================================================
 
 def get_all_students_with_results():
-    """
-    Tüm öğrencileri ve test sonuçlarını döndürür.
-    DÜZELTME: StudentInfo class'ı artık döngü dışında tanımlı.
-    DÜZELTME: Bare except → spesifik exception türleri kullanılıyor.
-    """
+    """Tüm öğrencileri ve test sonuçlarını döndürür."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
@@ -238,8 +265,6 @@ def get_all_students_with_results():
     all_data = []
     
     for s in students_raw:
-        # DÜZELTME: StudentInfo artık döngü dışında tanımlı (modül seviyesinde)
-        
         try:
             c.execute(
                 "SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?",
@@ -258,8 +283,7 @@ def get_all_students_with_results():
         for t in tests_raw:
             try:
                 score_json = json.loads(t[1]) if t[1] else {}
-            except (json.JSONDecodeError, TypeError) as e:
-                # DÜZELTME: Bare except yerine spesifik exception
+            except (json.JSONDecodeError, TypeError):
                 score_json = {}
                 
             tests_list.append({
@@ -330,12 +354,7 @@ def save_holistic_analysis(student_id, combination_list, report_text):
 
 
 def delete_specific_students(names_list):
-    """
-    Belirtilen öğrencilerin tüm verilerini siler.
-    DÜZELTME 1: except + pass → rollback() + connection close + hata dönüşü
-    DÜZELTME 2: Kısmi silme durumunda rollback ile veri tutarsızlığı önleniyor.
-    Not: İsim bazlı silme korundu (teacher_view.py ile uyum için).
-    """
+    """Belirtilen öğrencilerin tüm verilerini siler."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
@@ -348,7 +367,6 @@ def delete_specific_students(names_list):
                 c.execute("DELETE FROM analysis_history WHERE student_id=?", (sid[0],))
         conn.commit()
     except Exception as e:
-        # DÜZELTME: Kısmi silme geri alınıyor, hata loglanıyor
         conn.rollback()
         conn.close()
         print(f"Silme hatası: {e}")
