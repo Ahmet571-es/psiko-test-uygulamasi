@@ -1028,7 +1028,6 @@ def app():
                     st.session_state.intro_passed = False
 
                     if "Enneagram" in test:
-                        # Tüm soruları düz listeye dönüştür ve karıştır
                         import random
                         flat = []
                         for tip_no, qs in ENNEAGRAM_QUESTIONS.items():
@@ -1115,11 +1114,18 @@ def app():
     elif st.session_state.page == "test":
         t_name = st.session_state.selected_test
 
-        # --- GİRİŞ EKRANI ---
+        # --- GİRİŞ EKRANI (DÜZELTME: GERİ DÖN BUTONU EKLENDİ) ---
         if not st.session_state.intro_passed:
             st.title(f"📘 {t_name}")
             st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın.")
-            if st.button("HAZIRIM, BAŞLA!", type="primary"):
+            
+            c1, c2 = st.columns(2)
+            
+            if c1.button("⬅️ Vazgeç / Ana Menüye Dön"):
+                st.session_state.page = "home"
+                st.rerun()
+                
+            if c2.button("HAZIRIM, BAŞLA! 🚀", type="primary"):
                 st.session_state.intro_passed = True
                 st.rerun()
 
@@ -1218,7 +1224,6 @@ def app():
 
             # ========================================
             # TİP: A/B SEÇİMLİ (Sağ-Sol Beyin)
-            # DÜZELTME: q['option_a'] ve q['option_b'] yerine q['a'] ve q['b']
             # ========================================
             elif q_type == "ab_choice":
                 qs = data["questions"]
@@ -1236,8 +1241,6 @@ def app():
                     st.write(f"**{qid}. {q['text']}**")
 
                     prev = st.session_state.cevaplar.get(qid)
-
-                    # ✅ DÜZELTME: 'option_a'/'option_b' → 'a'/'b'
                     options = [f"a) {q['a']}", f"b) {q['b']}"]
                     idx = 0 if prev == "a" else (1 if prev == "b" else None)
 
@@ -1499,7 +1502,7 @@ def _finish_and_save(t_name, q_type):
                 "sag_beyin":  result["sag_beyin"],
                 "sol_beyin":  result["sol_beyin"],
                 "sag_yuzde":  result["sag_yuzde"],
-                "sol_yuzde":  result["sol_yuzde"],  # DÜZELTME: eksikti, öğretmen grafiği boş çıkıyordu
+                "sol_yuzde":  result["sol_yuzde"],
                 "dominant":   result["dominant"],
                 "level":      result["level"],
             }
@@ -1541,7 +1544,6 @@ def _finish_and_save(t_name, q_type):
 
         elif q_type == "holland_3":
             result, report = calculate_holland(answers)
-            # DÜZELTME: result["percentages"] yoktur, doğrudan key'ler kullanılıyor
             scores = {
                 "R": result["R"],
                 "I": result["I"],
