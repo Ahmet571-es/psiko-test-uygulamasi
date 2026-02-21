@@ -2,9 +2,8 @@ import streamlit as st
 import time
 import os
 
-# DÜZELTME: database.py (SQLAlchemy/psiko_test.db) değil,
-# db_utils.py (sqlite3/school_data.db) import edilmeli.
-from db_utils import init_db, login_student, register_student
+# DÜZELTME: reset_student_password fonksiyonu da import edildi (db_utils'e eklenecek)
+from db_utils import init_db, login_student, register_student, reset_student_password
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
@@ -17,8 +16,6 @@ st.set_page_config(
 # =========================================================
 # 🛠️ VERİTABANI BAŞLATMA
 # =========================================================
-# DÜZELTME: if/else her iki dalda da init_db() çağırıyordu, gereksiz.
-# Tek çağrı yeterli — init_db() zaten "CREATE TABLE IF NOT EXISTS" kullanıyor.
 init_db()
 
 # --- CSS VE TASARIM AYARLARI ---
@@ -62,6 +59,9 @@ def go_to_register():
 def go_to_teacher():
     st.session_state.auth_mode = 'teacher'
 
+def go_to_forgot_password():
+    st.session_state.auth_mode = 'forgot_password'
+
 # --- ÖĞRETMEN ŞİFRESİ ALMA FONKSİYONU ---
 def get_teacher_password():
     """
@@ -69,11 +69,6 @@ def get_teacher_password():
     Öncelik sırası:
     1. Streamlit Secrets (st.secrets["teacher_password"]) — Streamlit Cloud için
     2. Ortam değişkeni (TEACHER_PASSWORD) — Lokal / Docker için
-    3. Şifre bulunamazsa None döner ve giriş engellenir.
-    
-    DÜZELTME: Şifre artık kod içinde hardcoded değil.
-    Streamlit Cloud'da: Settings > Secrets > teacher_password = "SifrenizBuraya"
-    Lokalde: .env dosyasına TEACHER_PASSWORD=SifrenizBuraya ekleyin.
     """
     if "teacher_password" in st.secrets:
         return st.secrets["teacher_password"]
@@ -98,7 +93,7 @@ def main_auth_flow():
     
     with col2:
         # ---------------------------------------------------------
-        # 1. MOD: KAYIT OL (VARSAYILAN AÇILIŞ)
+        # 1. MOD: KAYIT OL
         # ---------------------------------------------------------
         if st.session_state.auth_mode == 'register':
             st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
@@ -115,17 +110,21 @@ def main_auth_flow():
                 new_user = st.text_input("Kullanıcı Adı Belirle")
                 new_pw = st.text_input("Şifre Belirle", type="password")
                 
+                # YENİ EKLENEN KISIM: Kurtarma Kelimesi
+                secret_word = st.text_input("Gizli Kurtarma Kelimesi (Şifrenizi unutursanız gerekecek)", 
+                                            placeholder="Örn: en sevdiğin renk, ilk evcil hayvanın vb.")
+                
                 submit = st.form_submit_button("Kayıt Ol", type="primary")
                 
                 if submit:
-                    if not name or not new_user or not new_pw:
-                        st.warning("Lütfen tüm alanları doldurunuz.")
+                    if not name or not new_user or not new_pw or not secret_word:
+                        st.warning("Lütfen tüm alanları (Kurtarma Kelimesi dahil) doldurunuz.")
                     else:
-                        success, result = register_student(name.title(), new_user, new_pw, age, gender)
+                        success, result = register_student(name.title(), new_user, new_pw, age, gender, secret_word.lower().strip())
                         if success:
                             st.success("✅ Kayıt Başarılı! Giriş ekranına yönlendiriliyorsunuz...")
                             time.sleep(2)
-                            st.session_state.auth_mode = 'login' # Otomatik yönlendirme
+                            st.session_state.auth_mode = 'login' 
                             st.rerun()
                         else:
                             st.error(result)
@@ -168,10 +167,44 @@ def main_auth_flow():
             
             # Alt Linkler
             st.markdown("---")
-            if st.button("⬅️ Hesabın yok mu? KAYIT OL", on_click=go_to_register): pass
+            col_a, col_b = st.columns(2)
+            if col_a.button("⬅️ Hesabın yok mu? KAYIT OL", on_click=go_to_register): pass
+            if col_b.button("❓ Şifremi Unuttum", on_click=go_to_forgot_password): pass
 
         # ---------------------------------------------------------
-        # 3. MOD: ÖĞRETMEN GİRİŞİ
+        # 3. MOD: ŞİFREMİ UNUTTUM (YENİ EKLENDİ)
+        # ---------------------------------------------------------
+        elif st.session_state.auth_mode == 'forgot_password':
+            st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
+            st.subheader("🔐 Şifre Sıfırlama")
+            st.info("Kayıt olurken belirlediğiniz gizli kurtarma kelimesini kullanarak yeni şifre belirleyebilirsiniz.")
+            
+            with st.form("forgot_password_form"):
+                user = st.text_input("Kullanıcı Adı")
+                secret = st.text_input("Gizli Kurtarma Kelimesi", type="password")
+                new_pw = st.text_input("Yeni Şifre Belirle", type="password")
+                
+                submit = st.form_submit_button("Şifremi Yenile", type="primary")
+                
+                if submit:
+                    if not user or not secret or not new_pw:
+                        st.warning("Lütfen tüm alanları doldurunuz.")
+                    else:
+                        success, msg = reset_student_password(user, secret.lower().strip(), new_pw)
+                        if success:
+                            st.success("✅ Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...")
+                            time.sleep(2)
+                            st.session_state.auth_mode = 'login'
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                            
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("---")
+            if st.button("⬅️ Giriş Ekranına Dön", on_click=go_to_login): pass
+
+        # ---------------------------------------------------------
+        # 4. MOD: ÖĞRETMEN GİRİŞİ
         # ---------------------------------------------------------
         elif st.session_state.auth_mode == 'teacher':
             st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
@@ -182,8 +215,6 @@ def main_auth_flow():
                 submit = st.form_submit_button("Panele Git")
                 
                 if submit:
-                    # DÜZELTME: Şifre artık kod içinde hardcoded değil.
-                    # st.secrets["teacher_password"] veya TEACHER_PASSWORD env değişkeni kullanılıyor.
                     secret_pass = get_teacher_password()
                     
                     if secret_pass is None:
@@ -223,7 +254,7 @@ if st.session_state.role:
             if st.button("⚠️ Veritabanını Onar (Reset)", help="Veritabanı hatası alırsanız buna basın"):
                 if os.path.exists("school_data.db"):
                     os.remove("school_data.db")
-                    init_db()  # DÜZELTME: Artık db_utils.init_db() çağrılıyor (doğru)
+                    init_db() 
                     st.success("Veritabanı sıfırlandı!")
                     time.sleep(1)
                     st.session_state.clear()
