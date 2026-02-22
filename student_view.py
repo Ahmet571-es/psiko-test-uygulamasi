@@ -984,15 +984,33 @@ def app():
     st.markdown("""
     <style>
         .test-card { background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-bottom: 15px; text-align: center; transition: 0.3s; cursor: pointer; }
-        .test-card:hover { background-color: #e9ecef; border-color: #2E86C1; transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .test-card:hover { background-color: #e9ecef; border-color: #1b365d; transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .completed-badge { background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
-        .main-header { color: #2E86C1; text-align: center; font-weight: bold; font-size: 2.5rem; margin-bottom: 10px; }
-        .sub-header { color: #555; text-align: center; margin-bottom: 30px; font-style: italic; }
+        
+        /* BAŞLIK STİLLERİ (LOGUYA UYUMLU) */
+        .main-header { 
+            color: #1b365d; 
+            text-align: center; 
+            font-weight: 900; 
+            font-size: 3.5rem; 
+            margin-bottom: 0px; 
+        }
+        .sub-title {
+            color: #cc0000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+        .welcome-text { color: #555; text-align: center; margin-bottom: 30px; font-style: italic; font-size: 1.1rem; }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("<h1 class='main-header'>🏥 EĞİTİM KLİNİK MERKEZİ</h1>", unsafe_allow_html=True)
-    st.markdown(f"<div class='sub-header'>Hoşgeldin, <b>{st.session_state.student_name}</b>. Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
+    # --- KURUMSAL BAŞLIK ALANI (YENİ İSİM) ---
+    st.markdown("<h1 class='main-header'>EĞİTİM CHECKUP</h1>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>Kişisel Eğitim & Kariyer Analiz Merkezi</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='welcome-text'>Hoşgeldin, <b>{st.session_state.student_name}</b>. Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
     if "page" not in st.session_state:
         st.session_state.page = "home"
@@ -1011,7 +1029,6 @@ def app():
     # SAYFA 1: ANA MENÜ (HOME)
     # ============================================================
     if st.session_state.page == "home":
-        st.markdown(f"## 👤 Merhaba, {st.session_state.student_name}")
         st.info("Aşağıdaki listeden dilediğin testi seçip çözebilirsin. Başarılar!")
 
         col1, col2 = st.columns(2)
@@ -1114,7 +1131,7 @@ def app():
     elif st.session_state.page == "test":
         t_name = st.session_state.selected_test
 
-        # --- GİRİŞ EKRANI (DÜZELTME: GERİ DÖN BUTONU EKLENDİ) ---
+        # --- GİRİŞ EKRANI ---
         if not st.session_state.intro_passed:
             st.title(f"📘 {t_name}")
             st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın.")
