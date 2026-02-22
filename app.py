@@ -2,12 +2,11 @@ import streamlit as st
 import time
 import os
 
-# DÜZELTME: reset_student_password fonksiyonu da import edildi (db_utils'e eklenecek)
 from db_utils import init_db, login_student, register_student, reset_student_password
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
-    page_title="EĞİTİM KLİNİK MERKEZİ",
+    page_title="EĞİTİM CHECKUP",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -24,16 +23,24 @@ st.markdown("""
     .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; width: 100%; }
     .auth-container { border: 2px solid #e0e0e0; padding: 40px; border-radius: 15px; background-color: #ffffff; max-width: 600px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     
-    /* BAŞLIK STİLLERİ */
+    /* BAŞLIK STİLLERİ (LOGUYA UYUMLU) */
     .header-text { 
         text-align: center; 
-        color: #2E86C1; 
+        color: #1b365d; /* Logodaki Lacivert Tonu */
         margin-top: 10px; 
-        margin-bottom: 20px; 
+        margin-bottom: 0px; 
         font-weight: 900; 
-        font-size: 3rem; 
+        font-size: 3.5rem; 
         text-transform: uppercase; 
         letter-spacing: 1px;
+    }
+    .sub-title-text {
+        text-align: center;
+        color: #cc0000; /* Logodaki Kırmızı Tonu */
+        font-weight: bold;
+        font-size: 1.5rem;
+        margin-bottom: 30px;
+        margin-top: -5px;
     }
     
     .sub-link { text-align: center; margin-top: 10px; cursor: pointer; color: #555; }
@@ -64,12 +71,6 @@ def go_to_forgot_password():
 
 # --- ÖĞRETMEN ŞİFRESİ ALMA FONKSİYONU ---
 def get_teacher_password():
-    """
-    Öğretmen şifresini güvenli şekilde alır.
-    Öncelik sırası:
-    1. Streamlit Secrets (st.secrets["teacher_password"]) — Streamlit Cloud için
-    2. Ortam değişkeni (TEACHER_PASSWORD) — Lokal / Docker için
-    """
     if "teacher_password" in st.secrets:
         return st.secrets["teacher_password"]
     env_pw = os.getenv("TEACHER_PASSWORD")
@@ -79,10 +80,11 @@ def get_teacher_password():
 
 # --- ANA GİRİŞ SİSTEMİ ---
 def main_auth_flow():
-    # --- KURUMSAL BAŞLIK ALANI ---
+    # --- KURUMSAL BAŞLIK ALANI (YENİ İSİM VE ALT BAŞLIK) ---
     st.markdown("""
         <div style="padding: 20px; text-align: center;">
-            <h1 class='header-text'>🧠 EĞİTİM KLİNİK MERKEZİ</h1>
+            <h1 class='header-text'>EĞİTİM CHECKUP</h1>
+            <div class='sub-title-text'>Kişisel Eğitim & Kariyer Analiz Merkezi</div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -110,7 +112,6 @@ def main_auth_flow():
                 new_user = st.text_input("Kullanıcı Adı Belirle")
                 new_pw = st.text_input("Şifre Belirle", type="password")
                 
-                # YENİ EKLENEN KISIM: Kurtarma Kelimesi
                 secret_word = st.text_input("Gizli Kurtarma Kelimesi (Şifrenizi unutursanız gerekecek)", 
                                             placeholder="Örn: en sevdiğin renk, ilk evcil hayvanın vb.")
                 
@@ -131,7 +132,6 @@ def main_auth_flow():
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Alt Linkler
             st.markdown("---")
             if st.button("Zaten hesabın var mı? OTURUM AÇ ➡️", on_click=go_to_login): pass
             if st.button("👨‍🏫 Öğretmen Girişi", type="secondary", on_click=go_to_teacher): pass
@@ -165,14 +165,13 @@ def main_auth_flow():
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Alt Linkler
             st.markdown("---")
             col_a, col_b = st.columns(2)
             if col_a.button("⬅️ Hesabın yok mu? KAYIT OL", on_click=go_to_register): pass
             if col_b.button("❓ Şifremi Unuttum", on_click=go_to_forgot_password): pass
 
         # ---------------------------------------------------------
-        # 3. MOD: ŞİFREMİ UNUTTUM (YENİ EKLENDİ)
+        # 3. MOD: ŞİFREMİ UNUTTUM
         # ---------------------------------------------------------
         elif st.session_state.auth_mode == 'forgot_password':
             st.markdown("<div class='auth-container'>", unsafe_allow_html=True)
@@ -227,7 +226,6 @@ def main_auth_flow():
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Alt Linkler
             st.markdown("---")
             if st.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register): pass
 
@@ -248,7 +246,6 @@ if st.session_state.role:
     with st.sidebar:
         st.write(f"Kullanıcı: **{st.session_state.get('student_name', 'Yönetici')}**")
         
-        # Öğretmen ise veritabanı temizleme butonu göster (Acil durumlar için)
         if st.session_state.role == "teacher":
             st.markdown("---")
             if st.button("⚠️ Veritabanını Onar (Reset)", help="Veritabanı hatası alırsanız buna basın"):
