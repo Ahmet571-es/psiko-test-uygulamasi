@@ -463,22 +463,22 @@ TEST_META = {
     "Çalışma Davranışı Ölçeği (Baltaş)": {
         "icon": "📚",
         "color": "#2E86C1",
-        "duration": "~8 dk",
-        "questions": 45,
+        "duration": "~15 dk",
+        "questions": 73,
         "desc": "Ders çalışma alışkanlıklarını ve akademik davranış kalıplarını analiz et.",
     },
     "Sağ-Sol Beyin Dominansı Testi": {
         "icon": "🧠",
         "color": "#E74C3C",
-        "duration": "~5 dk",
-        "questions": 20,
+        "duration": "~7 dk",
+        "questions": 30,
         "desc": "Beyinin hangi yarısı daha baskın? Yaratıcı mı, analitik mi, yoksa dengeli misin?",
     },
     "Sınav Kaygısı Ölçeği (DuSKÖ)": {
         "icon": "😰",
         "color": "#F39C12",
-        "duration": "~6 dk",
-        "questions": 33,
+        "duration": "~10 dk",
+        "questions": 50,
         "desc": "Sınav kaygın hangi boyutlarda seni etkiliyor? Fiziksel, zihinsel, duygusal...",
     },
     "VARK Öğrenme Stilleri Testi": {
@@ -498,8 +498,8 @@ TEST_META = {
     "Holland Mesleki İlgi Envanteri (RIASEC)": {
         "icon": "🧭",
         "color": "#1ABC9C",
-        "duration": "~10 dk",
-        "questions": 42,
+        "duration": "~15 dk",
+        "questions": 84,
         "desc": "Hangi meslek alanları sana en uygun? RIASEC koduyla kariyer haritanı çıkar.",
     },
 }
@@ -872,7 +872,6 @@ def app():
                 "Kendini keşfetmek, geleceğine yatırım yapmaktır. 🚀",
                 "Her cevabın, sana özel bir yol haritası çiziyor. 🗺️",
             ]
-            import random
             st.info(f"💡 {random.choice(motivations)}")
         
         st.markdown("---")
