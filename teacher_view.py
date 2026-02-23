@@ -645,5 +645,5 @@ def app():
     with st.expander("🗂️ Ham Veri Listesi"):
         if tests:
             df_tests = pd.DataFrame(tests)
-            df_tests['date'] = pd.to_datetime(df_tests['date']).dt.strftime('%d.%m.%Y')
+            df_tests['date'] = pd.to_datetime(df_tests['date'], errors='coerce').dt.strftime('%d.%m.%Y')
             st.dataframe(df_tests[["test_name", "date"]], use_container_width=True)
