@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import time
+import random
 from db_utils import check_test_completed, save_test_result_to_db
 
 # --- TEST VERİLERİ MODÜLÜ ---
@@ -25,6 +26,7 @@ from test_data import (
     HOLLAND_QUESTIONS, HOLLAND_TYPES,
     calculate_holland,
 )
+
 
 # ============================================================
 # SABİT ENNEAGRAM VERİLERİ
@@ -261,27 +263,10 @@ ENNEAGRAM_DATA = {
             "Öfkeyi bastırma — adaletsizlik karşısında duyduğun öfkeyi içe atarsın",
             "Gri alanlarla başa çıkmakta zorlanma — her şeyin siyah-beyaz olmadığını kabullenmek zor gelebilir",
         ],
-        "work_style": (
-            "Net kuralları, standartları ve beklentileri olan yapılandırılmış ortamlarda parlıyorsun. "
-            "Kalite kontrol, hukuk, eğitim, tıp, muhasebe gibi titizlik ve etik gerektiren alanlarda "
-            "doğal olarak güçlüsün. Kaotik veya kuralsız ortamlar seni strese sokar."
-        ),
-        "relationship_style": (
-            "İlişkilerinde dürüstlük, sadakat ve tutarlılık ararsın. Söz verilip tutulmaması "
-            "veya haksızlık seni derinden yaralar. Bazen yüksek beklentilerin "
-            "partnerin veya arkadaşların üzerinde baskı oluşturabilir. "
-            "Sevildiğini görmek için 'mükemmel' olmana gerek olmadığını hatırlatmak gerekiyor."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 4'e (Bireyci) kayarsın: melankolik, kendini geri çeken, "
-            "duygusal açıdan kapalı biri haline gelebilirsin. Eleştirini kendinee yöneltirsin "
-            "ve 'Hiçbir şeyi doğru yapamıyorum' hissine kapılabilirsin."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 7'ye (Hevesli) yönelirsin: daha oyuncu, daha esnek "
-            "ve daha neşeli biri olursun. Hayatın güzelliklerini fark edip, "
-            "'Yeterince iyi' diyebildiğinde gerçek huzuru bulursun."
-        ),
+        "work_style": "Net kuralları, standartları ve beklentileri olan yapılandırılmış ortamlarda parlıyorsun. Kalite kontrol, hukuk, eğitim, tıp, muhasebe gibi titizlik ve etik gerektiren alanlarda doğal olarak güçlüsün. Kaotik veya kuralsız ortamlar seni strese sokar.",
+        "relationship_style": "İlişkilerinde dürüstlük, sadakat ve tutarlılık ararsın. Söz verilip tutulmaması veya haksızlık seni derinden yaralar. Bazen yüksek beklentilerin partnerin veya arkadaşların üzerinde baskı oluşturabilir. Sevildiğini görmek için 'mükemmel' olmana gerek olmadığını hatırlatmak gerekiyor.",
+        "stress_behavior": "Stres altında Tip 4'e (Bireyci) kayarsın: melankolik, kendini geri çeken, duygusal açıdan kapalı biri haline gelebilirsin. Eleştirini kendine yöneltirsin ve 'Hiçbir şeyi doğru yapamıyorum' hissine kapılabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 7'ye (Hevesli) yönelirsin: daha oyuncu, daha esnek ve daha neşeli biri olursun. Hayatın güzelliklerini fark edip, 'Yeterince iyi' diyebildiğinde gerçek huzuru bulursun.",
         "danger_signals": [
             "Her şeyi ve herkesi sürekli düzeltme ihtiyacı hissetmek",
             "Dinginlik yerine sürekli gerginlik içinde olmak",
@@ -304,63 +289,15 @@ ENNEAGRAM_DATA = {
         "fear": "İstenmemek, sevilmemek ve değersiz hissedilmek.",
         "desire": "Sevilmek, ihtiyaç duyulmak ve başkaları için önemli olmak.",
         "stress": 8, "growth": 4,
-        "desc": (
-            "Sen dünyaya 'İnsanlara yardım etmeli ve onları sevmeliyim' gözlüğüyle bakıyorsun. "
-            "Başkalarının ihtiyaçlarını kendi ihtiyaçlarından önce görme konusunda adeta "
-            "bir antene sahipsin — odaya girer girmez kimin üzgün olduğunu, kimin desteğe "
-            "ihtiyaç duyduğunu hissedebilirsin. Bu empatin ve cömertliğin seni "
-            "insanların çok değer verdiği biri yapıyor. Ancak bazen kendi ihtiyaçlarını "
-            "o kadar arka plana atıyorsun ki, zamanla tükenmişlik ve kırgınlık sinyalleri "
-            "vermeye başlayabiliyor."
-        ),
-        "strengths": [
-            "Derin empati — başkalarının hislerini adeta kendi hislerin gibi anlarsın",
-            "Koşulsuz destek — zor anlarda yanında olmak için elinden geleni yaparsın",
-            "Sosyal zeka — insanları bir araya getirme ve ilişkileri güçlendirme konusunda üstünsün",
-            "Cömertlik — sahip olduklarını başkalarıyla paylaşmaktan içtenlikle mutluluk duyarsın",
-            "Sıcaklık ve bağlanma — insanların sana güven duymasını ve açılmasını sağlarsın",
-        ],
-        "weaknesses": [
-            "'Hayır' diyememek — başkasını hayal kırıklığına uğratmamak için kendi sınırlarını aşarsın",
-            "Kendi ihtiyaçlarını görmezden gelme — 'Ben iyiyim' demeye alışkın ama bazen değilsin",
-            "Takdir görmek isteme — iyiliğin fark edilmediğinde kırılgan hissedebilirsin",
-            "Duygusal manipülasyon riski — bilinçsizce suçluluk veya borçluluk hissi yaratabilirsin",
-            "Başkalarına bağımlılık — ilişkilerdeki rolün kaybolursa kimlik krizi yaşayabilirsin",
-        ],
-        "work_style": (
-            "İnsan odaklı, ilişki kurma gerektiren işlerde parıldıyorsun. "
-            "Sağlık, eğitim, sosyal hizmet, danışmanlık ve insan kaynakları gibi alanlarda "
-            "doğal olarak güçlüsün. Soğuk, bireysel ve rekabetçi ortamlar seni yorar."
-        ),
-        "relationship_style": (
-            "İlişkilerinde derin bağ ve karşılıklı şefkat ararsın. Sevdiğin insanın "
-            "ihtiyaçlarını sezmek sana doğal gelir. Ancak kendi ihtiyaçlarını dile getirmekte "
-            "zorlanır ve birikmiş beklentilerin sıtem olarak çıkabilir. "
-            "En sağlıklı ilişki: sevilmek için yardım etmediğin, "
-            "sadece sevdiğin için yardım ettiğin ilişkidir."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 8'e (Meydan Okuyan) kayarsın: kontrolcü, yüzleşmeci "
-            "ve talep edici hale gelebilirsin. 'Senden bu kadar şey yaptım, neden fark etmiyorsun?' "
-            "tepkileri verebilirsin."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 4'e (Bireyci) yönelirsin: kendi duygularını ve ihtiyaçlarını "
-            "keşfetmeye başlarsın. Başkalarına olan ilgin kadar kendine de ilgi gösterdiğinde "
-            "hem daha mutlu hem daha otantik olursun."
-        ),
-        "danger_signals": [
-            "Sürekli başkalarının ihtiyaçlarını düşünüp kendi ihtiyaçlarını bastırmak",
-            "'Beni kimse görmüyor' hissiyle içten içe kırılmak",
-            "Yardımını takdir etmeyeni pasif-agresif yollarla cezalandırmak",
-            "Tükenmişliği inkâr ederek daha fazla vermeye çalışmak",
-        ],
-        "prescription": [
-            "🌱 Kendin için bir şey yap: Bu hafta yalnızca senin için, kimseye faydası olmayan bir şey yap.",
-            "🗣️ İhtiyacını dile getir: Bugün birine 'Benim de desteğe ihtiyacım var' de.",
-            "⛔ Hayır pratiği: Bu hafta bir talebi reddet — ve suçluluk duymak yerine sınırını izle.",
-            "🪞 İçe dön: 'Ben şu an ne hissediyorum? Benim ihtiyacım ne?' sorularını sık sor.",
-        ],
+        "desc": "Sen dünyaya 'İnsanlara yardım etmeli ve onları sevmeliyim' gözlüğüyle bakıyorsun. Başkalarının ihtiyaçlarını kendi ihtiyaçlarından önce görme konusunda adeta bir antene sahipsin — odaya girer girmez kimin üzgün olduğunu, kimin desteğe ihtiyaç duyduğunu hissedebilirsin. Bu empatin ve cömertliğin seni insanların çok değer verdiği biri yapıyor. Ancak bazen kendi ihtiyaçlarını o kadar arka plana atıyorsun ki, zamanla tükenmişlik ve kırgınlık sinyalleri vermeye başlayabiliyor.",
+        "strengths": ["Derin empati", "Koşulsuz destek", "Sosyal zeka", "Cömertlik", "Sıcaklık ve bağlanma"],
+        "weaknesses": ["'Hayır' diyememek", "Kendi ihtiyaçlarını görmezden gelme", "Takdir görmek isteme", "Duygusal manipülasyon riski", "Başkalarına bağımlılık"],
+        "work_style": "İnsan odaklı, ilişki kurma gerektiren işlerde parıldıyorsun.",
+        "relationship_style": "İlişkilerinde derin bağ ve karşılıklı şefkat ararsın.",
+        "stress_behavior": "Stres altında Tip 8'e kayarsın: kontrolcü ve talep edici hale gelebilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 4'e yönelirsin: kendi duygularını keşfetmeye başlarsın.",
+        "danger_signals": ["Sürekli başkalarının ihtiyaçlarını düşünmek", "'Beni kimse görmüyor' hissi", "Yardımını takdir etmeyeni cezalandırmak", "Tükenmişliği inkâr etmek"],
+        "prescription": ["🌱 Kendin için bir şey yap", "🗣️ İhtiyacını dile getir", "⛔ Hayır pratiği", "🪞 İçe dön"],
         "famous_examples": "Desmond Tutu, Princess Diana, Dolly Parton",
         "careers": ["Hemşire", "Psikolog", "Öğretmen", "Sosyal hizmet uzmanı", "İK yöneticisi", "Terapist"],
     },
@@ -371,60 +308,15 @@ ENNEAGRAM_DATA = {
         "fear": "Başarısız olmak, değersiz ve sıradan görünmek.",
         "desire": "Başarılı, değerli ve hayranlık duyulan biri olmak.",
         "stress": 9, "growth": 6,
-        "desc": (
-            "Sen dünyaya 'Başarılı olmalı ve değer kanıtlamalıyım' gözlüğüyle bakıyorsun. "
-            "Hedef koymak, strateji geliştirmek ve o hedefe doğru ilerlemek seni canlı tutuyor. "
-            "Odaya girdiğinde enerjin hissedilir, insanları motive etme konusunda doğal bir yeteneğin var. "
-            "İmajına ve nasıl göründüğüne dikkat ediyorsun — bu bazen avantaj, bazen kırılganlık. "
-            "En büyük sorduğun soru şu: 'Başarmazsam hâlâ sevilir miyim?'"
-        ),
-        "strengths": [
-            "Hedef odaklılık — belirlediğin hedefe kilitlenip ilerleyebilirsin",
-            "Enerji ve motivasyon — çevreyi de sürüklediğin bir dinamizmin var",
-            "Adaptasyon yeteneği — farklı ortamlara ve insanlara hızla uyum sağlarsın",
-            "Verimlilik — en kısa yoldan sonuç üretme konusunda güçlüsün",
-            "Liderlik karizması — insanlara ilham vermek sana doğal gelir",
-        ],
-        "weaknesses": [
-            "Kimlik-başarı karışıklığı — başardıklarının ötesinde kim olduğunu sorgulamayabilirsin",
-            "Duyguları erteleme — 'Bunu daha sonra hissederim, şimdi iş var' tuzağı",
-            "İlişkileri proje gibi yönetme riski — empati yerine strateji ön plana çıkabilir",
-            "İmaj kaygısı — gerçek kırılganlıklarını gizleme eğilimi",
-            "Aşırı iş yükü — 'Daha fazlası' peşinde tükenmişliğe gidebilirsin",
-        ],
-        "work_style": (
-            "Rekabetçi, ölçülebilir başarı kriterleri olan ve görünürlük sunan ortamlarda "
-            "parıldıyorsun. Satış, girişimcilik, yöneticilik, halkla ilişkiler ve "
-            "sahne sanatları gibi alanlarda doğal gücün ortaya çıkar. "
-            "Takdir edilmediğin veya ilerleme göremediğin ortamlar seni söndürür."
-        ),
-        "relationship_style": (
-            "İlişkilerinde hayranlık ve takdir önemlidir. Başarılarını paylaşmak istersin "
-            "ama gerçek kırılganlıklarını göstermek zor gelir. "
-            "En derin bağı, 'maskesini düşürebildiğin' insanlarla kurarsın. "
-            "Partnerinin seni sadece başarıların için değil, gerçekten sevdiğini hissetmek istersin."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 9'a (Barışçı) kayarsın: hareketsizleşir, "
-            "erteleyebilir ve içine kapanabilirsin. 'Ne fark eder ki' hissiyle "
-            "motivasyonunu kaybedebilirsin."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 6'ya (Sadık) yönelirsin: daha sadık, dürüst ve "
-            "gerçekten işbirlikçi olursun. Başarının ötesinde, anlam ve bağlılık arayışına girersin."
-        ),
-        "danger_signals": [
-            "Dinlenmenin boşa harcanan zaman gibi gelmesi",
-            "Başarısızlık ya da eleştiri karşısında aşırı savunmacı olmak",
-            "Gerçek hislerini 'verimli olmayan bir şey' olarak görmek",
-            "İlişkilerde derinlik yerine statüyü ön plana koymak",
-        ],
-        "prescription": [
-            "🧘 Dur ve hisset: Her gün 5 dakika, gündemin dışında, sadece 'Ne hissediyorum?' diye sor.",
-            "🎭 Maske indir: Güvendiğin birine 'Ben aslında şu an zor bir dönemdeyim' de.",
-            "🏅 Başarısız olmayı dene: Küçük bir şeyde bilerek mükemmeliyetçiliği bırak.",
-            "❤️ Koşulsuz bağ: Bu hafta hiçbir başarını paylaşmadan, sadece var olarak birisiyle zaman geçir.",
-        ],
+        "desc": "Sen dünyaya 'Başarılı olmalı ve değer kanıtlamalıyım' gözlüğüyle bakıyorsun. Hedef koymak, strateji geliştirmek ve o hedefe doğru ilerlemek seni canlı tutuyor.",
+        "strengths": ["Hedef odaklılık", "Enerji ve motivasyon", "Adaptasyon yeteneği", "Verimlilik", "Liderlik karizması"],
+        "weaknesses": ["Kimlik-başarı karışıklığı", "Duyguları erteleme", "İmaj kaygısı", "Aşırı iş yükü", "İlişkileri proje gibi yönetme"],
+        "work_style": "Rekabetçi, ölçülebilir başarı kriterleri olan ortamlarda parıldıyorsun.",
+        "relationship_style": "İlişkilerinde hayranlık ve takdir önemlidir.",
+        "stress_behavior": "Stres altında Tip 9'a kayarsın: hareketsizleşir ve içine kapanabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 6'ya yönelirsin: daha sadık ve dürüst olursun.",
+        "danger_signals": ["Dinlenmenin boşa harcanan zaman gibi gelmesi", "Başarısızlık karşısında savunmacı olmak", "Gerçek hislerini 'verimli olmayan şey' görmek", "İlişkilerde statüyü ön plana koymak"],
+        "prescription": ["🧘 Dur ve hisset", "🎭 Maske indir", "🏅 Başarısız olmayı dene", "❤️ Koşulsuz bağ"],
         "famous_examples": "Oprah Winfrey, Tom Cruise, Taylor Swift",
         "careers": ["Girişimci", "Satış müdürü", "Aktör/Sunucu", "Pazarlama uzmanı", "Yönetici", "Koç"],
     },
@@ -435,58 +327,15 @@ ENNEAGRAM_DATA = {
         "fear": "Kimliği olmamak, sıradan ve anlamsız biri olmak.",
         "desire": "Kendine özgü, anlamlı ve otantik bir kimliğe sahip olmak.",
         "stress": 2, "growth": 1,
-        "desc": (
-            "Sen dünyaya 'Ben farklıyım ve bu farkı anlamlı kılmalıyım' gözlüğüyle bakıyorsun. "
-            "Duyguların yoğunluğu ve derinliği seni hem çok zengin hem de bazen çok ağır bir iç dünyaya sürüklüyor. "
-            "Güzelliği, anlamı ve özgünlüğü sıradan insanların göremediği yerlerde görebilirsin. "
-            "Sanat, müzik, edebiyat veya derin konuşmalar sana nefes aldırıyor. "
-            "En büyük paradoks: hem çok özel hissetmek hem de gerçekten anlaşılmak istemek."
-        ),
-        "strengths": [
-            "Derin duygusal zeka — başkalarının hissedemediği nüansları hissedersin",
-            "Yaratıcılık ve estetik duyarlılık — güzelliği görme ve yaratma konusunda üstünsün",
-            "Otantiklik — rol yapmayı reddeder, gerçek olan şeyi ararsin",
-            "Empati derinliği — acı çeken birinin yanında gerçekten var olabilirsin",
-            "Anlam arayışı — yüzeysel şeylerle yetinmez, derinliği ararsın",
-        ],
-        "weaknesses": [
-            "Melankoli ve hüzne gömülme — duygular bazen seni tüketebilir",
-            "Kendini eksik hissetme — başkalarının sahip olduklarına bakıp 'Ya ben?' diyebilirsin",
-            "Dramatizasyon eğilimi — olayları olduğundan daha ağır yaşayabilirsin",
-            "Günlük rutine direnç — sıradan görevler seni sıkıp boğabilir",
-            "İlişkilerde idealizm — hayal kırıklığına karşı çok kırılgansın",
-        ],
-        "work_style": (
-            "Yaratıcı özgürlük sunan, anlam ve estetik barındıran işlerde parıldıyorsun. "
-            "Sanat, tasarım, yazarlık, terapistlik, müzik ve moda gibi alanlarda "
-            "eşsiz bir katkı sunarsın. Monoton, kurumsal ve duygusuz ortamlar seni içten söndürür."
-        ),
-        "relationship_style": (
-            "Derin, tutkulu ve anlam dolu bağlar ararsın. Yüzeysel ilişkiler seni tatmin etmez. "
-            "Anlaşılma ve görülme ihtiyacın çok güçlüdür. Hayal kırıklığı yaşadığında "
-            "mesafe koyabilir ya da dramatik tepkiler verebilirsin. "
-            "En iyi ilişki: seni olduğun gibi görebilen biriyle kurduğun bağdır."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 2'ye (Yardımcı) kayarsın: ihtiyaçlarını bastırıp "
-            "başkalarına aşırı yönelir, sevilmeye çalışır ve duygusal bağımlılık geliştirebilirsin."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 1'e (Reformcu) yönelirsin: disiplin ve yapıya kavuşur, "
-            "yaratıcılığını somut eylemlere dönüştürebilirsin. Duygular seni tanımlamak yerine sana hizmet etmeye başlar."
-        ),
-        "danger_signals": [
-            "Uzun süre hüzün veya boşluk içinde kalmak",
-            "Başkalarını idealleştirip sonra yıkılmak",
-            "Günlük hayattan ve sorumluluklardan kaçmak",
-            "'Beni kimse gerçekten anlamıyor' düşüncesiyle izolasyona çekilmek",
-        ],
-        "prescription": [
-            "🌱 Rutini benimse: Her gün küçük bir rutin oluştur — vücudun ve zihni çapalar.",
-            "🚶 Bedenle bağlan: Duygu yoğunluğunda yürüyüş yap, nefes al, bedenine geri dön.",
-            "📓 Minnet listesi: Her gün sahip olduğun üç şeyi yaz — eksikliğe değil, varlığa odaklan.",
-            "🛠️ Tamamla: Yarım kalan yaratıcı bir projeyi bu hafta bitir.",
-        ],
+        "desc": "Sen dünyaya 'Ben farklıyım ve bu farkı anlamlı kılmalıyım' gözlüğüyle bakıyorsun. Duyguların yoğunluğu ve derinliği seni hem çok zengin hem de bazen çok ağır bir iç dünyaya sürüklüyor.",
+        "strengths": ["Derin duygusal zeka", "Yaratıcılık ve estetik duyarlılık", "Otantiklik", "Empati derinliği", "Anlam arayışı"],
+        "weaknesses": ["Melankoli ve hüzne gömülme", "Kendini eksik hissetme", "Dramatizasyon eğilimi", "Günlük rutine direnç", "İlişkilerde idealizm"],
+        "work_style": "Yaratıcı özgürlük sunan, anlam ve estetik barındıran işlerde parıldıyorsun.",
+        "relationship_style": "Derin, tutkulu ve anlam dolu bağlar ararsın.",
+        "stress_behavior": "Stres altında Tip 2'ye kayarsın: başkalarına aşırı yönelirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 1'e yönelirsin: disiplin ve yapıya kavuşursun.",
+        "danger_signals": ["Uzun süre hüzün içinde kalmak", "Başkalarını idealleştirip yıkılmak", "Sorumluluklardan kaçmak", "İzolasyona çekilmek"],
+        "prescription": ["🌱 Rutini benimse", "🚶 Bedenle bağlan", "📓 Minnet listesi", "🛠️ Tamamla"],
         "famous_examples": "Frida Kahlo, Virginia Woolf, Bob Dylan",
         "careers": ["Sanatçı", "Yazar", "Terapist", "Tasarımcı", "Müzisyen", "Fotoğrafçı"],
     },
@@ -494,64 +343,18 @@ ENNEAGRAM_DATA = {
         "title": "Tip 5: Araştırmacı",
         "role": "Gözlemci, Uzman",
         "icon": "🔬",
-        "fear": "Yetersiz olmak, kaynaklarının tükenmesi ve insanların istilasına uğramak.",
+        "fear": "Yetersiz olmak, kaynaklarının tükenmesi.",
         "desire": "Yetkin, bilgili ve çevresini anlayan biri olmak.",
         "stress": 7, "growth": 8,
-        "desc": (
-            "Sen dünyaya 'Önce anlamalıyım, sonra hareket ederim' gözlüğüyle bakıyorsun. "
-            "Zihnin sürekli merakla dolu — bir konuyu en ince detayına kadar araştırmak "
-            "sana güvenlik ve zevk verir. Yalnızlık seni yıkmaz, aksine şarj eder. "
-            "Enerjini, zamanını ve bilgini dikkatle paylaşırsın. "
-            "Gözlemlemek ve analiz etmek eylemden daha rahat gelir. "
-            "Zihnin muhteşem ama bazen seni hayattan uzaklaştırabilir."
-        ),
-        "strengths": [
-            "Derin analitik düşünme — karmaşık konuları anlama ve açıklama konusunda üstünsün",
-            "Uzmanlık — ilgi alanında derinlemesine bilgi biriktirir, gerçek bir uzman olursun",
-            "Bağımsızlık — kendi başına çalışabilir ve kararlarını verebilirsin",
-            "Gözlem gücü — diğerlerinin fark etmediği detayları ve örüntüleri görürsün",
-            "Sakinlik — kriz anlarında soğukkanlılığını korursun",
-        ],
-        "weaknesses": [
-            "İzolasyon — insanlardan ve sosyal bağlardan kendiğini geri çekebilirsin",
-            "Eylemden kaçınma — 'Biraz daha araştırayım' derken harekete geçmeyi erteleyebilirsin",
-            "Duygusal kopukluk — hisleri doğrudan yaşamak yerine analiz etmeyi tercih edersin",
-            "Cimrilik (enerji/bilgi/zaman) — kaynaklarını paylaşmak güç gelebilir",
-            "Sosyal yorgunluk — kalabalık ortamlar seni tüketir",
-        ],
-        "work_style": (
-            "Bağımsız çalışma, derin düşünme ve uzmanlık gerektiren ortamlarda güçlüsün. "
-            "Bilim, teknoloji, felsefe, araştırma, yazarlık ve mühendislik gibi alanlarda "
-            "doğal avantajın var. Açık ofis, sürekli toplantı ve yoğun sosyal dinamikler seni yorar."
-        ),
-        "relationship_style": (
-            "Bağımsızlığına saygı duyan, entelektüel derinliği olan birini ararsın. "
-            "Hislerini doğrudan ifade etmek zor gelir, duygularını genellikle davranışlarla gösterirsin. "
-            "Aşırı talep veya yakınlık baskısı seni kaçışa iter. "
-            "En derin bağ: seni içine çekildiğinde yargılamayan biriyle kurduğun bağdır."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 7'ye (Hevesli) kayarsın: dağınık, hiperaktif ve "
-            "konsantre olamayan biri haline gelebilirsin. Düşünceler çok hızlı akar, "
-            "hiçbiri derinleşemez."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 8'e (Meydan Okuyan) yönelirsin: harekete geçer, "
-            "güçlü kararlar alır ve liderlik edebilirsin. Zihin ile eylem birleştiğinde "
-            "gerçek potansiyelini ortaya çıkarırsın."
-        ),
-        "danger_signals": [
-            "Günlerce veya haftalarca insanlardan uzak kalmak",
-            "Bilgi toplamayı eyleme tercih etmek",
-            "Hisleri hissetmek yerine analiz etmek",
-            "Sosyal iletişimi gereksiz enerji kaybı olarak görmek",
-        ],
-        "prescription": [
-            "🤝 Bağlan: Bu hafta biriyle sıradan ama gerçek bir sohbet yap — amacı yok, sadece bağlantı.",
-            "⚡ Harekete geç: 'Yeterince hazır hissettim' demeden küçük bir adım at.",
-            "💬 Hislerini söyle: Güvendiğin birine bir duygundan bahset, analiz etmeden.",
-            "🌍 Dışarı çık: Her gün en az 20 dakika dışarıda, insanların arasında ol.",
-        ],
+        "desc": "Sen dünyaya 'Önce anlamalıyım, sonra hareket ederim' gözlüğüyle bakıyorsun. Zihnin sürekli merakla dolu.",
+        "strengths": ["Derin analitik düşünme", "Uzmanlık", "Bağımsızlık", "Gözlem gücü", "Sakinlik"],
+        "weaknesses": ["İzolasyon", "Eylemden kaçınma", "Duygusal kopukluk", "Cimrilik (enerji/bilgi/zaman)", "Sosyal yorgunluk"],
+        "work_style": "Bağımsız çalışma ve uzmanlık gerektiren ortamlarda güçlüsün.",
+        "relationship_style": "Bağımsızlığına saygı duyan, entelektüel derinliği olan birini ararsın.",
+        "stress_behavior": "Stres altında Tip 7'ye kayarsın: dağınık ve hiperaktif olabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 8'e yönelirsin: harekete geçer, liderlik edebilirsin.",
+        "danger_signals": ["İnsanlardan uzak kalmak", "Bilgi toplamayı eyleme tercih etmek", "Hisleri analiz etmek", "Sosyal iletişimi gereksiz görmek"],
+        "prescription": ["🤝 Bağlan", "⚡ Harekete geç", "💬 Hislerini söyle", "🌍 Dışarı çık"],
         "famous_examples": "Albert Einstein, Stephen Hawking, Bill Gates",
         "careers": ["Araştırmacı", "Yazılımcı", "Mühendis", "Analist", "Akademisyen", "Yazar"],
     },
@@ -560,61 +363,17 @@ ENNEAGRAM_DATA = {
         "role": "Sorgulayıcı, Güvenilir",
         "icon": "🛡️",
         "fear": "Güvensizlik, yalnız kalmak ve desteğini kaybetmek.",
-        "desire": "Güvende olmak, güvenilir ilişkilere ve yapılara sahip olmak.",
+        "desire": "Güvende olmak, güvenilir ilişkilere sahip olmak.",
         "stress": 3, "growth": 9,
-        "desc": (
-            "Sen dünyaya 'Güvende miyim? Güvenebilir miyim?' gözlüğüyle bakıyorsun. "
-            "Tehditleri önceden görmek, olası riskleri hesaplamak ve en kötü senaryoya "
-            "hazırlıklı olmak seni güvende tutmak için geliştirdiğin doğal bir refleks. "
-            "Bu sayede inanılmaz derecede sadık, sorumluluk sahibi ve güvenilirsin. "
-            "Bir kez güvenilirliğini kanıtladıysan yanından ayrılmazsın. "
-            "Ancak zihnindeki 'ya olursa?' sesi bazen seni yorabilir."
-        ),
-        "strengths": [
-            "Sadakat — bağlı olduğun insanlar ve değerler için sonuna kadar dururun",
-            "Sorumluluk — üstlendiğin işi sonuna kadar götürür, sözünü tutarsın",
-            "Risk analizi — tehlikeleri önceden görmek konusunda keskin bir sezgin var",
-            "Ekip ruhu — grup içinde güven inşa etme ve herkesin iyiliğini düşünme konusunda güçlüsün",
-            "Soru sorma cesareti — otoriteyi körü körüne kabul etmezsin, sorgularsın",
-        ],
-        "weaknesses": [
-            "Aşırı kaygı — zihin sürekli olası tehlikeleri tarıyor olabilir",
-            "Kararsızlık — 'Ya yanlış karar verirsem?' korkusuyla kilitlenebilirsin",
-            "Güvensizlik — insanların niyetini test etme eğilimin ilişkileri zorlayabilir",
-            "Felaket senaryoları — küçük sorunları kafanda büyütebilirsin",
-            "Otoriteyle çelişki — hem otoriteye ihtiyaç duyar hem de ona şüpheyle bakarsın",
-        ],
-        "work_style": (
-            "Net roller, güvenilir yapılar ve açık beklentilerin olduğu ortamlarda güçlüsün. "
-            "Risk yönetimi, hukuk, güvenlik, finans, sağlık ve kriz yönetimi gibi alanlarda "
-            "değerli katkı sunarsın. Kaotik, belirsiz ve güvensiz ortamlar seni tüketir."
-        ),
-        "relationship_style": (
-            "Sadakat ve güven senin için ilişkinin temeli. Güvendiğin birinin seni hayal kırıklığına uğratması "
-            "çok derinden etkiler. Test etme eğilimin — sordukların, yokladıkların — "
-            "bazen fark edilmeden ilişkiye yük olabilir. "
-            "En iyi ilişki: güvenilirliğini kanıtlamış, tutarlı ve seni yargılamayan biriyle."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 3'e (Başarılı) kayarsın: aşırı çalışır, performans odaklı olur "
-            "ve kontrolü ele geçirmeye çalışırsın. Kaygını başarı veya meşguliyet ile örtbas edersin."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 9'a (Barışçı) yönelirsin: zihin sakinleşir, "
-            "içgüdülerine güvenmeye başlarsın. Kaygı yerine huzur merkezinden hareket edersin."
-        ),
-        "danger_signals": [
-            "Sürekli kötü senaryo düşünerek karar verememek",
-            "Güvendiğin insanları bile sürekli test etmek",
-            "Fiziksel belirtiler (mide ağrısı, baş ağrısı) olarak taşınan kaygı",
-            "Otoriteye hem muhtaç hem de öfkeli hissetmek",
-        ],
-        "prescription": [
-            "🧘 Zihni durdur: 'Bu düşünce gerçek mi yoksa senaryo mu?' diye sor.",
-            "💪 İçgüdüne güven: Bir kararda aklını değil, ilk hissini rehber al.",
-            "✅ Tamamlananları gör: Bugün neyin yolunda gittiğine odaklan, neyin bozulabileceğine değil.",
-            "🤲 Destek iste: Kaygını birisiyle paylaş — yalnız taşımak onu büyütür.",
-        ],
+        "desc": "Sen dünyaya 'Güvende miyim? Güvenebilir miyim?' gözlüğüyle bakıyorsun.",
+        "strengths": ["Sadakat", "Sorumluluk", "Risk analizi", "Ekip ruhu", "Soru sorma cesareti"],
+        "weaknesses": ["Aşırı kaygı", "Kararsızlık", "Güvensizlik", "Felaket senaryoları", "Otoriteyle çelişki"],
+        "work_style": "Net roller ve güvenilir yapıların olduğu ortamlarda güçlüsün.",
+        "relationship_style": "Sadakat ve güven senin için ilişkinin temeli.",
+        "stress_behavior": "Stres altında Tip 3'e kayarsın: aşırı çalışır, performans odaklı olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 9'a yönelirsin: zihin sakinleşir, huzur bulursun.",
+        "danger_signals": ["Kötü senaryo düşünerek karar verememek", "Güvendiğin insanları test etmek", "Fiziksel kaygı belirtileri", "Otoriteye hem muhtaç hem öfkeli hissetmek"],
+        "prescription": ["🧘 Zihni durdur", "💪 İçgüdüne güven", "✅ Tamamlananları gör", "🤲 Destek iste"],
         "famous_examples": "Barack Obama, Ellen DeGeneres, Malala Yousafzai",
         "careers": ["Avukat", "Risk analisti", "Güvenlik uzmanı", "Muhasebeci", "Polis memuru", "Danışman"],
     },
@@ -622,63 +381,18 @@ ENNEAGRAM_DATA = {
         "title": "Tip 7: Hevesli",
         "role": "Maceracı, Vizyoner",
         "icon": "🚀",
-        "fear": "Acı çekmek, kısıtlanmak ve eğlencesiz bir hayata mahkûm olmak.",
+        "fear": "Acı çekmek, kısıtlanmak ve eğlencesiz hayat.",
         "desire": "Mutlu, özgür ve doyumsuz bir hayat sürmek.",
         "stress": 1, "growth": 5,
-        "desc": (
-            "Sen dünyaya 'Hayat güzel olmalı ve ben her şeyi deneyimlemeliyim' gözlüğüyle bakıyorsun. "
-            "Enerji, iyimserlik ve merak senin doğal halin. "
-            "Yeni fikirler, maceralar ve olasılıklar seni canlı tutuyor. "
-            "Bir kapı kapanırken on yeni kapı görürsün ve içinden en az üçüne girmek istersin. "
-            "Bu enerjin çevreni de aydınlatıyor — seninle olmak genellikle eğlenceli ve canlandırıcı. "
-            "Ancak zorluklardan ve acıdan kaçma eğilimin bazen derinleşmeni engelleyebilir."
-        ),
-        "strengths": [
-            "Sınır tanımayan iyimserlik — en zor durumlarda bile çıkış yolu görebilirsin",
-            "Hızlı öğrenme — yeni konuları ve becerileri süratle kavrayabilirsin",
-            "Yaratıcılık ve yenilikçilik — farklı alanları bağlayan yaratıcı çözümler üretirsin",
-            "Enerji ve coşku — çevrendekileri harekete geçirir ve motive edersin",
-            "Esneklik — planlar değiştiğinde hızla adapte olabilirsin",
-        ],
-        "weaknesses": [
-            "Odaklanma güçlüğü — çok fazla şeye başlayıp bitiremeyebilirsin",
-            "Acıdan kaçma — zor duyguları şenlik veya hareketle örtbas edebilirsin",
-            "Söz vermek ama tutamamak — heyecanla verdiğin sözleri gerçekleştirmek zor gelebilir",
-            "Derinleşme güçlüğü — yüzeyden yüzeye atlamak derinliği zorlaştırır",
-            "Anlık tatmin — uzun vadeli sabır gerektiren işler seni zorlayabilir",
-        ],
-        "work_style": (
-            "Çeşitlilik, yaratıcılık ve hareket sunan ortamlarda parıldıyorsun. "
-            "Girişimcilik, medya, turizm, eğlence, yaratıcı sektörler ve eğitim gibi alanlarda "
-            "doğal gücün ortaya çıkar. Monoton, tekrarlı ve kısıtlayıcı ortamlar seni boğar."
-        ),
-        "relationship_style": (
-            "Eğlenceli, spontane ve macera dolu ilişkiler ararsın. "
-            "Rutinleşen veya ağır bir hale gelen ilişkilerden uzaklaşma eğilimin var. "
-            "Zorlu bir konuşmayı espriye vurmak veya ertelemek senin için kolay. "
-            "En iyi ilişki: seni hem eğlenceli hem derin olmaya teşvik eden biriyle."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 1'e (Reformcu) kayarsın: aşırı eleştirel, mükemmeliyetçi "
-            "ve sabırsız hale gelebilirsin. Her şeyi yanlış bulan, sert biri gibi görünürsün."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 5'e (Araştırmacı) yönelirsin: derinleşir, "
-            "tek bir şeye uzun süre odaklanabilir ve gerçek uzmanlık geliştirebilirsin. "
-            "Hızın yavaşlayınca hayatın zenginliğini daha derinden tadabilirsin."
-        ),
-        "danger_signals": [
-            "Projeleri, ilişkileri veya sözleri yarım bırakmak",
-            "Yalnız kaldığında huzursuzluk yerine sürekli meşguliyet arayışı",
-            "Duygusal derinlikten kaçmak için hareket ve eğlenceye sığınmak",
-            "Uzun vadeli bir şeye bağlanmaktan kaçınmak",
-        ],
-        "prescription": [
-            "🎯 Bir şeyi bitir: Bu hafta yarım kalan bir şeyi tamamla — küçük olsun ama bütün olsun.",
-            "🌑 Karanlıkla otur: Zor bir duygunun yanında 10 dakika kal — kaçmadan, çözmeye çalışmadan.",
-            "📅 Derinleş: İlgi duyduğun bir konuya yüzeysel değil, gerçekten derinlemesine gir.",
-            "🤝 Söz tut: Bu hafta verdiğin bir sözü eksiksiz yerine getir.",
-        ],
+        "desc": "Sen dünyaya 'Hayat güzel olmalı ve ben her şeyi deneyimlemeliyim' gözlüğüyle bakıyorsun.",
+        "strengths": ["Sınır tanımayan iyimserlik", "Hızlı öğrenme", "Yaratıcılık ve yenilikçilik", "Enerji ve coşku", "Esneklik"],
+        "weaknesses": ["Odaklanma güçlüğü", "Acıdan kaçma", "Söz verip tutamamak", "Derinleşme güçlüğü", "Anlık tatmin"],
+        "work_style": "Çeşitlilik, yaratıcılık ve hareket sunan ortamlarda parıldıyorsun.",
+        "relationship_style": "Eğlenceli, spontane ve macera dolu ilişkiler ararsın.",
+        "stress_behavior": "Stres altında Tip 1'e kayarsın: eleştirel ve mükemmeliyetçi olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 5'e yönelirsin: derinleşir ve odaklanırsın.",
+        "danger_signals": ["Projeleri yarım bırakmak", "Sürekli meşguliyet arayışı", "Duygusal derinlikten kaçmak", "Bağlanmaktan kaçınmak"],
+        "prescription": ["🎯 Bir şeyi bitir", "🌑 Karanlıkla otur", "📅 Derinleş", "🤝 Söz tut"],
         "famous_examples": "Robin Williams, Jim Carrey, Freddie Mercury",
         "careers": ["Girişimci", "Medya profesyoneli", "Rehber/Eğitimci", "Komedyen", "Turizm uzmanı"],
     },
@@ -689,60 +403,15 @@ ENNEAGRAM_DATA = {
         "fear": "Kontrol edilmek, manipüle edilmek ve zayıf görünmek.",
         "desire": "Kendi hayatını kontrol etmek, güçlü ve bağımsız olmak.",
         "stress": 5, "growth": 2,
-        "desc": (
-            "Sen dünyaya 'Ben güçlü olmalıyım ve kontrol bendeyken herkes güvende' gözlüğüyle bakıyorsun. "
-            "Doğrudan, güçlü ve kararlısın — etrafındakilere hissettirmeden liderlik edersin. "
-            "Haksızlık ve zayıfların ezilmesi seni derin bir öfkeyle harekete geçirir. "
-            "Zayıflık veya bağımlılık sana çok uzak hissettiriyor — kırılgan olmak tehlike gibi geliyor. "
-            "Oysa bu güçlü kabuğun altında çok derin bir koruyuculuk ve sadakat yatıyor."
-        ),
-        "strengths": [
-            "Liderlik gücü — doğal olarak öne çıkar, insanları yönlendirir ve korursun",
-            "Karar alma hızı — belirsizlikte bile net ve kararlı olabilirsin",
-            "Adalet duygusu — güçsüzlerin yanında olmak seni harekete geçirir",
-            "Güç ve dayanıklılık — zorluklarla yüzleşmekten kaçınmazsın",
-            "Dürüstlük — düşündüğünü açıkça söylersin, diplomasiyi bazen atlayabilirsin",
-        ],
-        "weaknesses": [
-            "Kırılganlığı reddetme — duygusal açıklık sana tehlike gibi gelir",
-            "Baskıcılık — kontrolü kaybetmemek için çevreyi baskı altına alabilirsin",
-            "Öfkenin ani ve yoğun çıkması — sınır çiğnendiğinde sert tepkiler verebilirsin",
-            "Dinleme güçlüğü — kendi görüşüne o kadar güvenirsin ki başkasını kapatabilirsin",
-            "İktidar mücadelesi — boyun eğmek yerine çatışmayı seçebilirsin",
-        ],
-        "work_style": (
-            "Liderlik, bağımsızlık ve gerçek etki imkânı sunan ortamlarda güçlüsün. "
-            "Girişimcilik, yöneticilik, hukuk, politika ve kriz yönetimi gibi alanlarda "
-            "doğal avantajın var. Ayrıntı odaklı, bürokratik ve seni kısıtlayan ortamlar seni boğar."
-        ),
-        "relationship_style": (
-            "Tutkulu, sadık ve koruyucu bir partner veya arkadassın. "
-            "Sevdiklerini zayıf düşürecek herkese karşı duracak cesareti taşırsın. "
-            "Ancak kırılganlığını göstermek çok zor gelir — bu mesafe ve yalnızlık yaratabilir. "
-            "En derin bağ: gücünü kullanan değil, içini gören biriyle kurduğun bağdır."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 5'e (Araştırmacı) kayarsın: içine çekilir, "
-            "izole olur ve pasif hale gelebilirsin. Dışarıya güçlü görünür, "
-            "içeride ise yalnız ve tükenmişsindir."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 2'ye (Yardımcı) yönelirsin: şefkat açılır, "
-            "başkalarının ihtiyaçlarına gerçekten dokunur ve kırılgan olabilirsin. "
-            "Güç, şefkati bastırmak yerine onu ifade etmek için kullanılır."
-        ),
-        "danger_signals": [
-            "Her şeyin kontrolde olması gerektiği hissiyle sürekli gerginlik",
-            "İnsanların senden gerçekten korkması",
-            "Kırılganlığı zayıflık olarak görerek tüm duygusal kapıları kapatmak",
-            "İktidar için ilişkileri ve değerleri feda etmek",
-        ],
-        "prescription": [
-            "🤍 Kırılgan ol: Bu hafta güvendiğin birine gerçekten zor hissettiren bir şeyden bahset.",
-            "👂 Dinle: Bir tartışmada karşındakinin bakış açısını sonuna kadar dinle, araya girme.",
-            "🌿 Kontrol bırak: Bir konuda 'Ben bilmiyorum, sen karar ver' de — nasıl hissettirdiğini izle.",
-            "❤️ Şefkat yönelt: Bugün güçsüz gördüğün birine, güç göstermeden, sadece insan olarak dokunmaya çalış.",
-        ],
+        "desc": "Sen dünyaya 'Ben güçlü olmalıyım ve kontrol bendeyken herkes güvende' gözlüğüyle bakıyorsun.",
+        "strengths": ["Liderlik gücü", "Karar alma hızı", "Adalet duygusu", "Güç ve dayanıklılık", "Dürüstlük"],
+        "weaknesses": ["Kırılganlığı reddetme", "Baskıcılık", "Öfkenin ani çıkması", "Dinleme güçlüğü", "İktidar mücadelesi"],
+        "work_style": "Liderlik ve bağımsızlık sunan ortamlarda güçlüsün.",
+        "relationship_style": "Tutkulu, sadık ve koruyucu bir partner olursun.",
+        "stress_behavior": "Stres altında Tip 5'e kayarsın: içine çekilir, izole olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 2'ye yönelirsin: şefkat açılır, kırılgan olabilirsin.",
+        "danger_signals": ["Her şeyin kontrolde olması gerektiği hissi", "İnsanların senden korkması", "Duygusal kapıları kapatmak", "İlişkileri feda etmek"],
+        "prescription": ["🤍 Kırılgan ol", "👂 Dinle", "🌿 Kontrol bırak", "❤️ Şefkat yönelt"],
         "famous_examples": "Winston Churchill, Martin Luther King, Serena Williams",
         "careers": ["CEO", "Politikacı", "Avukat", "Girişimci", "Askeri lider", "Aktivist"],
     },
@@ -753,62 +422,15 @@ ENNEAGRAM_DATA = {
         "fear": "Çatışma, kopukluk ve iç huzurun kaybı.",
         "desire": "İç ve dış huzura sahip olmak, herkesin uyum içinde olduğunu görmek.",
         "stress": 6, "growth": 3,
-        "desc": (
-            "Sen dünyaya 'Herkes iyi olsun, uyum bozulmasın' gözlüğüyle bakıyorsun. "
-            "Sakinliğin, anlayışın ve kapsayıcılığın çevreye huzur verir. "
-            "Çatışmayı önlemek için yüksek bir enerji harcarsın ve genellikle insanlara "
-            "uzlaşmanın yolunu gösterebilirsin. Ancak bu barışı koruma çabası bazen "
-            "kendi sesini bastırmanla sonuçlanabilir. 'Ben ne istiyorum?' sorusu "
-            "zaman zaman en zorlu soru haline gelebilir."
-        ),
-        "strengths": [
-            "Doğal arabuluculuk — çatışmaları görmek ve uzlaştırmak sana kolay gelir",
-            "Sabır ve anlayış — farklı bakış açılarını kapsayıcı bir şekilde dinleyebilirsin",
-            "Güven verme — insanlar yanında kendini güvende ve kabul görmüş hisseder",
-            "Empati — başkasının dünyasına girmek ve onu anlamak konusunda üstünsün",
-            "İstikrar — stresli ortamlarda sakin ve dengeli kalabilirsin",
-        ],
-        "weaknesses": [
-            "Kendi sesini kaybetme — çatışmadan kaçmak için fikirlerini geri planda tutabilirsin",
-            "Erteleme — harekete geçmek bazen çok ağır gelir, olduğu yerde kalırsın",
-            "Pasif-agresif tepkiler — doğrudan söylemek yerine geri çekilir veya direnirsin",
-            "Önceliklendirme güçlüğü — ne istediğini bilmemek enerjini dağıtır",
-            "Dışsal uyaranlara bağımlılık — başkası harekete geçirmeden kendi kendine başlamak zor",
-        ],
-        "work_style": (
-            "İşbirliği gerektiren, hiyerarşinin katı olmadığı ve uyum içinde çalışılan "
-            "ortamlarda güçlüsün. Danışmanlık, arabuluculuk, sosyal hizmet, eğitim ve "
-            "sağlık gibi alanlarda değerli katkı sunarsın. "
-            "Aşırı rekabetçi, gürültülü ve çatışmacı ortamlar seni tüketir."
-        ),
-        "relationship_style": (
-            "Destekleyici, uyumlu ve sakin bir bağ ararsın. "
-            "Partnerinin mutluluğu için kendi isteklerini sık sık arka plana atarsın. "
-            "Hayal kırıklıklarını doğrudan ifade etmek yerine mesafe koyar ya da pasif kalırsın. "
-            "En iyi ilişki: fikirlerini ve isteklerini söylemeni güvenli hissettiren biriyle."
-        ),
-        "stress_behavior": (
-            "Stres altında Tip 6'ya (Sadık) kayarsın: kaygılanır, "
-            "güvensizleşir ve felaket senaryoları üretmeye başlarsın. "
-            "Normalde sakin olan yapın, kaygı ve şüpheyle dolar."
-        ),
-        "growth_behavior": (
-            "Gelişim yolunda Tip 3'e (Başarılı) yönelirsin: harekete geçer, "
-            "hedefler belirler ve bunlara odaklanırsın. "
-            "Pasiflik yerini enerjik ve amaçlı bir harekete bırakır."
-        ),
-        "danger_signals": [
-            "Yıllarca kendi isteklerini ve duygularını bastırmak",
-            "Önemli kararları sürekli ertelemek",
-            "Söylemek istediklerini içine atıp geri çekilmek",
-            "Başkalarının hayatında aktif, kendininkinde pasif olmak",
-        ],
-        "prescription": [
-            "🗣️ Sesini çıkar: Bugün 'Ben şunu istiyorum' veya 'Ben şunu düşünüyorum' de — rahatsızlık normaldir.",
-            "⚡ Bir adım at: Ertelediğin küçük bir şeyi bu gün yap, mükemmel olmak zorunda değil.",
-            "📋 Önceliklendir: Sabah 'Bugün benim için en önemli üç şey nedir?' diye sor.",
-            "🔍 Çatışmaya gir: Küçük bir anlaşmazlıkta görüşünü açıkla ve uzlaşmak yerine var ol.",
-        ],
+        "desc": "Sen dünyaya 'Herkes iyi olsun, uyum bozulmasın' gözlüğüyle bakıyorsun.",
+        "strengths": ["Doğal arabuluculuk", "Sabır ve anlayış", "Güven verme", "Empati", "İstikrar"],
+        "weaknesses": ["Kendi sesini kaybetme", "Erteleme", "Pasif-agresif tepkiler", "Önceliklendirme güçlüğü", "Dışsal uyaranlara bağımlılık"],
+        "work_style": "İşbirliği gerektiren, uyum içinde çalışılan ortamlarda güçlüsün.",
+        "relationship_style": "Destekleyici, uyumlu ve sakin bir bağ ararsın.",
+        "stress_behavior": "Stres altında Tip 6'ya kayarsın: kaygılanır ve güvensizleşirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 3'e yönelirsin: harekete geçer ve hedefler belirlersin.",
+        "danger_signals": ["İsteklerini bastırmak", "Kararları ertelemek", "İçine atmak", "Kendininkinde pasif olmak"],
+        "prescription": ["🗣️ Sesini çıkar", "⚡ Bir adım at", "📋 Önceliklendir", "🔍 Çatışmaya gir"],
         "famous_examples": "Dalai Lama, Abraham Lincoln, Mister Rogers",
         "careers": ["Arabulucu", "Danışman", "Terapist", "Öğretmen", "Sosyal hizmet uzmanı", "Diplomat"],
     },
@@ -824,6 +446,62 @@ WING_DESCRIPTIONS = {
     "7w6": "Daha sorumlu ve grup odaklı.", "7w8": "Daha lider ruhlu ve kararlı.",
     "8w7": "Daha enerjik ve eğlenceli lider.", "8w9": "Daha barışçıl ve sakin güç.",
     "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
+}
+
+
+# ============================================================
+# TEST META BİLGİLERİ (YENİ — Süre + Açıklama + İkon)
+# ============================================================
+TEST_META = {
+    "Enneagram Kişilik Testi": {
+        "icon": "🧬",
+        "color": "#8E44AD",
+        "duration": "~25 dk",
+        "questions": 180,
+        "desc": "9 kişilik tipinden hangisine en yakınsın? Güçlü yönlerini, korkularını ve büyüme yolunu keşfet.",
+    },
+    "Çalışma Davranışı Ölçeği (Baltaş)": {
+        "icon": "📚",
+        "color": "#2E86C1",
+        "duration": "~8 dk",
+        "questions": 45,
+        "desc": "Ders çalışma alışkanlıklarını ve akademik davranış kalıplarını analiz et.",
+    },
+    "Sağ-Sol Beyin Dominansı Testi": {
+        "icon": "🧠",
+        "color": "#E74C3C",
+        "duration": "~5 dk",
+        "questions": 20,
+        "desc": "Beyinin hangi yarısı daha baskın? Yaratıcı mı, analitik mi, yoksa dengeli misin?",
+    },
+    "Sınav Kaygısı Ölçeği (DuSKÖ)": {
+        "icon": "😰",
+        "color": "#F39C12",
+        "duration": "~6 dk",
+        "questions": 33,
+        "desc": "Sınav kaygın hangi boyutlarda seni etkiliyor? Fiziksel, zihinsel, duygusal...",
+    },
+    "VARK Öğrenme Stilleri Testi": {
+        "icon": "👁️",
+        "color": "#27AE60",
+        "duration": "~8 dk",
+        "questions": 16,
+        "desc": "En iyi nasıl öğreniyorsun? Görsel, İşitsel, Okuma/Yazma, Kinestetik...",
+    },
+    "Çoklu Zeka Testi (Gardner)": {
+        "icon": "💡",
+        "color": "#3498DB",
+        "duration": "~12 dk",
+        "questions": 80,
+        "desc": "Howard Gardner'ın 8 zeka alanından hangilerinde güçlüsün?",
+    },
+    "Holland Mesleki İlgi Envanteri (RIASEC)": {
+        "icon": "🧭",
+        "color": "#1ABC9C",
+        "duration": "~10 dk",
+        "questions": 42,
+        "desc": "Hangi meslek alanları sana en uygun? RIASEC koduyla kariyer haritanı çıkar.",
+    },
 }
 
 
@@ -851,7 +529,6 @@ def calculate_enneagram_report(all_answers):
     stress_data = ENNEAGRAM_DATA[data["stress"]]
     growth_data = ENNEAGRAM_DATA[data["growth"]]
 
-    # Puan tablosu için sıralama
     sorted_scores = sorted(normalized.items(), key=lambda x: x[1], reverse=True)
 
     def bar(pct):
@@ -978,39 +655,152 @@ gelişim sinyallerini merak ve şefkatle karşıla. Değişim, kendini tanımakl
 
 
 # ============================================================
-# ANA APP FONKSİYONU
+# 🏠 ANA APP FONKSİYONU
 # ============================================================
 def app():
+    # --- GENEL CSS ---
     st.markdown("""
     <style>
-        .test-card { background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-bottom: 15px; text-align: center; transition: 0.3s; cursor: pointer; }
-        .test-card:hover { background-color: #e9ecef; border-color: #1b365d; transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .completed-badge { background-color: #d4edda; color: #155724; padding: 5px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; }
-        
-        /* BAŞLIK STİLLERİ (LOGUYA UYUMLU) */
-        .main-header { 
-            color: #1b365d; 
-            text-align: center; 
-            font-weight: 900; 
-            font-size: 3.5rem; 
-            margin-bottom: 0px; 
-        }
-        .sub-title {
-            color: #cc0000;
+        /* ===== ÖĞRENCİ GÖRÜNÜM CSS ===== */
+        .main-header {
             text-align: center;
-            font-weight: bold;
-            font-size: 1.5rem;
-            margin-top: -10px;
-            margin-bottom: 20px;
+            font-weight: 900;
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+            color: #1B2A4A;
+            letter-spacing: 1px;
         }
-        .welcome-text { color: #555; text-align: center; margin-bottom: 30px; font-style: italic; font-size: 1.1rem; }
+        .sub-header {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1rem;
+            color: #555;
+        }
+        
+        /* ===== TEST KART TASARIMI ===== */
+        .test-card {
+            background: #ffffff;
+            border: 1px solid #E0E4EA;
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .test-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--card-color, #2E86C1);
+        }
+        .test-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--card-color, #2E86C1);
+        }
+        .test-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+        .test-card-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1B2A4A;
+            margin-bottom: 6px;
+        }
+        .test-card-desc {
+            font-size: 0.82rem;
+            color: #777;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .test-card-meta {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 0.75rem;
+            color: #999;
+        }
+        
+        /* ===== DURUM BADGELERİ ===== */
+        .badge-done {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .badge-ready {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        
+        /* ===== İSTATİSTİK KUTUSU ===== */
+        .stat-box {
+            background: #ffffff;
+            border: 1px solid #E0E4EA;
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1B2A4A;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        /* ===== İLERLEME ÇUBUĞU ===== */
+        .progress-container {
+            background: #E8EDF3;
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #1B2A4A, #2E86C1);
+            transition: width 0.5s ease;
+        }
+        
+        /* ===== MOTİVASYON MESAJLARI ===== */
+        .motivation-box {
+            background: linear-gradient(135deg, #1B2A4A 0%, #2C3E6B 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .motivation-box h3 {
+            color: #FFFFFF;
+            margin-bottom: 8px;
+        }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- KURUMSAL BAŞLIK ALANI (YENİ İSİM) ---
-    st.markdown("<h1 class='main-header'>EĞİTİM CHECKUP</h1>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-title'>Kişisel Eğitim & Kariyer Analiz Merkezi</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='welcome-text'>Hoşgeldin, <b>{st.session_state.student_name}</b>. Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
+    # --- BAŞLIK ---
+    st.markdown("<h1 class='main-header'>🎓 EĞİTİM CHECK UP</h1>", unsafe_allow_html=True)
+    st.markdown(f"<div class='sub-header'>Hoşgeldin <b>{st.session_state.student_name}</b> — Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
     if "page" not in st.session_state:
         st.session_state.page = "home"
@@ -1029,88 +819,165 @@ def app():
     # SAYFA 1: ANA MENÜ (HOME)
     # ============================================================
     if st.session_state.page == "home":
-        st.info("Aşağıdaki listeden dilediğin testi seçip çözebilirsin. Başarılar!")
-
+        
+        # --- İSTATİSTİK KUTUSU ---
+        completed_count = sum(1 for t in ALL_TESTS if check_test_completed(st.session_state.student_id, t))
+        total_count = len(ALL_TESTS)
+        pct = round(completed_count / total_count * 100)
+        
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            st.markdown(f"""
+                <div class="stat-box">
+                    <div class="stat-number">{completed_count}/{total_count}</div>
+                    <div class="stat-label">Tamamlanan Test</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with sc2:
+            st.markdown(f"""
+                <div class="stat-box">
+                    <div class="stat-number">%{pct}</div>
+                    <div class="stat-label">İlerleme Oranı</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with sc3:
+            remaining = total_count - completed_count
+            st.markdown(f"""
+                <div class="stat-box">
+                    <div class="stat-number">{remaining}</div>
+                    <div class="stat-label">Kalan Test</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # İlerleme Çubuğu
+        st.markdown(f"""
+            <div class="progress-container">
+                <div class="progress-bar" style="width: {pct}%;"></div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Tüm testler tamamlandıysa kutlama mesajı
+        if completed_count == total_count:
+            st.markdown("""
+                <div class="motivation-box">
+                    <h3>🎉 Tebrikler! Tüm Testleri Tamamladın!</h3>
+                    <p>Harika bir iş çıkardın. Öğretmenin artık sana özel bir analiz raporu hazırlayabilir.</p>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Motivasyon mesajları
+            motivations = [
+                "Her test, kendini daha iyi tanımana bir adım daha yaklaştırıyor. 🌟",
+                "Doğru veya yanlış cevap yok — sadece SEN varsın! 💪",
+                "Kendini keşfetmek, geleceğine yatırım yapmaktır. 🚀",
+                "Her cevabın, sana özel bir yol haritası çiziyor. 🗺️",
+            ]
+            import random
+            st.info(f"💡 {random.choice(motivations)}")
+        
+        st.markdown("---")
+        
+        # --- TEST KARTLARI ---
         col1, col2 = st.columns(2)
-
+        
         for idx, test in enumerate(ALL_TESTS):
             is_done = check_test_completed(st.session_state.student_id, test)
             target_col = col1 if idx % 2 == 0 else col2
+            meta = TEST_META.get(test, {})
+            
+            with target_col:
+                if is_done:
+                    st.markdown(f"""
+                        <div class="test-card" style="--card-color: #27AE60; opacity: 0.85;">
+                            <div class="test-card-icon">{meta.get('icon', '📝')}</div>
+                            <div class="test-card-title">{test}</div>
+                            <div class="test-card-desc">{meta.get('desc', '')}</div>
+                            <span class="badge-done">✅ Tamamlandı</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class="test-card" style="--card-color: {meta.get('color', '#2E86C1')};">
+                            <div class="test-card-icon">{meta.get('icon', '📝')}</div>
+                            <div class="test-card-title">{test}</div>
+                            <div class="test-card-desc">{meta.get('desc', '')}</div>
+                            <div class="test-card-meta">
+                                <span>⏱️ {meta.get('duration', '~10 dk')}</span>
+                                <span>📝 {meta.get('questions', '?')} soru</span>
+                            </div>
+                            <span class="badge-ready">🎯 Hazır</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(f"▶️ {test} Başla", key=test, type="primary"):
+                        st.session_state.selected_test = test
+                        st.session_state.intro_passed = False
 
-            if is_done:
-                target_col.button(f"✅ {test} (Tamamlandı)", disabled=True, key=test)
-            else:
-                if target_col.button(f"👉 {test}", type="primary", key=test):
-                    st.session_state.selected_test = test
-                    st.session_state.intro_passed = False
+                        if "Enneagram" in test:
+                            flat = []
+                            for tip_no, qs in ENNEAGRAM_QUESTIONS.items():
+                                for i, text in enumerate(qs):
+                                    flat.append({"type": tip_no, "idx": i, "text": text,
+                                                 "key": f"{tip_no}_{i}"})
+                            random.shuffle(flat)
+                            st.session_state.enneagram_shuffled  = flat
+                            st.session_state.enneagram_page      = 0
+                            st.session_state.enneagram_answers   = {}
+                            st.session_state.current_test_data   = {"type": "enneagram_fixed"}
 
-                    if "Enneagram" in test:
-                        import random
-                        flat = []
-                        for tip_no, qs in ENNEAGRAM_QUESTIONS.items():
-                            for i, text in enumerate(qs):
-                                flat.append({"type": tip_no, "idx": i, "text": text,
-                                             "key": f"{tip_no}_{i}"})
-                        random.shuffle(flat)
-                        st.session_state.enneagram_shuffled  = flat
-                        st.session_state.enneagram_page      = 0
-                        st.session_state.enneagram_answers   = {}
-                        st.session_state.current_test_data   = {"type": "enneagram_fixed"}
+                        elif "Sağ-Sol Beyin" in test:
+                            st.session_state.current_test_data = {"type": "ab_choice", "questions": SAG_SOL_BEYIN_QUESTIONS}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "Sağ-Sol Beyin" in test:
-                        st.session_state.current_test_data = {"type": "ab_choice", "questions": SAG_SOL_BEYIN_QUESTIONS}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
+                        elif "Çalışma Davranışı" in test:
+                            st.session_state.current_test_data = {"type": "true_false", "questions": CALISMA_DAVRANISI_QUESTIONS}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "Çalışma Davranışı" in test:
-                        st.session_state.current_test_data = {"type": "true_false", "questions": CALISMA_DAVRANISI_QUESTIONS}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
+                        elif "Sınav Kaygısı" in test:
+                            st.session_state.current_test_data = {"type": "true_false", "questions": SINAV_KAYGISI_QUESTIONS}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "Sınav Kaygısı" in test:
-                        st.session_state.current_test_data = {"type": "true_false", "questions": SINAV_KAYGISI_QUESTIONS}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
+                        elif "Çoklu Zeka" in test:
+                            student_age = st.session_state.get('student_age', 15)
+                            if student_age and student_age <= 13:
+                                qs = []
+                                for zk in ZEKA_SIRA:
+                                    qs.extend(COKLU_ZEKA_QUESTIONS_ILKOGRETIM[zk])
+                                st.session_state.current_test_data = {"type": "coklu_zeka_ilk", "questions": qs}
+                            else:
+                                qs = []
+                                for zk in ZEKA_SIRA:
+                                    qs.extend(COKLU_ZEKA_QUESTIONS_LISE[zk])
+                                st.session_state.current_test_data = {"type": "coklu_zeka_lise", "questions": qs}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "Çoklu Zeka" in test:
-                        student_age = st.session_state.get('student_age', 15)
-                        if student_age and student_age <= 13:
-                            qs = []
-                            for zk in ZEKA_SIRA:
-                                qs.extend(COKLU_ZEKA_QUESTIONS_ILKOGRETIM[zk])
-                            st.session_state.current_test_data = {"type": "coklu_zeka_ilk", "questions": qs}
-                        else:
-                            qs = []
-                            for zk in ZEKA_SIRA:
-                                qs.extend(COKLU_ZEKA_QUESTIONS_LISE[zk])
-                            st.session_state.current_test_data = {"type": "coklu_zeka_lise", "questions": qs}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
+                        elif "VARK" in test:
+                            st.session_state.current_test_data = {"type": "vark_multi", "questions": VARK_QUESTIONS}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "VARK" in test:
-                        st.session_state.current_test_data = {"type": "vark_multi", "questions": VARK_QUESTIONS}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
+                        elif "Holland" in test:
+                            st.session_state.current_test_data = {"type": "holland_3", "questions": HOLLAND_QUESTIONS}
+                            st.session_state.cevaplar = {}
+                            st.session_state.sayfa = 0
 
-                    elif "Holland" in test:
-                        st.session_state.current_test_data = {"type": "holland_3", "questions": HOLLAND_QUESTIONS}
-                        st.session_state.cevaplar = {}
-                        st.session_state.sayfa = 0
-
-                    st.session_state.page = "test"
-                    st.rerun()
+                        st.session_state.page = "test"
+                        st.rerun()
 
     # ============================================================
     # SAYFA 2: BAŞARI EKRANI
     # ============================================================
     elif st.session_state.page == "success_screen":
-        st.markdown(
-            "<div style='text-align:center; padding:40px;'>"
-            "<h1>🎉 Harika İş Çıkardın!</h1>"
-            "<p>Testi başarıyla tamamladın. Sonuçların öğretmenine iletildi.</p>"
-            "</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+            <div class="motivation-box">
+                <h3>🎉 Harika İş Çıkardın!</h3>
+                <p>Testi başarıyla tamamladın. Sonuçların öğretmenine iletildi.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
         if "last_report" in st.session_state and st.session_state.last_report:
             with st.expander("📋 Raporunu Görüntüle", expanded=True):
@@ -1118,7 +985,7 @@ def app():
 
         st.markdown("---")
         c1, c2 = st.columns(2)
-        if c1.button("🏠 Diğer Teste Geç"):
+        if c1.button("🏠 Diğer Teste Geç", type="primary"):
             st.session_state.page = "home"
             st.rerun()
         if c2.button("🚪 Çıkış Yap"):
@@ -1130,15 +997,29 @@ def app():
     # ============================================================
     elif st.session_state.page == "test":
         t_name = st.session_state.selected_test
+        meta = TEST_META.get(t_name, {})
 
         # --- GİRİŞ EKRANI ---
         if not st.session_state.intro_passed:
-            st.title(f"📘 {t_name}")
-            st.info("Lütfen tüm soruları içtenlikle cevapla. Doğru veya yanlış cevap yok, sadece SEN varsın.")
+            st.markdown(f"### {meta.get('icon', '📝')} {t_name}")
+            
+            # Test bilgi kartı
+            st.markdown(f"""
+                <div style="background: #ffffff; border: 1px solid #E0E4EA; border-radius: 16px; padding: 25px; margin: 15px 0;
+                            border-top: 4px solid {meta.get('color', '#2E86C1')};">
+                    <p style="color: #555; font-size: 1rem; margin-bottom: 15px;">{meta.get('desc', '')}</p>
+                    <div style="display: flex; gap: 20px; color: #777; font-size: 0.9rem;">
+                        <span>⏱️ Tahmini süre: <b>{meta.get('duration', '~10 dk')}</b></span>
+                        <span>📝 <b>{meta.get('questions', '?')}</b> soru</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.info("💡 Doğru veya yanlış cevap yoktur. İçinden geldiği gibi, samimiyetle cevapla.")
             
             c1, c2 = st.columns(2)
             
-            if c1.button("⬅️ Vazgeç / Ana Menüye Dön"):
+            if c1.button("⬅️ Vazgeç / Ana Menü"):
                 st.session_state.page = "home"
                 st.rerun()
                 
@@ -1157,18 +1038,17 @@ def app():
             if q_type == "enneagram_fixed":
                 PER_PAGE  = 20
                 all_qs    = st.session_state.enneagram_shuffled
-                total_qs  = len(all_qs)          # 180
+                total_qs  = len(all_qs)
                 curr_page = st.session_state.enneagram_page
-                total_pages = (total_qs + PER_PAGE - 1) // PER_PAGE  # 9
+                total_pages = (total_qs + PER_PAGE - 1) // PER_PAGE
 
                 page_qs  = all_qs[curr_page * PER_PAGE : (curr_page + 1) * PER_PAGE]
                 answered = sum(1 for q in all_qs
                                if st.session_state.enneagram_answers.get(q["key"]) is not None)
 
-                # İlerleme — kaç soru cevaplandı, hangi bölüm
                 st.progress(answered / total_qs)
-                st.caption(f"Bölüm {curr_page + 1} / {total_pages}  •  "
-                           f"{answered}/{total_qs} soru cevaplandı")
+                st.caption(f"📖 Bölüm {curr_page + 1} / {total_pages}  •  "
+                           f"✍️ {answered}/{total_qs} soru cevaplandı")
                 st.divider()
 
                 ennea_map = {
@@ -1224,7 +1104,7 @@ def app():
                             st.error(f"⚠️ Henüz {total_qs - total_answered} soru cevaplanmadı. "
                                      "Önceki bölümlere dönerek eksikleri tamamla.")
                         else:
-                            with st.spinner("Kişilik haritan çıkarılıyor..."):
+                            with st.spinner("🧬 Kişilik haritan çıkarılıyor..."):
                                 scores, rep = calculate_enneagram_report(
                                     st.session_state.enneagram_answers
                                 )
@@ -1250,25 +1130,17 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid)
                     options = [f"a) {q['a']}", f"b) {q['b']}"]
                     idx = 0 if prev == "a" else (1 if prev == "b" else None)
-
-                    val = st.radio(
-                        f"Soru {qid}",
-                        options,
-                        key=f"q_{qid}",
-                        index=idx,
-                        horizontal=True,
-                        label_visibility="collapsed"
-                    )
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
                     if val:
                         st.session_state.cevaplar[qid] = "a" if val.startswith("a)") else "b"
                     st.divider()
@@ -1286,25 +1158,17 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid)
                     options = ["Doğru", "Yanlış"]
                     idx = 0 if prev == "D" else (1 if prev == "Y" else None)
-
-                    val = st.radio(
-                        f"Soru {qid}",
-                        options,
-                        key=f"q_{qid}",
-                        index=idx,
-                        horizontal=True,
-                        label_visibility="collapsed"
-                    )
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
                     if val:
                         st.session_state.cevaplar[qid] = "D" if val == "Doğru" else "Y"
                     st.divider()
@@ -1322,34 +1186,19 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
-                likert_labels = {
-                    0: "0 - Asla",
-                    1: "1 - Çok Az",
-                    2: "2 - Bazen",
-                    3: "3 - Çoğu Kez",
-                    4: "4 - Daima"
-                }
+                likert_labels = {0: "0 - Asla", 1: "1 - Çok Az", 2: "2 - Bazen", 3: "3 - Çoğu Kez", 4: "4 - Daima"}
                 likert_opts = [0, 1, 2, 3, 4]
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid)
                     idx = likert_opts.index(prev) if prev is not None else None
-
-                    val = st.radio(
-                        f"Soru {qid}",
-                        likert_opts,
-                        key=f"q_{qid}",
-                        index=idx,
-                        horizontal=True,
-                        format_func=lambda x: likert_labels[x],
-                        label_visibility="collapsed"
-                    )
+                    val = st.radio(f"Soru {qid}", likert_opts, key=f"q_{qid}", index=idx, horizontal=True, format_func=lambda x: likert_labels[x], label_visibility="collapsed")
                     if val is not None:
                         st.session_state.cevaplar[qid] = val
                     st.divider()
@@ -1367,25 +1216,17 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid)
                     options = ["Evet", "Hayır"]
                     idx = 0 if prev == "E" else (1 if prev == "H" else None)
-
-                    val = st.radio(
-                        f"Soru {qid}",
-                        options,
-                        key=f"q_{qid}",
-                        index=idx,
-                        horizontal=True,
-                        label_visibility="collapsed"
-                    )
+                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
                     if val:
                         st.session_state.cevaplar[qid] = "E" if val == "Evet" else "H"
                     st.divider()
@@ -1403,14 +1244,13 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption("💡 Her soruda birden fazla seçenek işaretleyebilirsin.")
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}  •  💡 Her soruda birden fazla seçenek işaretleyebilirsin.")
                 page_q_ids = []
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid, [])
                     selected = []
                     for opt_key, opt_text in q["options"].items():
@@ -1433,6 +1273,7 @@ def app():
                 curr_qs = qs[start:start + PER_PAGE]
 
                 st.progress((st.session_state.sayfa + 1) / tot_p)
+                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
                 holland_opts = ["😊 Hoşlanırım", "😐 Fark etmez", "😕 Hoşlanmam"]
@@ -1442,18 +1283,9 @@ def app():
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
-
                     prev = st.session_state.cevaplar.get(qid)
                     idx = {2: 0, 1: 1, 0: 2}.get(prev, None)
-
-                    val = st.radio(
-                        f"Soru {qid}",
-                        holland_opts,
-                        key=f"q_{qid}",
-                        index=idx,
-                        horizontal=True,
-                        label_visibility="collapsed"
-                    )
+                    val = st.radio(f"Soru {qid}", holland_opts, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
                     if val:
                         st.session_state.cevaplar[qid] = holland_score_map[val]
                     st.divider()
@@ -1477,7 +1309,7 @@ def _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type):
         if c2.button("İleri ➡️"):
             missing = _check_missing(page_q_ids, q_type)
             if missing:
-                st.error("⚠️ Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin. 😉")
+                st.error("⚠️ Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin.")
             else:
                 st.session_state.sayfa += 1
                 st.rerun()
@@ -1511,35 +1343,23 @@ def _finish_and_save(t_name, q_type):
     scores = None
     report = ""
 
-    with st.spinner("Sonuçların hesaplanıyor..."):
+    with st.spinner("📊 Sonuçların hesaplanıyor..."):
 
         if q_type == "ab_choice":
             result, report = calculate_sag_sol_beyin(answers)
             scores = {
-                "sag_beyin":  result["sag_beyin"],
-                "sol_beyin":  result["sol_beyin"],
-                "sag_yuzde":  result["sag_yuzde"],
-                "sol_yuzde":  result["sol_yuzde"],
-                "dominant":   result["dominant"],
-                "level":      result["level"],
+                "sag_beyin": result["sag_beyin"], "sol_beyin": result["sol_beyin"],
+                "sag_yuzde": result["sag_yuzde"], "sol_yuzde": result["sol_yuzde"],
+                "dominant": result["dominant"], "level": result["level"],
             }
 
         elif q_type == "true_false":
             if "Çalışma Davranışı" in t_name:
                 result, report = calculate_calisma_davranisi(answers)
-                scores = {
-                    "total": result["total"],
-                    "max_total": result["max_total"],
-                    "categories": result["categories"]
-                }
+                scores = {"total": result["total"], "max_total": result["max_total"], "categories": result["categories"]}
             elif "Sınav Kaygısı" in t_name:
                 result, report = calculate_sinav_kaygisi(answers)
-                scores = {
-                    "total": result["total"],
-                    "total_pct": result["total_pct"],
-                    "level": result["overall_level"],
-                    "categories": result["categories"]
-                }
+                scores = {"total": result["total"], "total_pct": result["total_pct"], "level": result["overall_level"], "categories": result["categories"]}
 
         elif q_type == "coklu_zeka_lise":
             result, report = calculate_coklu_zeka_lise(answers)
@@ -1552,22 +1372,16 @@ def _finish_and_save(t_name, q_type):
         elif q_type == "vark_multi":
             result, report = calculate_vark(answers)
             scores = {
-                "V": result["counts"]["V"],
-                "A": result["counts"]["A"],
-                "R": result["counts"]["R"],
-                "K": result["counts"]["K"],
+                "V": result["counts"]["V"], "A": result["counts"]["A"],
+                "R": result["counts"]["R"], "K": result["counts"]["K"],
                 "dominant": result["dominant"][0]
             }
 
         elif q_type == "holland_3":
             result, report = calculate_holland(answers)
             scores = {
-                "R": result["R"],
-                "I": result["I"],
-                "A": result["A"],
-                "S": result["S"],
-                "E": result["E"],
-                "C": result["C"],
+                "R": result["R"], "I": result["I"], "A": result["A"],
+                "S": result["S"], "E": result["E"], "C": result["C"],
                 "holland_code": result["holland_code"],
             }
 
