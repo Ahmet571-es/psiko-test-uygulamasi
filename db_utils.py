@@ -1,11 +1,81 @@
-import sqlite3
 import json
 import hashlib
 import pandas as pd
 from datetime import datetime
 import os
+import streamlit as st
 
-DB_NAME = "school_data.db"
+# ============================================================
+# 🗄️ VERİTABANI BAĞLANTI YÖNETİMİ
+# ============================================================
+# Supabase (PostgreSQL) bağlantısı kullanır.
+# Bağlantı bilgisi: Streamlit Secrets → .env → ortam değişkeni
+# ============================================================
+
+try:
+    import psycopg2
+    import psycopg2.extras
+    DB_ENGINE = "postgresql"
+except ImportError:
+    DB_ENGINE = "sqlite"
+    import sqlite3
+
+# SQLite fallback DB adı (lokal geliştirme için)
+SQLITE_DB_NAME = "school_data.db"
+
+
+def get_db_url():
+    """
+    Supabase PostgreSQL bağlantı URL'sini alır.
+    Öncelik: st.secrets → ortam değişkeni
+    Bulunamazsa None döner (SQLite fallback).
+    """
+    try:
+        if "SUPABASE_DB_URL" in st.secrets:
+            return st.secrets["SUPABASE_DB_URL"]
+    except Exception:
+        pass
+
+    env_url = os.getenv("SUPABASE_DB_URL")
+    if env_url:
+        return env_url
+
+    return None
+
+
+def get_connection():
+    """
+    Veritabanı bağlantısı döndürür.
+    - Supabase URL varsa → PostgreSQL bağlantısı
+    - Yoksa → SQLite fallback (lokal geliştirme)
+    """
+    db_url = get_db_url()
+
+    if db_url and DB_ENGINE == "postgresql":
+        try:
+            conn = psycopg2.connect(db_url, connect_timeout=10)
+            conn.autocommit = False
+            return conn, "postgresql"
+        except Exception as e:
+            print(f"PostgreSQL bağlantı hatası: {e}")
+            # Fallback to SQLite
+            pass
+
+    # SQLite Fallback
+    if DB_ENGINE == "sqlite" or not db_url:
+        conn = sqlite3.connect(SQLITE_DB_NAME)
+        return conn, "sqlite"
+
+    # Son çare: SQLite
+    import sqlite3 as sq3
+    conn = sq3.connect(SQLITE_DB_NAME)
+    return conn, "sqlite"
+
+
+def get_placeholder(engine):
+    """SQL placeholder döndürür: PostgreSQL=%s, SQLite=?"""
+    return "%s" if engine == "postgresql" else "?"
+
 
 # ============================================================
 # SINIF TANIMLAMALARI
@@ -44,45 +114,92 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
+# ============================================================
+# VERİTABANI BAŞLATMA
+# ============================================================
+
 def init_db():
-    """Veritabanı tablolarını oluşturur ve günceller."""
-    conn = sqlite3.connect(DB_NAME)
+    """
+    Veritabanı tablolarını oluşturur.
+    PostgreSQL ve SQLite uyumlu.
+    """
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
 
-    # 1. Öğrenciler Tablosu
-    c.execute('''CREATE TABLE IF NOT EXISTS students
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  name TEXT, username TEXT, password TEXT,
-                  age INTEGER, gender TEXT,
-                  login_count INTEGER DEFAULT 0,
-                  secret_word TEXT)''')
-
-    # Mevcut veritabanına secret_word sütunu ekle (yoksa)
     try:
-        c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
-    except sqlite3.OperationalError:
-        pass
+        if engine == "postgresql":
+            # --- PostgreSQL Tabloları ---
+            c.execute('''CREATE TABLE IF NOT EXISTS students (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                username TEXT UNIQUE,
+                password TEXT,
+                age INTEGER,
+                gender TEXT,
+                login_count INTEGER DEFAULT 0,
+                secret_word TEXT
+            )''')
 
-    # 2. Test Sonuçları Tablosu
-    c.execute('''CREATE TABLE IF NOT EXISTS results
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  student_id INTEGER,
-                  test_name TEXT,
-                  raw_answers TEXT,
-                  scores TEXT,
-                  report TEXT,
-                  date TIMESTAMP)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS results (
+                id SERIAL PRIMARY KEY,
+                student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+                test_name TEXT,
+                raw_answers TEXT,
+                scores TEXT,
+                report TEXT,
+                date TIMESTAMP DEFAULT NOW()
+            )''')
 
-    # 3. Öğretmen AI Analiz Arşivi Tablosu
-    c.execute('''CREATE TABLE IF NOT EXISTS analysis_history
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  student_id INTEGER,
-                  combination TEXT,
-                  ai_report TEXT,
-                  date TIMESTAMP)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS analysis_history (
+                id SERIAL PRIMARY KEY,
+                student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+                combination TEXT,
+                ai_report TEXT,
+                date TIMESTAMP DEFAULT NOW()
+            )''')
 
-    conn.commit()
-    conn.close()
+            # Unique index — aynı öğrenci aynı testi tekrar kaydettiğinde düzgün çalışsın
+            c.execute('''CREATE INDEX IF NOT EXISTS idx_results_student_test 
+                         ON results(student_id, test_name)''')
+
+        else:
+            # --- SQLite Tabloları ---
+            c.execute('''CREATE TABLE IF NOT EXISTS students
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          name TEXT, username TEXT, password TEXT,
+                          age INTEGER, gender TEXT,
+                          login_count INTEGER DEFAULT 0,
+                          secret_word TEXT)''')
+
+            # secret_word sütunu yoksa ekle
+            try:
+                c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
+            except Exception:
+                pass
+
+            c.execute('''CREATE TABLE IF NOT EXISTS results
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          student_id INTEGER,
+                          test_name TEXT,
+                          raw_answers TEXT,
+                          scores TEXT,
+                          report TEXT,
+                          date TIMESTAMP)''')
+
+            c.execute('''CREATE TABLE IF NOT EXISTS analysis_history
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          student_id INTEGER,
+                          combination TEXT,
+                          ai_report TEXT,
+                          date TIMESTAMP)''')
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"init_db hatası: {e}")
+    finally:
+        conn.close()
 
 
 # ============================================================
@@ -90,99 +207,106 @@ def init_db():
 # ============================================================
 
 def register_student(name, username, password, age, gender, secret_word=""):
-    """
-    Yeni öğrenci kaydeder.
-    Input validation app.py tarafında yapılır, burada DB işlemi gerçekleştirilir.
-    """
+    """Yeni öğrenci kaydeder."""
     init_db()
 
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM students WHERE username=?", (username,))
-    if c.fetchone():
-        conn.close()
-        return False, "Bu kullanıcı adı zaten alınmış."
+    ph = get_placeholder(engine)
 
-    hashed_pw = hash_password(password)
-    c.execute(
-        "INSERT INTO students (name, username, password, age, gender, secret_word) VALUES (?, ?, ?, ?, ?, ?)",
-        (name, username, hashed_pw, age, gender, secret_word)
-    )
-    conn.commit()
-    conn.close()
-    return True, "Kayıt Başarılı"
+    try:
+        c.execute(f"SELECT id FROM students WHERE username={ph}", (username,))
+        if c.fetchone():
+            conn.close()
+            return False, "Bu kullanıcı adı zaten alınmış."
+
+        hashed_pw = hash_password(password)
+        c.execute(
+            f"INSERT INTO students (name, username, password, age, gender, secret_word) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
+            (name, username, hashed_pw, age, gender, secret_word)
+        )
+        conn.commit()
+        conn.close()
+        return True, "Kayıt Başarılı"
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return False, f"Kayıt sırasında hata: {e}"
 
 
 def login_student(username, password):
     """Öğrenci girişi doğrular."""
     init_db()
 
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
-
-    hashed_pw = hash_password(password)
+    ph = get_placeholder(engine)
 
     try:
+        hashed_pw = hash_password(password)
+
         c.execute(
-            "SELECT * FROM students WHERE username=? AND password=?",
+            f"SELECT id, name, username, password, age, gender, login_count FROM students WHERE username={ph} AND password={ph}",
             (username, hashed_pw)
         )
-    except sqlite3.OperationalError:
+        user = c.fetchone()
+
+        if user:
+            new_count = (user[6] or 0) + 1
+            c.execute(f"UPDATE students SET login_count={ph} WHERE id={ph}", (new_count, user[0]))
+            conn.commit()
+            conn.close()
+            return True, Student(user, new_count)
+
         conn.close()
-        init_db()
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            "SELECT * FROM students WHERE username=? AND password=?",
-            (username, hashed_pw)
-        )
+        return False, None
 
-    user = c.fetchone()
-
-    if user:
-        new_count = user[6] + 1
-        c.execute("UPDATE students SET login_count=? WHERE id=?", (new_count, user[0]))
-        conn.commit()
+    except Exception as e:
+        conn.rollback()
         conn.close()
-        return True, Student(user, new_count)
-
-    conn.close()
-    return False, None
+        print(f"Login hatası: {e}")
+        return False, None
 
 
 def reset_student_password(username, secret_word, new_password):
-    """
-    Öğrenci şifresini sıfırlar.
-    Kullanıcı adı ve kurtarma kelimesini kontrol eder.
-    """
+    """Öğrenci şifresini sıfırlar."""
     init_db()
-    conn = sqlite3.connect(DB_NAME)
+
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
 
-    c.execute("SELECT id, secret_word FROM students WHERE username=?", (username,))
-    user_data = c.fetchone()
+    try:
+        c.execute(f"SELECT id, secret_word FROM students WHERE username={ph}", (username,))
+        user_data = c.fetchone()
 
-    if not user_data:
+        if not user_data:
+            conn.close()
+            return False, "Sistemde böyle bir kullanıcı adı bulunamadı."
+
+        user_id = user_data[0]
+        stored_secret = user_data[1]
+
+        if not stored_secret:
+            conn.close()
+            return False, "Bu hesaba ait kurtarma kelimesi bulunmuyor (Eski kayıt olabilir). Lütfen yeni hesap açın."
+
+        if stored_secret.lower().strip() != secret_word.lower().strip():
+            conn.close()
+            return False, "Girilen kurtarma kelimesi yanlış!"
+
+        new_hashed_pw = hash_password(new_password)
+        c.execute(f"UPDATE students SET password={ph} WHERE id={ph}", (new_hashed_pw, user_id))
+        conn.commit()
         conn.close()
-        return False, "Sistemde böyle bir kullanıcı adı bulunamadı."
 
-    user_id = user_data[0]
-    stored_secret = user_data[1]
+        return True, "Şifreniz başarıyla yenilendi."
 
-    if not stored_secret:
+    except Exception as e:
+        conn.rollback()
         conn.close()
-        return False, "Bu hesaba ait kurtarma kelimesi bulunmuyor (Eski kayıt olabilir). Lütfen yeni hesap açın."
-
-    if stored_secret.lower().strip() != secret_word.lower().strip():
-        conn.close()
-        return False, "Girilen kurtarma kelimesi yanlış!"
-
-    new_hashed_pw = hash_password(new_password)
-    c.execute("UPDATE students SET password=? WHERE id=?", (new_hashed_pw, user_id))
-    conn.commit()
-    conn.close()
-
-    return True, "Şifreniz başarıyla yenilendi."
+        return False, f"Şifre sıfırlama hatası: {e}"
 
 
 # ============================================================
@@ -191,57 +315,57 @@ def reset_student_password(username, secret_word, new_password):
 
 def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_text):
     """Test sonucunu veritabanına kaydeder. Varsa eski kaydı günceller."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
 
     try:
+        # Eski kaydı sil (aynı öğrenci, aynı test)
         c.execute(
-            "DELETE FROM results WHERE student_id=? AND test_name=?",
-            (student_id, test_name)
-        )
-    except sqlite3.OperationalError:
-        conn.close()
-        init_db()
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            "DELETE FROM results WHERE student_id=? AND test_name=?",
+            f"DELETE FROM results WHERE student_id={ph} AND test_name={ph}",
             (student_id, test_name)
         )
 
-    c.execute(
-        "INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            student_id,
-            test_name,
-            json.dumps(raw_answers, ensure_ascii=False),
-            json.dumps(scores, ensure_ascii=False),
-            report_text,
-            datetime.now()
+        # Yeni kaydı ekle
+        c.execute(
+            f"INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
+            (
+                student_id,
+                test_name,
+                json.dumps(raw_answers, ensure_ascii=False),
+                json.dumps(scores, ensure_ascii=False),
+                report_text,
+                datetime.now()
+            )
         )
-    )
-    conn.commit()
-    conn.close()
-    return True
+        conn.commit()
+        conn.close()
+        return True
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print(f"Test kayıt hatası: {e}")
+        return False
 
 
 def check_test_completed(student_id, test_name):
     """Öğrencinin belirli bir testi tamamlayıp tamamlamadığını kontrol eder."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
+
     try:
         c.execute(
-            "SELECT id FROM results WHERE student_id=? AND test_name=?",
+            f"SELECT id FROM results WHERE student_id={ph} AND test_name={ph}",
             (student_id, test_name)
         )
-    except sqlite3.OperationalError:
+        data = c.fetchone()
         conn.close()
-        init_db()
+        return data is not None
+    except Exception:
+        conn.close()
         return False
-
-    data = c.fetchone()
-    conn.close()
-    return data is not None
 
 
 # ============================================================
@@ -250,137 +374,163 @@ def check_test_completed(student_id, test_name):
 
 def get_all_students_with_results():
     """Tüm öğrencileri ve test sonuçlarını döndürür."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
 
     try:
-        c.execute("SELECT * FROM students")
-    except sqlite3.OperationalError:
-        conn.close()
-        init_db()
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("SELECT * FROM students")
+        c.execute("SELECT id, name, username, password, age, gender, login_count FROM students ORDER BY name")
+        students_raw = c.fetchall()
 
-    students_raw = c.fetchall()
-    all_data = []
-
-    for s in students_raw:
-        try:
+        all_data = []
+        for s in students_raw:
             c.execute(
-                "SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?",
+                f"SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id={ph} ORDER BY date DESC",
                 (s[0],)
             )
-        except sqlite3.OperationalError:
-            init_db()
-            c.execute(
-                "SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id=?",
-                (s[0],)
-            )
+            tests_raw = c.fetchall()
 
-        tests_raw = c.fetchall()
+            tests_list = []
+            for t in tests_raw:
+                try:
+                    score_json = json.loads(t[1]) if t[1] else {}
+                except (json.JSONDecodeError, TypeError):
+                    score_json = {}
 
-        tests_list = []
-        for t in tests_raw:
-            try:
-                score_json = json.loads(t[1]) if t[1] else {}
-            except (json.JSONDecodeError, TypeError):
-                score_json = {}
+                tests_list.append({
+                    "test_name": t[0],
+                    "scores": score_json,
+                    "raw_answers": t[2],
+                    "date": str(t[3]) if t[3] else "",
+                    "report": t[4]
+                })
 
-            tests_list.append({
-                "test_name": t[0],
-                "scores": score_json,
-                "raw_answers": t[2],
-                "date": t[3],
-                "report": t[4]
+            all_data.append({
+                "info": StudentInfo(s),
+                "tests": tests_list
             })
 
-        all_data.append({
-            "info": StudentInfo(s),
-            "tests": tests_list
-        })
+        conn.close()
+        return all_data
 
-    conn.close()
-    return all_data
+    except Exception as e:
+        conn.close()
+        print(f"Veri çekme hatası: {e}")
+        return []
 
 
 def get_student_analysis_history(student_id):
     """Öğrencinin AI analiz arşivini döndürür."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
+
     try:
         c.execute(
-            "SELECT combination, ai_report, date FROM analysis_history WHERE student_id=? ORDER BY date DESC",
+            f"SELECT combination, ai_report, date FROM analysis_history WHERE student_id={ph} ORDER BY date DESC",
             (student_id,)
         )
-    except sqlite3.OperationalError:
+        rows = c.fetchall()
         conn.close()
-        init_db()
+
+        history = []
+        for r in rows:
+            history.append({
+                "combination": r[0],
+                "report": r[1],
+                "date": str(r[2]) if r[2] else ""
+            })
+        return history
+
+    except Exception:
+        conn.close()
         return []
-
-    rows = c.fetchall()
-    conn.close()
-
-    history = []
-    for r in rows:
-        history.append({
-            "combination": r[0],
-            "report": r[1],
-            "date": r[2]
-        })
-    return history
 
 
 def save_holistic_analysis(student_id, combination_list, report_text):
     """AI analiz raporunu arşive kaydeder."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
     comb_str = " + ".join(combination_list)
 
     try:
         c.execute(
-            "INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
+            f"INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES ({ph}, {ph}, {ph}, {ph})",
             (student_id, comb_str, report_text, datetime.now())
         )
-    except sqlite3.OperationalError:
+        conn.commit()
         conn.close()
-        init_db()
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO analysis_history (student_id, combination, ai_report, date) VALUES (?, ?, ?, ?)",
-            (student_id, comb_str, report_text, datetime.now())
-        )
 
-    conn.commit()
-    conn.close()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print(f"Analiz kayıt hatası: {e}")
 
 
 def delete_specific_students(names_list):
     """Belirtilen öğrencilerin tüm verilerini siler."""
-    conn = sqlite3.connect(DB_NAME)
+    conn, engine = get_connection()
     c = conn.cursor()
+    ph = get_placeholder(engine)
+
     try:
         for name in names_list:
-            c.execute("SELECT id FROM students WHERE name=?", (name,))
+            c.execute(f"SELECT id FROM students WHERE name={ph}", (name,))
             sid = c.fetchone()
             if sid:
-                c.execute("DELETE FROM students WHERE id=?", (sid[0],))
-                c.execute("DELETE FROM results WHERE student_id=?", (sid[0],))
-                c.execute("DELETE FROM analysis_history WHERE student_id=?", (sid[0],))
+                c.execute(f"DELETE FROM analysis_history WHERE student_id={ph}", (sid[0],))
+                c.execute(f"DELETE FROM results WHERE student_id={ph}", (sid[0],))
+                c.execute(f"DELETE FROM students WHERE id={ph}", (sid[0],))
         conn.commit()
+        conn.close()
+        return True
+
     except Exception as e:
         conn.rollback()
         conn.close()
         print(f"Silme hatası: {e}")
         return False
-    conn.close()
-    return True
 
 
 def reset_database():
-    """Tüm veritabanını sıfırlar."""
-    if os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
-    init_db()
-    return True
+    """
+    Tüm veritabanını sıfırlar.
+    PostgreSQL: Tabloları DROP eder ve yeniden oluşturur.
+    SQLite: Dosyayı siler ve yeniden oluşturur.
+    """
+    conn, engine = get_connection()
+    c = conn.cursor()
+
+    try:
+        if engine == "postgresql":
+            c.execute("DROP TABLE IF EXISTS analysis_history CASCADE")
+            c.execute("DROP TABLE IF EXISTS results CASCADE")
+            c.execute("DROP TABLE IF EXISTS students CASCADE")
+            conn.commit()
+            conn.close()
+        else:
+            conn.close()
+            if os.path.exists(SQLITE_DB_NAME):
+                os.remove(SQLITE_DB_NAME)
+
+        init_db()
+        return True
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print(f"Sıfırlama hatası: {e}")
+        return False
+
+
+def repair_database():
+    """
+    Veritabanını onarmaya çalışır.
+    Tabloları yeniden oluşturur (varsa dokunmaz).
+    """
+    try:
+        init_db()
+        return True
+    except Exception:
+        return False
