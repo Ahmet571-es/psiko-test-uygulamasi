@@ -3,7 +3,8 @@ import time
 import os
 import base64
 
-from db_utils import init_db, login_student, register_student, reset_student_password
+# DÜZELTME: repair_database de import edildi (Supabase uyumu)
+from db_utils import init_db, login_student, register_student, reset_student_password, repair_database
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(
@@ -40,13 +41,6 @@ def get_logo_base64():
 # =========================================================
 # 🎨 MERKEZ TASARIM SİSTEMİ (CSS)
 # =========================================================
-# Renk Paleti (Logo'dan türetilmiş):
-#   Navy     : #1B2A4A
-#   Kırmızı  : #C0392B
-#   Açık Mavi : #2E86C1
-#   Beyaz     : #FFFFFF
-#   Açık Gri  : #F4F6F9
-
 st.markdown("""
 <style>
     /* ========== GENEL SIFIRLAMA ========== */
@@ -154,13 +148,7 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* ========== ALT LİNKLER ========== */
-    .nav-links {
-        text-align: center;
-        margin-top: 10px;
-    }
-    
-    /* ========== BADGE / ETİKET ========== */
+    /* ========== VERSION BADGE ========== */
     .version-badge {
         position: fixed;
         bottom: 10px;
@@ -171,16 +159,6 @@ st.markdown("""
         border-radius: 20px;
         font-size: 0.7rem;
         letter-spacing: 0.5px;
-    }
-    
-    /* ========== TAB TASARIMI ========== */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 10px 10px 0 0;
-        padding: 10px 24px;
-        font-weight: 600;
     }
     
     /* ========== SIDEBAR İYİLEŞTİRME ========== */
@@ -229,8 +207,6 @@ if 'student_name' not in st.session_state:
     st.session_state.student_name = None
 if 'login_phase' not in st.session_state:
     st.session_state.login_phase = 1
-
-# Sayfa Modu Kontrolü (Varsayılan: 'register')
 if 'auth_mode' not in st.session_state:
     st.session_state.auth_mode = 'register'
 
@@ -251,14 +227,12 @@ def go_to_forgot_password():
 
 # --- ÖĞRETMEN ŞİFRESİ ALMA FONKSİYONU ---
 def get_teacher_password():
-    """
-    Öğretmen şifresini güvenli şekilde alır.
-    Öncelik sırası:
-    1. Streamlit Secrets (st.secrets["teacher_password"]) — Streamlit Cloud için
-    2. Ortam değişkeni (TEACHER_PASSWORD) — Lokal / Docker için
-    """
-    if "teacher_password" in st.secrets:
-        return st.secrets["teacher_password"]
+    """Öğretmen şifresini güvenli şekilde alır."""
+    try:
+        if "teacher_password" in st.secrets:
+            return st.secrets["teacher_password"]
+    except Exception:
+        pass
     env_pw = os.getenv("TEACHER_PASSWORD")
     if env_pw:
         return env_pw
@@ -279,7 +253,6 @@ def render_brand_header():
             </div>
         """, unsafe_allow_html=True)
     else:
-        # Logo dosyası yoksa metin tabanlı başlık göster
         st.markdown("""
             <div class="brand-area animate-in">
                 <div class="brand-title">🎓 EĞİTİM CHECK UP</div>
@@ -294,10 +267,8 @@ def render_brand_header():
 # 🔐 ANA GİRİŞ SİSTEMİ
 # =========================================================
 def main_auth_flow():
-    # --- MARKA BAŞLIK ---
     render_brand_header()
     
-    # Ortalamak için kolon yapısı
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
@@ -311,7 +282,6 @@ def main_auth_flow():
             
             with st.form("register_form"):
                 name = st.text_input("👤 Ad Soyad", placeholder="Tam adını yaz...")
-                
                 c1, c2 = st.columns(2)
                 age = c1.number_input("🎂 Yaş", min_value=5, max_value=99, step=1, value=15)
                 gender = c2.selectbox("⚧ Cinsiyet", ["Kız", "Erkek"])
@@ -319,17 +289,15 @@ def main_auth_flow():
                 st.markdown("---")
                 new_user = st.text_input("🔑 Kullanıcı Adı Belirle", placeholder="Örn: mehmet123")
                 new_pw = st.text_input("🔒 Şifre Belirle", type="password", placeholder="En az 4 karakter")
-                
                 secret_word = st.text_input(
                     "🛡️ Gizli Kurtarma Kelimesi",
                     placeholder="Şifreni unutursan bu kelime lazım olacak",
-                    help="Şifreni sıfırlamak istediğinde bu kelimeyi soracağız. Unutmayacağın bir kelime seç."
+                    help="Şifreni sıfırlamak istediğinde bu kelimeyi soracağız."
                 )
                 
                 submit = st.form_submit_button("🚀 Kayıt Ol", type="primary")
                 
                 if submit:
-                    # --- INPUT VALIDATION ---
                     if not name or not new_user or not new_pw or not secret_word:
                         st.warning("⚠️ Lütfen tüm alanları doldurunuz.")
                     elif len(new_pw) < 4:
@@ -340,7 +308,7 @@ def main_auth_flow():
                         st.warning("⚠️ Kullanıcı adı sadece harf, rakam, nokta ve alt çizgi içerebilir.")
                     else:
                         success, result = register_student(
-                            name.title(), new_user.strip(), new_pw,
+                            name.title(), new_user.strip().lower(), new_pw,
                             age, gender, secret_word.lower().strip()
                         )
                         if success:
@@ -353,12 +321,10 @@ def main_auth_flow():
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Alt Linkler
             st.markdown("<br>", unsafe_allow_html=True)
             link_col1, link_col2 = st.columns(2)
             link_col1.button("🔑 Zaten hesabın var mı? GİRİŞ YAP", on_click=go_to_login)
             link_col2.button("👨‍🏫 Öğretmen / Yönetici Girişi", on_click=go_to_teacher)
-
 
         # ---------------------------------------------------------
         # 2. MOD: ÖĞRENCİ GİRİŞİ
@@ -378,7 +344,7 @@ def main_auth_flow():
                     if not user or not pw:
                         st.warning("⚠️ Kullanıcı adı ve şifre boş bırakılamaz.")
                     else:
-                        status, student_obj = login_student(user.strip(), pw)
+                        status, student_obj = login_student(user.strip().lower(), pw)
                         if status:
                             st.success(f"🎉 Hoşgeldin {student_obj.name}!")
                             st.session_state.role = "student"
@@ -393,12 +359,10 @@ def main_auth_flow():
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Alt Linkler
             st.markdown("<br>", unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             col_a.button("📝 Hesabın yok mu? KAYIT OL", on_click=go_to_register)
             col_b.button("❓ Şifremi Unuttum", on_click=go_to_forgot_password)
-
 
         # ---------------------------------------------------------
         # 3. MOD: ŞİFREMİ UNUTTUM
@@ -410,8 +374,8 @@ def main_auth_flow():
             
             with st.form("forgot_password_form"):
                 user = st.text_input("👤 Kullanıcı Adı", placeholder="Kayıtlı kullanıcı adını gir...")
-                secret = st.text_input("🛡️ Gizli Kurtarma Kelimesi", type="password", placeholder="Kurtarma kelimeni gir...")
-                new_pw = st.text_input("🔒 Yeni Şifre Belirle", type="password", placeholder="Yeni şifreni gir...")
+                secret = st.text_input("🛡️ Gizli Kurtarma Kelimesi", type="password")
+                new_pw = st.text_input("🔒 Yeni Şifre Belirle", type="password")
                 
                 submit = st.form_submit_button("Şifremi Yenile ✅", type="primary")
                 
@@ -421,9 +385,9 @@ def main_auth_flow():
                     elif len(new_pw) < 4:
                         st.warning("⚠️ Yeni şifre en az 4 karakter olmalıdır.")
                     else:
-                        success, msg = reset_student_password(user.strip(), secret.lower().strip(), new_pw)
+                        success, msg = reset_student_password(user.strip().lower(), secret.lower().strip(), new_pw)
                         if success:
-                            st.success("✅ Şifren başarıyla güncellendi! Yönlendiriliyorsun...")
+                            st.success("✅ Şifren güncellendi! Yönlendiriliyorsun...")
                             time.sleep(1.5)
                             st.session_state.auth_mode = 'login'
                             st.rerun()
@@ -434,7 +398,6 @@ def main_auth_flow():
             st.markdown("<br>", unsafe_allow_html=True)
             st.button("⬅️ Giriş Ekranına Dön", on_click=go_to_login)
 
-
         # ---------------------------------------------------------
         # 4. MOD: ÖĞRETMEN GİRİŞİ
         # ---------------------------------------------------------
@@ -444,14 +407,13 @@ def main_auth_flow():
             st.caption("Bu alan yalnızca yetkili personel içindir.")
             
             with st.form("teacher_form"):
-                pw = st.text_input("🔑 Yönetici Şifresi", type="password", placeholder="Yönetici şifresini girin...")
+                pw = st.text_input("🔑 Yönetici Şifresi", type="password")
                 submit = st.form_submit_button("Panele Git ➡️", type="primary")
                 
                 if submit:
                     secret_pass = get_teacher_password()
-                    
                     if secret_pass is None:
-                        st.error("⚠️ Yönetici şifresi yapılandırılmamış. Lütfen sistem yöneticisiyle iletişime geçin.")
+                        st.error("⚠️ Yönetici şifresi yapılandırılmamış. Sistem yöneticisiyle iletişime geçin.")
                     elif pw == secret_pass:
                         st.session_state.role = "teacher"
                         st.rerun()
@@ -459,17 +421,10 @@ def main_auth_flow():
                         st.error("❌ Hatalı şifre.")
             
             st.markdown("</div>", unsafe_allow_html=True)
-            
-            # Alt Linkler
             st.markdown("<br>", unsafe_allow_html=True)
             st.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register)
     
-    # --- SAYFA ALTI BİLGİ ---
-    st.markdown("""
-        <div class="version-badge">
-            EĞİTİM CHECK UP v2.0
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="version-badge">EĞİTİM CHECK UP v2.0</div>', unsafe_allow_html=True)
 
 
 # =========================================================
@@ -492,7 +447,6 @@ elif st.session_state.role == "teacher":
 # =========================================================
 if st.session_state.role:
     with st.sidebar:
-        # Kullanıcı bilgisi
         role_label = "👨‍🏫 Yönetici" if st.session_state.role == "teacher" else "🎓 Öğrenci"
         user_name = st.session_state.get('student_name', 'Yönetici')
         
@@ -507,15 +461,15 @@ if st.session_state.role:
         st.markdown("---")
         
         # Öğretmen ise veritabanı onarım butonu
+        # DÜZELTME: Artık SQLite dosya silme yerine repair_database() kullanıyor
         if st.session_state.role == "teacher":
             if st.button("🔧 Veritabanını Onar", help="Veritabanı hatası alırsanız buna basın"):
-                if os.path.exists("school_data.db"):
-                    os.remove("school_data.db")
-                    init_db()
-                    st.success("✅ Veritabanı sıfırlandı!")
+                if repair_database():
+                    st.success("✅ Veritabanı onarıldı!")
                     time.sleep(1)
-                    st.session_state.clear()
                     st.rerun()
+                else:
+                    st.error("Onarım başarısız oldu.")
             st.markdown("---")
         
         # Çıkış Butonu
@@ -524,7 +478,6 @@ if st.session_state.role:
             st.session_state.auth_mode = 'register'
             st.rerun()
         
-        # Alt bilgi
         st.markdown("---")
         st.markdown("""
             <div style="text-align:center; font-size: 0.7rem; color: rgba(255,255,255,0.5); padding-top: 10px;">
