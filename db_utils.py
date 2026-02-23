@@ -8,8 +8,8 @@ import streamlit as st
 # ============================================================
 # 🗄️ VERİTABANI BAĞLANTI YÖNETİMİ
 # ============================================================
-# Supabase (PostgreSQL) bağlantısı kullanır.
-# Bağlantı bilgisi: Streamlit Secrets → .env → ortam değişkeni
+# Supabase (PostgreSQL) bağlantısı varsa onu kullanır.
+# Yoksa SQLite ile çalışır (lokal geliştirme / fallback).
 # ============================================================
 
 try:
@@ -20,7 +20,7 @@ except ImportError:
     DB_ENGINE = "sqlite"
     import sqlite3
 
-# SQLite fallback DB adı (lokal geliştirme için)
+# SQLite fallback DB adı
 SQLITE_DB_NAME = "school_data.db"
 
 
@@ -57,23 +57,21 @@ def get_connection():
             conn.autocommit = False
             return conn, "postgresql"
         except Exception as e:
-            print(f"PostgreSQL bağlantı hatası: {e}")
-            # Fallback to SQLite
-            pass
+            print(f"PostgreSQL bağlantı hatası, SQLite'a geçiliyor: {e}")
 
     # SQLite Fallback
-    if DB_ENGINE == "sqlite" or not db_url:
+    if DB_ENGINE == "sqlite":
         conn = sqlite3.connect(SQLITE_DB_NAME)
         return conn, "sqlite"
 
-    # Son çare: SQLite
+    # psycopg2 yüklü ama bağlantı başarısız → SQLite fallback
     import sqlite3 as sq3
     conn = sq3.connect(SQLITE_DB_NAME)
     return conn, "sqlite"
 
 
 def get_placeholder(engine):
-    """SQL placeholder döndürür: PostgreSQL=%s, SQLite=?"""
+    """SQL placeholder: PostgreSQL=%s, SQLite=?"""
     return "%s" if engine == "postgresql" else "?"
 
 
@@ -125,7 +123,6 @@ def init_db():
     """
     conn, engine = get_connection()
     c = conn.cursor()
-    ph = get_placeholder(engine)
 
     try:
         if engine == "postgresql":
@@ -159,7 +156,6 @@ def init_db():
                 date TIMESTAMP DEFAULT NOW()
             )''')
 
-            # Unique index — aynı öğrenci aynı testi tekrar kaydettiğinde düzgün çalışsın
             c.execute('''CREATE INDEX IF NOT EXISTS idx_results_student_test 
                          ON results(student_id, test_name)''')
 
@@ -172,7 +168,6 @@ def init_db():
                           login_count INTEGER DEFAULT 0,
                           secret_word TEXT)''')
 
-            # secret_word sütunu yoksa ekle
             try:
                 c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
             except Exception:
@@ -320,13 +315,11 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
     ph = get_placeholder(engine)
 
     try:
-        # Eski kaydı sil (aynı öğrenci, aynı test)
         c.execute(
             f"DELETE FROM results WHERE student_id={ph} AND test_name={ph}",
             (student_id, test_name)
         )
 
-        # Yeni kaydı ekle
         c.execute(
             f"INSERT INTO results (student_id, test_name, raw_answers, scores, report, date) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
             (
@@ -527,7 +520,7 @@ def reset_database():
 def repair_database():
     """
     Veritabanını onarmaya çalışır.
-    Tabloları yeniden oluşturur (varsa dokunmaz).
+    Eksik tabloları yeniden oluşturur (varsa dokunmaz).
     """
     try:
         init_db()
