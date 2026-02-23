@@ -212,7 +212,6 @@ def register_student(name, username, password, age, gender, secret_word=""):
     try:
         c.execute(f"SELECT id FROM students WHERE username={ph}", (username,))
         if c.fetchone():
-            conn.close()
             return False, "Bu kullanıcı adı zaten alınmış."
 
         hashed_pw = hash_password(password)
@@ -221,13 +220,14 @@ def register_student(name, username, password, age, gender, secret_word=""):
             (name, username, hashed_pw, age, gender, secret_word)
         )
         conn.commit()
-        conn.close()
         return True, "Kayıt Başarılı"
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         return False, f"Kayıt sırasında hata: {e}"
+
+    finally:
+        conn.close()
 
 
 def login_student(username, password):
@@ -251,17 +251,17 @@ def login_student(username, password):
             new_count = (user[6] or 0) + 1
             c.execute(f"UPDATE students SET login_count={ph} WHERE id={ph}", (new_count, user[0]))
             conn.commit()
-            conn.close()
             return True, Student(user, new_count)
 
-        conn.close()
         return False, None
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         print(f"Login hatası: {e}")
         return False, None
+
+    finally:
+        conn.close()
 
 
 def reset_student_password(username, secret_word, new_password):
@@ -277,31 +277,29 @@ def reset_student_password(username, secret_word, new_password):
         user_data = c.fetchone()
 
         if not user_data:
-            conn.close()
             return False, "Sistemde böyle bir kullanıcı adı bulunamadı."
 
         user_id = user_data[0]
         stored_secret = user_data[1]
 
         if not stored_secret:
-            conn.close()
             return False, "Bu hesaba ait kurtarma kelimesi bulunmuyor (Eski kayıt olabilir). Lütfen yeni hesap açın."
 
         if stored_secret.lower().strip() != secret_word.lower().strip():
-            conn.close()
             return False, "Girilen kurtarma kelimesi yanlış!"
 
         new_hashed_pw = hash_password(new_password)
         c.execute(f"UPDATE students SET password={ph} WHERE id={ph}", (new_hashed_pw, user_id))
         conn.commit()
-        conn.close()
 
         return True, "Şifreniz başarıyla yenilendi."
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         return False, f"Şifre sıfırlama hatası: {e}"
+
+    finally:
+        conn.close()
 
 
 # ============================================================
@@ -332,14 +330,15 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
             )
         )
         conn.commit()
-        conn.close()
         return True
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         print(f"Test kayıt hatası: {e}")
         return False
+
+    finally:
+        conn.close()
 
 
 def check_test_completed(student_id, test_name):
@@ -354,11 +353,11 @@ def check_test_completed(student_id, test_name):
             (student_id, test_name)
         )
         data = c.fetchone()
-        conn.close()
         return data is not None
     except Exception:
-        conn.close()
         return False
+    finally:
+        conn.close()
 
 
 # ============================================================
@@ -403,13 +402,14 @@ def get_all_students_with_results():
                 "tests": tests_list
             })
 
-        conn.close()
         return all_data
 
     except Exception as e:
-        conn.close()
         print(f"Veri çekme hatası: {e}")
         return []
+
+    finally:
+        conn.close()
 
 
 def get_student_analysis_history(student_id):
@@ -424,7 +424,6 @@ def get_student_analysis_history(student_id):
             (student_id,)
         )
         rows = c.fetchall()
-        conn.close()
 
         history = []
         for r in rows:
@@ -436,8 +435,10 @@ def get_student_analysis_history(student_id):
         return history
 
     except Exception:
-        conn.close()
         return []
+
+    finally:
+        conn.close()
 
 
 def save_holistic_analysis(student_id, combination_list, report_text):
@@ -453,12 +454,13 @@ def save_holistic_analysis(student_id, combination_list, report_text):
             (student_id, comb_str, report_text, datetime.now())
         )
         conn.commit()
-        conn.close()
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         print(f"Analiz kayıt hatası: {e}")
+
+    finally:
+        conn.close()
 
 
 def delete_specific_students(names_list):
@@ -476,14 +478,15 @@ def delete_specific_students(names_list):
                 c.execute(f"DELETE FROM results WHERE student_id={ph}", (sid[0],))
                 c.execute(f"DELETE FROM students WHERE id={ph}", (sid[0],))
         conn.commit()
-        conn.close()
         return True
 
     except Exception as e:
         conn.rollback()
-        conn.close()
         print(f"Silme hatası: {e}")
         return False
+
+    finally:
+        conn.close()
 
 
 def reset_database():
@@ -511,8 +514,11 @@ def reset_database():
         return True
 
     except Exception as e:
-        conn.rollback()
-        conn.close()
+        try:
+            conn.rollback()
+            conn.close()
+        except Exception:
+            pass
         print(f"Sıfırlama hatası: {e}")
         return False
 
