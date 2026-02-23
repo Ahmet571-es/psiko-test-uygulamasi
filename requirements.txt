@@ -1,7 +1,7 @@
-streamlit>=1.28.0
-sqlalchemy>=2.0.0
-anthropic>=0.40.0
-python-dotenv>=1.0.0
-pandas>=2.0.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
+streamlit
+anthropic
+python-dotenv
+pandas
+matplotlib
+seaborn
+psycopg2-binary
