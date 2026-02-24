@@ -48,7 +48,7 @@ def get_ai_analysis(prompt):
     try:
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=4000,
+            max_tokens=8000,
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -136,8 +136,10 @@ def plot_scores(data_dict, title):
 # ============================================================
 
 def build_holistic_prompt(student_name, student_age, student_gender, test_data_list):
-    """Bütüncül (harmanlanmış) analiz için geliştirilmiş prompt."""
-    return f"""Sen, Türkiye'de çalışan deneyimli bir eğitim psikoloğu ve öğrenci koçusun. Psikometrik verileri sentezleyerek öğrenci hakkında bütünsel bir tablo çıkarıyorsun.
+    """Bütüncül (harmanlanmış) analiz için kapsamlı prompt."""
+    return f"""Sen, Türkiye'de 15+ yıl deneyime sahip bir eğitim psikoloğu, kariyer danışmanı ve öğrenci koçusun. 
+Psikometrik verileri sentezleyerek öğrenci hakkında klinik düzeyde bütünsel bir profil çıkarıyorsun.
+Raporun, velilere ve öğretmenlere sunulacak profesyonel bir analiz belgesidir.
 
 ---
 
@@ -155,71 +157,335 @@ def build_holistic_prompt(student_name, student_age, student_gender, test_data_l
 
 ## 🛑 ZORUNLU KURALLAR
 
-1. **VERİ BAĞLILIĞI:** Yalnızca JSON içindeki somut puanlara dayanan yorumlar yap. Her iddiayı veriyle destekle.
-2. **SENTEZ ODAKLI:** Testleri tek tek özetleme — testler ARASI ilişkileri ve örüntüleri analiz et.
-3. **ÇELİŞKİ TESPİTİ:** Öğrencinin güçlü yönleri ile zayıf yönleri çelişiyorsa (örn. yüksek zeka + yüksek kaygı) bunu açıkça işaretle.
+1. **VERİ BAĞLILIĞI:** Yalnızca JSON içindeki somut puanlara dayanan yorumlar yap. Her iddiayı (puan: XX) şeklinde kanıtla.
+2. **SENTEZ ODAKLI:** Testleri tek tek özetleme — testler ARASI ilişkileri, korelasyonları ve örüntüleri analiz et.
+3. **ÇELİŞKİ TESPİTİ:** Veriler arasındaki çelişkileri açıkça işaretle. Örn: "Yüksek sosyal zeka ama düşük girişimcilik skoru", "Güçlü analitik düşünme ama yüksek sınav kaygısı."
 4. **TIBBİ TANI YASAĞI:** "DEHB", "depresyon", "anksiyete bozukluğu", "disleksi" gibi klinik tanı terimleri kesinlikle kullanma.
-5. **YAŞA UYGUNLUK:** {student_age} yaşındaki bir öğrenci için gerçekçi ve uygulanabilir tavsiyeler ver.
-6. **NEDEN-SONUÇ BAĞLANTISI:** "Ders çalışamıyor" gibi sonuç ifadeleri değil, "VARK Kinestetik skoru yüksek olduğu için masa başında uzun süre odaklanmakta güçlük çekiyor" gibi veri destekli nedenler kullan.
+5. **YAŞA UYGUNLUK:** {student_age} yaşındaki bir öğrenci için somut, uygulanabilir, gerçekçi tavsiyeler ver.
+6. **NEDEN-SONUÇ BAĞLANTISI:** "Ders çalışamıyor" gibi sonuç ifadeleri yerine "VARK Kinestetik skoru yüksek olduğu için masa başında uzun süre odaklanmakta güçlük çekiyor olabilir" gibi veri destekli nedenler kullan.
+7. **PUAN YORUMLAMA STANDARDI:**
+   - %0-30 → "Gelişime çok açık"
+   - %31-50 → "Ortalama altı, geliştirilebilir"
+   - %51-70 → "Ortalama / dengeli"
+   - %71-85 → "Güçlü"
+   - %86-100 → "Çok güçlü / baskın"
+8. **KAPSAMLI OL:** Bu rapor bir aileye ve öğretmene sunulacak resmi bir belgedir. Yüzeysel değil, derinlemesine analiz yap. Minimum 2000 kelime.
 
 ---
 
-## 📝 RAPOR FORMATI (Bu formatı değiştirme)
+## 🔬 TESTE ÖZEL YORUM REHBERİ
+
+Eğer veride aşağıdaki testler varsa, sentez yaparken bu detaylara dikkat et:
+
+### Enneagram Varsa:
+- Ana tip ve kanat (wing) kombinasyonunun kişilik dinamiğini açıkla
+- Stres ve gelişim yönlerinin diğer test sonuçlarıyla uyumunu analiz et
+- 9 tipin puanlarını sıralayarak "kişilik haritasının genel şeklini" yorumla (yüksek puanlar kümeleniyor mu, dağınık mı?)
+- Ana tipin öğrenme stili ve motivasyon kaynaklarını diğer testlerle çapraz kontrol et (Örn: Tip 5 analitik → Sol beyin baskın mı?, Tip 7 hevesli → çalışma davranışı düzensiz mi?)
+- Enneagram tipi ile Holland RIASEC kodu arasındaki uyumu değerlendir
+
+### Çoklu Zeka Varsa:
+- En güçlü 3 zeka alanını Holland RIASEC ile karşılaştır
+- Zeka profili dengesini analiz et: uzmanlaşmış mı, çok yönlü mü?
+- Zayıf zeka alanlarının akademik performansa etkisini değerlendir
+
+### Sınav Kaygısı Varsa:
+- Alt kategorileri ayrı ayrı yorumla (bedensel, zihinsel, gelecek endişesi vb.)
+- Kaygı kaynağını tespit et: performans kaygısı mı, hazırlık eksikliği mi, dış baskı mı?
+- Çalışma davranışı ile kaygı arasındaki ilişkiyi analiz et (düzensiz çalışma → kaygı döngüsü?)
+
+### VARK + Sağ-Sol Beyin Birlikte Varsa:
+- "Öğrenme DNA'sını" oluştur: beyin dominansı + duyu tercihi birleşimi
+- Sınıf ortamında en verimli öğrenme formatını somutlaştır
+
+---
+
+## 📝 RAPOR FORMATI (Bu formatı AYNEN KORU, bölüm atlama)
 
 # 🚀 BÜYÜK RESİM: {student_name} Kimdir?
 
-*(2-3 cümlelik güçlü giriş: Tüm testlerin ortak paydasını, öğrencinin en belirgin karakteristiğini anlat. Bir cümleyle öğrencinin "öğrenme imzasını" tanımla.)*
+*(3-4 cümlelik güçlü, kişiselleştirilmiş giriş. Tüm testlerin ortak paydasını, öğrencinin en belirgin karakteristiğini anlat. Bir cümleyle öğrencinin "öğrenme imzasını" tanımla. Bu bölüm öğrenciyi tanımayan birinin okuduğunda net bir portre görmesini sağlamalı.)*
+
+---
+
+# 🧬 KİŞİLİK ve MOTİVASYON PROFİLİ
+
+*(Eğer Enneagram verisi varsa bu bölümü mutlaka doldur. Yoksa diğer testlerden çıkarım yap.)*
+
+### Temel Kişilik Dinamiği
+*(Ana kişilik tipi, motivasyon kaynakları, temel korku ve arzu. Bu öğrenci neyin peşinde koşuyor, neyden kaçınıyor?)*
+
+### Stres ve Büyüme Mekanizmaları
+*(Bu öğrenci stres altında nasıl tepki verir? Sağlıklı büyüme yolunda hangi davranışlar beklenir? Bunu sınav kaygısı verileriyle çapraz kontrol et.)*
+
+### Sosyal ve Duygusal Profil
+*(İlişki tarzı, grup dinamiklerindeki rolü, duygusal zekası. Enneagram + Çoklu Zeka Kişilerarası verisinden çıkarım yap.)*
 
 ---
 
 # 🧩 ZİHİNSEL SENTEZ
 
 ### Potansiyel ↔ Performans Dengesi
-*(Zeka/yetenek puanları ile çalışma davranışı/kaygı skorları arasındaki ilişki. Potansiyel kullanılıyor mu?)*
+*(Zeka/yetenek puanları ile çalışma davranışı/kaygı skorları arasındaki ilişki. Bu öğrenci potansiyelini kullanabiliyor mu? Eğer kullanamıyorsa bunun nedeni ne olabilir? 2-3 paragraf derinlemesine analiz.)*
 
 ### Öğrenme DNA'sı
-*(Sağ/Sol Beyin + VARK sonuçlarını birleştir. "Bu öğrenci en iyi nasıl öğreniyor?" sorusunu cevapla.)*
+*(Sağ/Sol Beyin + VARK sonuçlarını birleştir. "Bu öğrenci en iyi nasıl öğreniyor?" sorusunu cevapla. Somut ders çalışma senaryosu öner. Örn: "Matematik çalışırken mind-map kullanması, Tarih çalışırken sesli okuma yapması önerilir.")*
 
 ### İlgi ↔ Yetenek Uyumu
-*(Holland RIASEC kodu ile Çoklu Zeka güçlü yönleri örtüşüyor mu? Meslek yönelimi netleşiyor mu?)*
+*(Holland RIASEC kodu ile Çoklu Zeka güçlü yönleri örtüşüyor mu? Meslek yönelimi netleşiyor mu? Uyumsuzluk varsa bunun olası nedenlerini tartış.)*
+
+### Çelişki ve Paradoks Analizi
+*(Verilerdeki tüm çelişkileri listele ve açıkla. Her çelişki için olası nedenleri tartış. Minimum 2 çelişki bul. Örn: "Yüksek sosyal zeka + yüksek sınav kaygısı → performans değerlendirmesi sosyal bağlamda kaygı tetikliyor olabilir.")*
 
 ---
 
-# ⚖️ DENGE TABLOSU
+# ⚖️ KAPSAMLI DENGE TABLOSU
 
-| 💪 Kanıtlanmış Güç (Test + Puan) | 🚧 Kritik Engel (Test + Puan) | 🎯 Çözüm Stratejisi |
-|----------------------------------|-------------------------------|---------------------|
-| Örn: Müzik Zekası (Çoklu Zeka %82) | Sınav Kaygısı Zihinsel (%70) | Müzik ile ezber, nefes teknikleri |
-| ... | ... | ... |
+| 💪 Kanıtlanmış Güç (Test + Puan) | 🚧 Kritik Engel (Test + Puan) | 🔗 İlişki Analizi | 🎯 Çözüm Stratejisi |
+|----------------------------------|-------------------------------|-------------------|---------------------|
+| ... | ... | Güç engeli nasıl aşabilir? | Somut adım |
+| ... | ... | ... | ... |
 
-*(En az 3 satır doldur. Puan olmadan güç veya engel yazma.)*
+*(En az 5 satır doldur. Her güç ve engel mutlaka puan ile desteklenmeli.)*
+
+---
+
+# 📊 KRİTİK GÖSTERGELER PANELİ
+
+### 🟢 Acil Müdahale Gerektirmeyen (İyi Düzey)
+*(Hangi alanlarda öğrenci sağlıklı? Puanlarla listele.)*
+
+### 🟡 Takip Gerektiren (Orta Düzey)
+*(Hangi alanlarda gelişim potansiyeli var? Puanlarla listele.)*
+
+### 🔴 Öncelikli İlgi Alanı (Kritik Düzey)
+*(Hangi alanlarda acil destek gerekiyor? Puanlarla listele.)*
 
 ---
 
 # 🗺️ STRATEJİK YOL HARİTASI
 
-### 🎓 Akademik Başarı İçin (Bu Haftadan İtibaren Uygulanabilir)
-- **[Çalışma Ortamı]:** ... *(VARK ve Sağ/Sol Beyin verilerine özel)*
-- **[Zaman Planlaması]:** ... *(Çalışma Davranışı verilerine özel)*
-- **[Sınav Hazırlığı]:** ... *(Sınav Kaygısı verilerine özel)*
+### 🎓 AKADEMİK BAŞARI PLANI
 
-### 🧠 Duygusal ve Sosyal Gelişim
-- ... *(Kaygı skoru yüksekse mutlaka rahatlama tekniği öner)*
+**[Çalışma Ortamı]:** *(VARK ve Sağ/Sol Beyin verilerine özel — masa düzeni, ışık, ses, araçlar)*
+**[Günlük Çalışma Rutini]:** *(Çalışma Davranışı verilerine özel — saat saat örnek program)*
+**[Sınav Hazırlık Stratejisi]:** *(Sınav Kaygısı verilerine özel — sınav öncesi, sınav anı, sınav sonrası)*
+**[Ders Bazlı Öneriler]:** *(Zeka profili ve öğrenme stiline göre hangi derste nasıl çalışmalı)*
 
-### 👨‍👩‍👦 Ebeveyn Rehberi
-> *(Aileye yönelik, suçlamayan, motive edici, somut 2-3 madde. "Yapın / Yapmayın" formatında.)*
+### 🧠 KİŞİSEL GELİŞİM PLANI
 
-### 👩‍🏫 Öğretmen Notu
-> *(Sınıf ortamında dikkat edilmesi gerekenler. Öğretmenin yapabileceği 1-2 somut adım.)*
+**[Duygusal Düzenleme]:** *(Kaygı yönetimi, stres altında davranış kalıplarını değiştirme)*
+**[Sosyal Beceriler]:** *(Kişilik tipine uygun sosyal gelişim önerileri)*
+**[Motivasyon ve Hedef]:** *(Kişilik tipine uygun motivasyon stratejileri)*
+
+### 🧭 KARİYER YÖNELİMİ ÖN DEĞERLENDİRME
+
+*(Holland RIASEC + Çoklu Zeka + Kişilik profili üçgeninden kariyer yönelimi analizi. En uygun 5 meslek alanı ve nedenleri. Dikkat: Bu bir kesin yönlendirme değil, ön değerlendirmedir.)*
 
 ---
 
-*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı. Öğrenciyi yargılama, güçlendirmeye odaklan.*"""
+### 👨‍👩‍👦 AİLE REHBERİ
+
+> **✅ YAPIN:**
+> *(En az 4 somut, uygulanabilir madde. Her madde kişilik ve test verilerine dayalı olmalı.)*
+
+> **❌ YAPMAYIN:**
+> *(En az 3 somut uyarı. Kişilik tipine göre hangi yaklaşımlar zarar verebilir?)*
+
+### 👩‍🏫 ÖĞRETMEN REHBERİ
+
+> **Sınıf İçi Stratejiler:**
+> *(Bu öğrenci için sınıf ortamında ne yapılabilir? Öğrenme stili ve kişilik tipine özel 3-4 somut adım.)*
+
+> **İletişim Önerileri:**
+> *(Bu öğrenciyle nasıl iletişim kurulmalı? Kişilik tipine göre hangi yaklaşım etkili?)*
+
+---
+
+# 📌 SONUÇ ve ÖNCELİK SIRASI
+
+*(Tüm analizin 5 maddelik özeti. En acil olandan başlayarak sırala. Her madde somut ve ölçülebilir olmalı.)*
+
+1. **[EN ACİL]:** ...
+2. **[ÖNCELİKLİ]:** ...
+3. **[ÖNEMLİ]:** ...
+4. **[TAKİP]:** ...
+5. **[UZUN VADE]:** ...
+
+---
+
+*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı. Öğrenciyi yargılama, güçlendirmeye odaklan. Bu rapor resmi bir analiz belgesidir.*"""
+
+
+def _get_test_specific_guidance(test_name):
+    """Her test için özel analiz yönergesi döndürür."""
+
+    if "Enneagram" in test_name:
+        return """
+### 🔬 ENNEAGRAM ÖZEL ANALİZ YÖNERGESİ (MUTLAKA UYGULA)
+
+Bu test 9 kişilik tipini 0-100 ölçeğinde ölçer. Raporda şunları MUTLAKA yap:
+
+**A. ANA TİP DERİN ANALİZİ:**
+- Ana tipin temel motivasyonunu, korkusunu ve arzusunu öğrencinin yaşına uygun dille açıkla
+- Ana tipin sağlıklı, ortalama ve sağlıksız düzeylerinden hangisinde olduğunu puan yüzdesine göre değerlendir
+- Bu tipin okul ortamında nasıl göründüğünü somut örneklerle açıkla (sınıfta nasıl davranır, ödevlere nasıl yaklaşır, arkadaş ilişkileri nasıldır?)
+
+**B. KANAT (WING) ANALİZİ:**
+- Ana tipin yanındaki iki tipten (kanatlardan) hangisinin daha yüksek olduğunu bul
+- Kanat kombinasyonunun (örn: 4w5, 7w8) kişiliğe kattığı nüansı açıkla
+- Wing'in öğrenme stili üzerindeki etkisini tartış
+
+**C. TRİTYPE İPUÇLARI (En yüksek 3 farklı merkez):**
+- Kafa merkezinden (5,6,7) en yüksek puanlı tip
+- Kalp merkezinden (2,3,4) en yüksek puanlı tip
+- Karın merkezinden (8,9,1) en yüksek puanlı tip
+- Bu üçlünün birlikte çizdiği profili yorumla
+
+**D. STRES ve BÜYÜME DİNAMİĞİ:**
+- Stres yönündeki tipe kayma belirtileri var mı? (düşük puan = kaymıyor, yüksek puan = kayma eğilimi)
+- Büyüme yönündeki tipin puanı nedir? Bu, sağlıklı gelişim potansiyelini gösterir
+- Stres altında bu öğrencinin hangi davranışları sergileyeceğini somut örneklerle açıkla
+
+**E. 9 TİP PUAN HARİTASI:**
+- Tüm tiplerin puanlarını sıralayarak "kişilik haritasının şeklini" yorumla
+- Yüksek puanlar kümeleniyor mu? (Örn: 2-3-7 yüksek → sosyal, enerjik profil)
+- Düşük puanlı tipler neyi gösteriyor? (Baskılanan yönler)
+- İkincil ve üçüncül güçlü tiplerin ana tiple etkileşimini analiz et
+
+**F. AKADEMİK VE SOSYAL ETKİ:**
+- Bu kişilik tipinin ders çalışma alışkanlıkları
+- Sınav kaygısı ile ilişkisi
+- Öğretmen ve akranlarla iletişim tarzı
+- Motivasyon kaynakları ve öğrenme engelleri
+
+**G. KİŞİSEL GELİŞİM YOLU:**
+- Bu tipin büyüme yolundaki 5 somut adım (yaşa uygun)
+- Kaçınması gereken tuzaklar
+- Ailesi ve öğretmeni bu tipte bir çocukla nasıl iletişim kurmalı?
+"""
+
+    elif "Çalışma Davranışı" in test_name:
+        return """
+### 🔬 ÇALIŞMA DAVRANIŞI ÖZEL ANALİZ YÖNERGESİ
+
+Bu test 7 alt kategoride (A-G) ders çalışma alışkanlıklarını ölçer:
+- A: Motivasyon ve Ders Çalışmaya Karşı Tutum
+- B: Zaman Yönetimi
+- C: Derse Hazırlık ve Katılım
+- D: Okuma ve Not Tutma Alışkanlıkları
+- E: Yazılı Anlatım ve Ödev Yapma
+- F: Sınava Hazırlanma
+- G: Genel Çalışma Koşulları ve Alışkanlıkları
+
+**Raporda:**
+- Her kategoriyi ayrı ayrı yorumla ve birbiriyle ilişkilendir
+- "Zayıf zaman yönetimi + güçlü motivasyon" gibi çelişkilerin nedenlerini tartış
+- Bir günlük ideal çalışma programı taslağı oluştur
+- Fiziksel çalışma ortamı önerileri ver (masa düzeni, ışık, ses)
+- Haftalık ve sınav dönemi planlaması öner
+"""
+
+    elif "Sağ-Sol Beyin" in test_name:
+        return """
+### 🔬 SAĞ-SOL BEYİN ÖZEL ANALİZ YÖNERGESİ
+
+Bu test beyin yarım küre baskınlığını (sağ/sol yüzde + dominanslık seviyesi) ölçer.
+
+**Raporda:**
+- Baskın tarafın öğrenme stili üzerindeki etkisini detaylandır
+- Denge durumunu analiz et (güçlü baskınlık vs. dengeli)
+- Her ders için beyin baskınlığına uygun çalışma stratejileri öner
+- Sol baskınsa: analitik, sıralı, mantıksal çalışma yöntemleri
+- Sağ baskınsa: görsel, bütüncül, yaratıcı çalışma yöntemleri
+- Dengeliyse: hibrit stratejiler ve avantajları
+- Sınıf içi oturma düzeni ve ders dinleme stratejileri öner
+"""
+
+    elif "Sınav Kaygısı" in test_name:
+        return """
+### 🔬 SINAV KAYGISI ÖZEL ANALİZ YÖNERGESİ
+
+Bu test 7 alt boyutta sınav kaygısını ölçer:
+- Başkalarının Görüşü Kaygısı
+- Kendi Hakkındaki Görüşü
+- Gelecek Endişesi
+- Hazırlık Endişesi
+- Bedensel Tepkiler
+- Zihinsel Tepkiler
+- Genel Kaygı
+
+**Raporda:**
+- Her alt boyutu ayrı ayrı derinlemesine yorumla
+- Kaygının kaynağını tespit et: performans mı, hazırlık mı, sosyal baskı mı, gelecek korkusu mu?
+- Bedensel ve zihinsel tepkilerin birbirleriyle ilişkisini analiz et
+- Kaygı döngüsünü açıkla (kaygı → düşük performans → daha fazla kaygı)
+- Sınav öncesi (1 hafta, 1 gün, 1 saat) aşamalı rahatlama planı öner
+- Sınav anı stratejileri (nefes teknikleri, bilişsel yeniden yapılandırma)
+- Sınav sonrası değerlendirme yaklaşımı
+- Aileye özel: baskı yapmadan nasıl destek olunur
+"""
+
+    elif "VARK" in test_name:
+        return """
+### 🔬 VARK ÖZEL ANALİZ YÖNERGESİ
+
+Bu test 4 öğrenme stilini (V-Görsel, A-İşitsel, R-Okuma/Yazma, K-Kinestetik) ölçer.
+
+**Raporda:**
+- Baskın stil(ler)i ve multimodal durumu detaylandır
+- Her stil için somut ders çalışma teknikleri öner (araç, yöntem, ortam)
+- Zayıf stilleri güçlendirme stratejileri
+- Her ders için (Matematik, Fen, Türkçe, Sosyal, Yabancı Dil) stile uygun çalışma rehberi
+- Sınıfta öğretmenin kullanabileceği stile uygun öğretim yöntemleri
+- Dijital araç ve uygulama önerileri (yaşa uygun)
+"""
+
+    elif "Çoklu Zeka" in test_name:
+        return """
+### 🔬 ÇOKLU ZEKA ÖZEL ANALİZ YÖNERGESİ
+
+Bu test Gardner'ın 8 zeka alanını (%0-100) ölçer:
+Sözel-Dilsel, Mantıksal-Matematiksel, Görsel-Uzamsal, Bedensel-Kinestetik,
+Müzikal-Ritmik, Kişilerarası (Sosyal), İçsel (Özedönük), Doğacı.
+
+**Raporda:**
+- En güçlü 3 zeka alanının birbirleriyle etkileşimini açıkla
+- "Zeka profili tipi" belirle: uzmanlaşmış (1-2 zirve), çok yönlü (3-4 yüksek), dengeli
+- Her güçlü zeka alanı için somut kariyer alanları öner
+- Zayıf alanların güçlü alanlarla telafi stratejilerini açıkla
+- Okul dersleriyle zeka alanlarını eşleştir
+- Ders dışı aktivite ve hobi önerileri
+"""
+
+    elif "Holland" in test_name:
+        return """
+### 🔬 HOLLAND RIASEC ÖZEL ANALİZ YÖNERGESİ
+
+Bu test 6 mesleki ilgi tipini ölçer (her biri 0-28 puan):
+R-Gerçekçi, I-Araştırmacı, A-Sanatçı, S-Sosyal, E-Girişimci, C-Geleneksel.
+
+**Raporda:**
+- 3 harfli Holland kodunu (en yüksek 3 tip) derinlemesine açıkla
+- Holland altıgenindeki konumlandırmayı açıkla (bitişik tipler uyumlu, karşıt tipler çelişkili)
+- Her yüksek tip için en az 5 somut meslek önerisi
+- Holland kodu kombinasyonuna uygun 10 kariyer yolu
+- Türkiye iş piyasasına uygun bölüm ve fakülte önerileri
+- Lise alan seçimi (Sayısal, Eşit Ağırlık, Sözel, Dil) tavsiyesi
+- Kariyer keşfi için somut adımlar (staj, gönüllülük, gölgeleme)
+"""
+
+    return ""
 
 
 def build_single_test_prompt(student_name, student_age, student_gender, test_name, test_data):
-    """Tekil test analizi için geliştirilmiş prompt."""
-    return f"""Sen, Türkiye'de çalışan deneyimli bir eğitim psikoloğusun. Tek bir psikolojik test sonucunu derinlemesine analiz ediyorsun.
+    """Tekil test analizi için kapsamlı prompt — her teste özel rehber içerir."""
+
+    test_guidance = _get_test_specific_guidance(test_name)
+
+    return f"""Sen, Türkiye'de 15+ yıl deneyime sahip bir eğitim psikoloğu ve psikometri uzmanısın. 
+Tek bir psikolojik test sonucunu klinik düzeyde derinlemesine analiz ediyorsun.
+Raporun, velilere ve öğretmenlere sunulacak profesyonel bir analiz belgesidir.
 
 ---
 
@@ -239,7 +505,7 @@ def build_single_test_prompt(student_name, student_age, student_gender, test_nam
 ## 🛑 ZORUNLU KURALLAR
 
 1. **SADECE VERİ:** JSON içinde görmediğin hiçbir puan veya özellik hakkında yorum yapma.
-2. **KANIT ZORUNLU:** Güçlü/zayıf yön belirtirken parantez içinde puanı yaz. Örn: "Görsel zeka güçlü (pct: 78)"
+2. **KANIT ZORUNLU:** Her güçlü/zayıf yön için parantez içinde puanı yaz. Örn: "Görsel zeka güçlü (%78)"
 3. **PUAN YORUMLAMA STANDARDI:**
    - %0-30 → "Gelişime çok açık"
    - %31-50 → "Ortalama altı, geliştirilebilir"
@@ -247,66 +513,123 @@ def build_single_test_prompt(student_name, student_age, student_gender, test_nam
    - %71-85 → "Güçlü"
    - %86-100 → "Çok güçlü / baskın"
 4. **TIBBİ TANI YASAĞI:** Klinik tanı terimleri (DEHB, depresyon, disleksi vb.) kesinlikle kullanma.
-5. **YAŞA UYGUN TAVSİYE:** {student_age} yaşındaki bir öğrenci için gerçekçi öneriler ver.
-6. **TEST BAĞLAMINA SADIK KAL:** Sadece bu testin ölçtüğü alanı yorumla, dışına çıkma.
+5. **YAŞA UYGUN TAVSİYE:** {student_age} yaşındaki bir öğrenci için somut, gerçekçi öneriler ver.
+6. **KAPSAMLI OL:** Bu rapor resmi bir analiz belgesidir. Yüzeysel değil, derinlemesine analiz yap. Minimum 1500 kelime.
 
 ---
+{test_guidance}
+---
 
-## 📝 RAPOR FORMATI (Bu formatı değiştirme)
+## 📝 RAPOR FORMATI (Bu formatı AYNEN KORU, bölüm atlama)
 
 ### 1. 📊 TEST ÖZETİ
 
-**Tek Cümle Sonuç:** *(Testin en önemli bulgusu, net ve doğrudan.)*
+**Tek Cümle Sonuç:** *(Testin en önemli bulgusu, net ve doğrudan — öğrenciyi tanımayan birinin bile anlayacağı şekilde.)*
 
-**Görsel Özet:**
+**Görsel Özet (tüm boyutlar/kategoriler için):**
 ```
-[Kategori / Boyut Adı] : ████████░░ XX%
-[Kategori / Boyut Adı] : ██████░░░░ XX%
-[Kategori / Boyut Adı] : ████░░░░░░ XX%
+[Boyut/Kategori Adı] : ████████░░ XX%  → Yorum
+[Boyut/Kategori Adı] : ██████░░░░ XX%  → Yorum
+[Boyut/Kategori Adı] : ████░░░░░░ XX%  → Yorum
+...
 ```
+*(Tüm alt boyutları/kategorileri listele, hiçbirini atlama. Her birinin yanına kısa yorum ekle.)*
 
 ---
 
 ### 2. 🧠 DERİN YORUM
 
-*(Bu kısımda "NEDEN?" sorusuna cevap ver. Puanların günlük hayata etkisini somut örneklerle açıkla.
-2-3 paragraf, akıcı anlatım.)*
+*(Bu kısımda "NEDEN?" ve "NE ANLAMA GELİYOR?" sorularına cevap ver.
+Puanların günlük hayata, okul yaşamına ve sosyal ilişkilere etkisini somut örneklerle açıkla.
+En az 4-5 paragraf, akıcı ve derinlemesine anlatım. 
+Alt boyutları birbirleriyle ilişkilendir, örüntüleri tespit et.
+Öğrencinin bu profile sahip olmasının olası nedenlerini tartış.)*
 
 ---
 
 ### 3. 💪 KANITA DAYALI GÜÇLÜ YÖNLER
 
-| # | Güçlü Yön | Kanıt (Puan) | Günlük Yansıması |
-|---|-----------|--------------|-----------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
+| # | Güçlü Yön | Kanıt (Puan) | Okul Hayatına Yansıması | Nasıl Daha da Güçlendirilebilir? |
+|---|-----------|--------------|------------------------|--------------------------------|
+| 1 | ... | ... | ... | ... |
+| 2 | ... | ... | ... | ... |
+| 3 | ... | ... | ... | ... |
+| 4 | ... | ... | ... | ... |
+
+*(En az 4 satır doldur.)*
 
 ---
 
-### 4. 🌱 GELİŞİM FIRSATLARI
+### 4. 🌱 GELİŞİM ALANLARI
 
-| # | Alan | Mevcut Durum | Nasıl Geliştirilir? |
-|---|------|--------------|---------------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
+| # | Alan | Mevcut Durum (Puan) | Neden Önemli? | Somut Gelişim Stratejisi |
+|---|------|---------------------|---------------|------------------------|
+| 1 | ... | ... | ... | ... |
+| 2 | ... | ... | ... | ... |
+| 3 | ... | ... | ... | ... |
 
----
-
-### 5. 🎯 HEMEN UYGULANABİLİR TAVSİYELER
-
-**📌 TAVSİYE 1:** [Başlık]
-→ *(Adım adım ne yapılacak, ne zaman, nasıl)*
-
-**📌 TAVSİYE 2:** [Başlık]
-→ *(Adım adım ne yapılacak, ne zaman, nasıl)*
-
-**📌 TAVSİYE 3:** [Başlık]
-→ *(Adım adım ne yapılacak, ne zaman, nasıl)*
+*(En az 3 satır doldur. Her gelişim alanı için somut, adım adım strateji yaz.)*
 
 ---
 
-*Dil: Türkçe. Üslup: Profesyonel, içten, yapıcı.*"""
+### 5. 🎯 KAPSAMLI AKSİYON PLANI
+
+**📌 TAVSİYE 1: [Başlık]**
+- **Ne yapılacak:** *(Somut açıklama)*
+- **Ne zaman:** *(Günlük/haftalık program)*
+- **Nasıl ölçülecek:** *(Başarı göstergesi)*
+- **Kim sorumlu:** *(Öğrenci/Öğretmen/Aile)*
+
+**📌 TAVSİYE 2: [Başlık]**
+- **Ne yapılacak:** ...
+- **Ne zaman:** ...
+- **Nasıl ölçülecek:** ...
+- **Kim sorumlu:** ...
+
+**📌 TAVSİYE 3: [Başlık]**
+- **Ne yapılacak:** ...
+- **Ne zaman:** ...
+- **Nasıl ölçülecek:** ...
+- **Kim sorumlu:** ...
+
+**📌 TAVSİYE 4: [Başlık]**
+- **Ne yapılacak:** ...
+- **Ne zaman:** ...
+- **Nasıl ölçülecek:** ...
+- **Kim sorumlu:** ...
+
+**📌 TAVSİYE 5: [Başlık]**
+- **Ne yapılacak:** ...
+- **Ne zaman:** ...
+- **Nasıl ölçülecek:** ...
+- **Kim sorumlu:** ...
+
+---
+
+### 6. 👨‍👩‍👦 AİLE REHBERİ
+
+> **Bu test sonuçlarına göre ailenin bilmesi gerekenler:**
+> *(Test sonuçlarının ne anlama geldiğini aile diline çevir — teknik terim kullanma. 
+> En az 4 somut yapılması gereken ve 3 kaçınılması gereken davranış.)*
+
+---
+
+### 7. 👩‍🏫 ÖĞRETMEN REHBERİ
+
+> **Sınıf İçi Stratejiler:** *(En az 3 somut adım)*
+> **İletişim Önerileri:** *(Bu öğrenciyle nasıl konuşulmalı?)*
+> **Dikkat Edilmesi Gerekenler:** *(Gözden kaçırılmaması gereken işaretler)*
+
+---
+
+### 8. 📌 SONUÇ
+
+*(3-4 cümlelik kapanış. En kritik bulguyu vurgula, umut verici bir mesajla bitir. 
+Bir sonraki adımın ne olması gerektiğini belirt.)*
+
+---
+
+*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı. Bu rapor resmi bir analiz belgesidir. Öğrenciyi yargılama, güçlendirmeye odaklan.*"""
 
 
 # ============================================================
