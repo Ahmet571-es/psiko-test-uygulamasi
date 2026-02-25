@@ -287,7 +287,7 @@ def main_auth_flow():
                 gender = c2.selectbox("⚧ Cinsiyet", ["Kız", "Erkek"])
                 
                 st.markdown("---")
-                new_user = st.text_input("🔑 Kullanıcı Adı Belirle", placeholder="Örn: mehmet123")
+                new_user = st.text_input("📧 E-posta Adresi", placeholder="ornek@email.com")
                 new_pw = st.text_input("🔒 Şifre Belirle", type="password", placeholder="En az 4 karakter")
                 secret_word = st.text_input(
                     "🛡️ Gizli Kurtarma Kelimesi",
@@ -298,14 +298,14 @@ def main_auth_flow():
                 submit = st.form_submit_button("🚀 Kayıt Ol", type="primary")
                 
                 if submit:
+                    import re
+                    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
                     if not name or not new_user or not new_pw or not secret_word:
                         st.warning("⚠️ Lütfen tüm alanları doldurunuz.")
                     elif len(new_pw) < 4:
                         st.warning("⚠️ Şifre en az 4 karakter olmalıdır.")
-                    elif len(new_user) < 3:
-                        st.warning("⚠️ Kullanıcı adı en az 3 karakter olmalıdır.")
-                    elif not new_user.replace("_", "").replace(".", "").isalnum():
-                        st.warning("⚠️ Kullanıcı adı sadece harf, rakam, nokta ve alt çizgi içerebilir.")
+                    elif not re.match(email_pattern, new_user.strip()):
+                        st.warning("⚠️ Geçerli bir e-posta adresi giriniz. (Örn: ornek@email.com)")
                     else:
                         success, result = register_student(
                             name.title(), new_user.strip().lower(), new_pw,
@@ -332,17 +332,17 @@ def main_auth_flow():
         elif st.session_state.auth_mode == 'login':
             st.markdown("<div class='auth-container animate-in'>", unsafe_allow_html=True)
             st.markdown("#### 🔑 Öğrenci Girişi")
-            st.caption("Kullanıcı adın ve şifrenle giriş yap.")
+            st.caption("E-posta adresin ve şifrenle giriş yap.")
             
             with st.form("login_form"):
-                user = st.text_input("👤 Kullanıcı Adı", placeholder="Kullanıcı adını gir...")
+                user = st.text_input("📧 E-posta Adresi", placeholder="E-posta adresini gir...")
                 pw = st.text_input("🔒 Şifre", type="password", placeholder="Şifreni gir...")
                 
                 submit = st.form_submit_button("Giriş Yap ➡️", type="primary")
                 
                 if submit:
                     if not user or not pw:
-                        st.warning("⚠️ Kullanıcı adı ve şifre boş bırakılamaz.")
+                        st.warning("⚠️ E-posta ve şifre boş bırakılamaz.")
                     else:
                         status, student_obj = login_student(user.strip().lower(), pw)
                         if status:
@@ -355,7 +355,7 @@ def main_auth_flow():
                             time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.error("❌ Kullanıcı adı veya şifre hatalı.")
+                            st.error("❌ E-posta adresi veya şifre hatalı.")
             
             st.markdown("</div>", unsafe_allow_html=True)
             
@@ -373,7 +373,7 @@ def main_auth_flow():
             st.info("Kayıt olurken belirlediğin gizli kurtarma kelimesini kullanarak yeni şifre belirleyebilirsin.")
             
             with st.form("forgot_password_form"):
-                user = st.text_input("👤 Kullanıcı Adı", placeholder="Kayıtlı kullanıcı adını gir...")
+                user = st.text_input("📧 E-posta Adresi", placeholder="Kayıtlı e-posta adresini gir...")
                 secret = st.text_input("🛡️ Gizli Kurtarma Kelimesi", type="password")
                 new_pw = st.text_input("🔒 Yeni Şifre Belirle", type="password")
                 
