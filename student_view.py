@@ -461,7 +461,7 @@ TEST_META = {
         "questions": 180,
         "desc": "9 kişilik tipinden hangisine en yakınsın? Güçlü yönlerini, korkularını ve büyüme yolunu keşfet.",
     },
-    "Çalışma Davranışı Ölçeği (Baltaş)": {
+    "Çalışma Davranışı Ölçeği": {
         "icon": "📚",
         "color": "#2E86C1",
         "duration": "~15 dk",
@@ -475,7 +475,7 @@ TEST_META = {
         "questions": 30,
         "desc": "Beyinin hangi yarısı daha baskın? Yaratıcı mı, analitik mi, yoksa dengeli misin?",
     },
-    "Sınav Kaygısı Ölçeği (DuSKÖ)": {
+    "Sınav Kaygısı Ölçeği": {
         "icon": "😰",
         "color": "#F39C12",
         "duration": "~10 dk",
@@ -489,14 +489,14 @@ TEST_META = {
         "questions": 16,
         "desc": "En iyi nasıl öğreniyorsun? Görsel, İşitsel, Okuma/Yazma, Kinestetik...",
     },
-    "Çoklu Zeka Testi (Gardner)": {
+    "Çoklu Zeka Testi": {
         "icon": "💡",
         "color": "#3498DB",
         "duration": "~12 dk",
         "questions": 80,
         "desc": "Howard Gardner'ın 8 zeka alanından hangilerinde güçlüsün?",
     },
-    "Holland Mesleki İlgi Envanteri (RIASEC)": {
+    "Holland Mesleki İlgi Envanteri": {
         "icon": "🧭",
         "color": "#1ABC9C",
         "duration": "~15 dk",
@@ -818,12 +818,12 @@ def app():
 
     ALL_TESTS = [
         "Enneagram Kişilik Testi",
-        "Çalışma Davranışı Ölçeği (Baltaş)",
+        "Çalışma Davranışı Ölçeği",
         "Sağ-Sol Beyin Dominansı Testi",
-        "Sınav Kaygısı Ölçeği (DuSKÖ)",
+        "Sınav Kaygısı Ölçeği",
         "VARK Öğrenme Stilleri Testi",
-        "Çoklu Zeka Testi (Gardner)",
-        "Holland Mesleki İlgi Envanteri (RIASEC)"
+        "Çoklu Zeka Testi",
+        "Holland Mesleki İlgi Envanteri"
     ]
 
     # ============================================================
@@ -971,7 +971,7 @@ def app():
                             st.session_state.sayfa = 0
 
                         elif "Holland" in test:
-                            st.session_state.current_test_data = {"type": "holland_3", "questions": HOLLAND_QUESTIONS}
+                            st.session_state.current_test_data = {"type": "holland_5", "questions": HOLLAND_QUESTIONS}
                             st.session_state.cevaplar = {}
                             st.session_state.sayfa = 0
 
@@ -1281,9 +1281,9 @@ def app():
                 _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
 
             # ========================================
-            # TİP: HOLLAND (Hoşlanırım/Fark etmez/Hoşlanmam)
+            # TİP: HOLLAND (5'li Likert)
             # ========================================
-            elif q_type == "holland_3":
+            elif q_type == "holland_5":
                 qs = data["questions"]
                 PER_PAGE = 10
                 tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
@@ -1294,18 +1294,29 @@ def app():
                 st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
                 page_q_ids = []
 
-                holland_opts = ["😊 Hoşlanırım", "😐 Fark etmez", "😕 Hoşlanmam"]
-                holland_score_map = {"😊 Hoşlanırım": 2, "😐 Fark etmez": 1, "😕 Hoşlanmam": 0}
+                holland_opts = [0, 1, 2, 3, 4]
+                holland_labels = {
+                    0: "😣 Hiç Hoşlanmam",
+                    1: "😕 Hoşlanmam",
+                    2: "😐 Kararsızım",
+                    3: "😊 Hoşlanırım",
+                    4: "😍 Çok Hoşlanırım"
+                }
 
                 for q in curr_qs:
                     qid = q["id"]
                     page_q_ids.append(qid)
                     st.write(f"**{qid}. {q['text']}**")
                     prev = st.session_state.cevaplar.get(qid)
-                    idx = {2: 0, 1: 1, 0: 2}.get(prev, None)
-                    val = st.radio(f"Soru {qid}", holland_opts, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
-                    if val:
-                        st.session_state.cevaplar[qid] = holland_score_map[val]
+                    idx = holland_opts.index(prev) if prev is not None else None
+                    val = st.radio(
+                        f"Soru {qid}", holland_opts, key=f"q_{qid}",
+                        index=idx, horizontal=True,
+                        format_func=lambda x: holland_labels[x],
+                        label_visibility="collapsed"
+                    )
+                    if val is not None:
+                        st.session_state.cevaplar[qid] = val
                     st.divider()
 
                 _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
@@ -1397,7 +1408,7 @@ def _finish_and_save(t_name, q_type):
                 "dominant": result["dominant"][0]
             }
 
-        elif q_type == "holland_3":
+        elif q_type == "holland_5":
             result, report = calculate_holland(answers)
             scores = {
                 "R": result["R"], "I": result["I"], "A": result["A"],
