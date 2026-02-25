@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import time
 import random
@@ -802,6 +803,16 @@ def app():
     st.markdown("<h1 class='main-header'>🎓 EĞİTİM CHECK UP</h1>", unsafe_allow_html=True)
     st.markdown(f"<div class='sub-header'>Hoşgeldin <b>{st.session_state.student_name}</b> — Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
+    # --- SAYFA GEÇİŞİNDE OTOMATİK SCROLL TO TOP ---
+    if st.session_state.get("_scroll_top"):
+        components.html(
+            """<script>
+                window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'instant'});
+            </script>""",
+            height=0
+        )
+        st.session_state._scroll_top = False
+
     if "page" not in st.session_state:
         st.session_state.page = "home"
 
@@ -965,6 +976,7 @@ def app():
                             st.session_state.sayfa = 0
 
                         st.session_state.page = "test"
+                        st.session_state._scroll_top = True
                         st.rerun()
 
     # ============================================================
@@ -986,9 +998,11 @@ def app():
         c1, c2 = st.columns(2)
         if c1.button("🏠 Diğer Teste Geç", type="primary"):
             st.session_state.page = "home"
+            st.session_state._scroll_top = True
             st.rerun()
         if c2.button("🚪 Çıkış Yap"):
             st.session_state.clear()
+            st.session_state._scroll_top = True
             st.rerun()
 
     # ============================================================
@@ -1020,10 +1034,12 @@ def app():
             
             if c1.button("⬅️ Vazgeç / Ana Menü"):
                 st.session_state.page = "home"
+                st.session_state._scroll_top = True
                 st.rerun()
                 
             if c2.button("HAZIRIM, BAŞLA! 🚀", type="primary"):
                 st.session_state.intro_passed = True
+                st.session_state._scroll_top = True
                 st.rerun()
 
         # --- SORULAR ---
@@ -1083,6 +1099,7 @@ def app():
                 if curr_page > 0:
                     if c1.button("⬅️ Önceki Bölüm"):
                         st.session_state.enneagram_page -= 1
+                        st.session_state._scroll_top = True
                         st.rerun()
 
                 is_last = curr_page == total_pages - 1
@@ -1092,6 +1109,7 @@ def app():
                             st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevapla.")
                         else:
                             st.session_state.enneagram_page += 1
+                            st.session_state._scroll_top = True
                             st.rerun()
                 else:
                     if c2.button("Bitir ve Gönder ✅", type="primary"):
@@ -1116,6 +1134,7 @@ def app():
                                 )
                                 st.session_state.last_report = rep
                                 st.session_state.page = "success_screen"
+                                st.session_state._scroll_top = True
                                 st.rerun()
 
             # ========================================
@@ -1302,6 +1321,7 @@ def _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type):
     if st.session_state.sayfa > 0:
         if c1.button("⬅️ Geri"):
             st.session_state.sayfa -= 1
+            st.session_state._scroll_top = True
             st.rerun()
 
     if st.session_state.sayfa < tot_p - 1:
@@ -1311,6 +1331,7 @@ def _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type):
                 st.error("⚠️ Bu sayfada boş bıraktığın sorular var. Onları doldurmadan geçemezsin.")
             else:
                 st.session_state.sayfa += 1
+                st.session_state._scroll_top = True
                 st.rerun()
     else:
         if c2.button("Testi Bitir ✅", type="primary"):
@@ -1388,4 +1409,5 @@ def _finish_and_save(t_name, q_type):
 
         st.session_state.last_report = report
         st.session_state.page = "success_screen"
+        st.session_state._scroll_top = True
         st.rerun()
