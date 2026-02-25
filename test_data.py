@@ -980,8 +980,8 @@ HOLLAND_QUESTIONS = [
 
 def calculate_holland(answers):
     """
-    DÜZELTME: "E" harfi arama hatası giderildi. 
-    Artık 0, 1, 2 puanları direkt toplanıyor.
+    Holland RIASEC puanlama — 5'li Likert (0-4).
+    Her tipten 14 soru, max puan: 14 × 4 = 56.
     """
     answers = {int(k): v for k, v in answers.items()}
 
@@ -990,7 +990,7 @@ def calculate_holland(answers):
     for q in HOLLAND_QUESTIONS:
         ans = answers.get(q["id"])
         if ans is not None:
-            type_scores[q["type"]] += ans  # Gelen 2, 1, 0 puanını direkt ekle
+            type_scores[q["type"]] += ans  # Gelen 0-4 puanını direkt ekle
 
     sorted_types  = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
     top3          = sorted_types[:3]
@@ -1013,8 +1013,8 @@ def generate_holland_report(scores):
     holland_code = scores["holland_code"]
     sorted_types = scores["sorted_types"]
     
-    # DÜZELTME: Her tipten 14 soru var, max puan 2 olduğu için toplam 28 puan olur.
-    max_per_type = 28 
+    # Her tipten 14 soru var, max puan 4 olduğu için toplam 56 puan olur.
+    max_per_type = 56 
 
     report = f"# 🧭 HOLLAND MESLEKİ İLGİ ENVANTERİ RAPORU\n\n**Senin Holland Kodun: {holland_code}**\n\n---\n\n## 📊 İlgi Profil Tablon\n\n| Tip | İsim | Puan | Yüzde | Grafik |\n|---|---|---|---|---|\n"
 
