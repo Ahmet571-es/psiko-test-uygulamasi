@@ -212,7 +212,7 @@ def register_student(name, username, password, age, gender, secret_word=""):
     try:
         c.execute(f"SELECT id FROM students WHERE username={ph}", (username,))
         if c.fetchone():
-            return False, "Bu kullanıcı adı zaten alınmış."
+            return False, "Bu e-posta adresi zaten kayıtlı."
 
         hashed_pw = hash_password(password)
         c.execute(
@@ -277,7 +277,7 @@ def reset_student_password(username, secret_word, new_password):
         user_data = c.fetchone()
 
         if not user_data:
-            return False, "Sistemde böyle bir kullanıcı adı bulunamadı."
+            return False, "Sistemde böyle bir e-posta adresi bulunamadı."
 
         user_id = user_data[0]
         stored_secret = user_data[1]
