@@ -418,6 +418,10 @@ ALL_KADEMELER = {
 
 def get_akademik_sections(grade=None, version=None):
     """Sınıf veya versiyon bazlı bölümleri döndürür. Geriye uyumlu."""
+    # Savunmacı: grade parametresine yanlışlıkla version string'i gönderilmişse düzelt
+    if isinstance(grade, str) and grade in ("ilkogretim", "lise"):
+        version = grade
+        grade = None
     if grade is not None:
         kademe = grade_to_kademe(grade)
     elif version == "ilkogretim":
@@ -451,6 +455,10 @@ def get_total_questions(grade=None, version=None):
 # SKORLAMA — ZORLUK AĞIRLIKLI + ALT BECERİ
 # ============================================================
 def calculate_akademik(answers, grade=None, version=None):
+    # Savunmacı: grade parametresine yanlışlıkla version string'i gönderilmişse düzelt
+    if isinstance(grade, str) and grade in ("ilkogretim", "lise"):
+        version = grade
+        grade = None
     sections = get_akademik_sections(grade=grade, version=version)
     kademe = grade_to_kademe(grade) if grade else ("kademe_1" if version == "ilkogretim" else "kademe_3" if version == "lise" else "kademe_2")
     results = {}
