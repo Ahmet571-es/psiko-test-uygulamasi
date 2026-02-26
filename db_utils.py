@@ -88,6 +88,7 @@ class Student:
         self.password    = data[3]
         self.age         = data[4]
         self.gender      = data[5]
+        self.grade       = data[6]  # Sınıf numarası (5-12)
         self.login_count = login_count
 
 
@@ -100,7 +101,8 @@ class StudentInfo:
         self.password    = data[3]
         self.age         = data[4]
         self.gender      = data[5]
-        self.login_count = data[6]
+        self.grade       = data[6]  # Sınıf numarası (5-12)
+        self.login_count = data[7]
 
 
 # ============================================================
@@ -134,9 +136,16 @@ def init_db():
                 password TEXT,
                 age INTEGER,
                 gender TEXT,
+                grade INTEGER,
                 login_count INTEGER DEFAULT 0,
                 secret_word TEXT
             )''')
+
+            # Mevcut tablo varsa grade sütunu ekle (migration)
+            try:
+                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
+            except Exception:
+                pass
 
             c.execute('''CREATE TABLE IF NOT EXISTS results (
                 id SERIAL PRIMARY KEY,
@@ -164,12 +173,17 @@ def init_db():
             c.execute('''CREATE TABLE IF NOT EXISTS students
                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
                           name TEXT, username TEXT, password TEXT,
-                          age INTEGER, gender TEXT,
+                          age INTEGER, gender TEXT, grade INTEGER,
                           login_count INTEGER DEFAULT 0,
                           secret_word TEXT)''')
 
             try:
                 c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
+            except Exception:
+                pass
+
+            try:
+                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
             except Exception:
                 pass
 
@@ -201,7 +215,7 @@ def init_db():
 # ÖĞRENCİ KİMLİK / KAYIT İŞLEMLERİ
 # ============================================================
 
-def register_student(name, username, password, age, gender, secret_word=""):
+def register_student(name, username, password, age, gender, secret_word="", grade=None):
     """Yeni öğrenci kaydeder."""
     init_db()
 
@@ -215,9 +229,10 @@ def register_student(name, username, password, age, gender, secret_word=""):
             return False, "Bu e-posta adresi zaten kayıtlı."
 
         hashed_pw = hash_password(password)
+        hashed_secret = hash_password(secret_word) if secret_word else ""
         c.execute(
-            f"INSERT INTO students (name, username, password, age, gender, secret_word) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
-            (name, username, hashed_pw, age, gender, secret_word)
+            f"INSERT INTO students (name, username, password, age, gender, grade, secret_word) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})",
+            (name, username, hashed_pw, age, gender, grade, hashed_secret)
         )
         conn.commit()
         return True, "Kayıt Başarılı"
@@ -242,13 +257,13 @@ def login_student(username, password):
         hashed_pw = hash_password(password)
 
         c.execute(
-            f"SELECT id, name, username, password, age, gender, login_count FROM students WHERE username={ph} AND password={ph}",
+            f"SELECT id, name, username, password, age, gender, grade, login_count FROM students WHERE username={ph} AND password={ph}",
             (username, hashed_pw)
         )
         user = c.fetchone()
 
         if user:
-            new_count = (user[6] or 0) + 1
+            new_count = (user[7] or 0) + 1
             c.execute(f"UPDATE students SET login_count={ph} WHERE id={ph}", (new_count, user[0]))
             conn.commit()
             return True, Student(user, new_count)
@@ -285,7 +300,14 @@ def reset_student_password(username, secret_word, new_password):
         if not stored_secret:
             return False, "Bu hesaba ait kurtarma kelimesi bulunmuyor (Eski kayıt olabilir). Lütfen yeni hesap açın."
 
-        if stored_secret.lower().strip() != secret_word.lower().strip():
+        # Hash'li karşılaştırma (yeni kayıtlar)
+        hashed_input = hash_password(secret_word.lower().strip())
+        if stored_secret == hashed_input:
+            pass  # Eşleşti — devam et
+        elif stored_secret.lower().strip() == secret_word.lower().strip():
+            # Eski kayıt (düz metin) — eşleşti, hash'e yükselt
+            c.execute(f"UPDATE students SET secret_word={ph} WHERE id={ph}", (hashed_input, user_id))
+        else:
             return False, "Girilen kurtarma kelimesi yanlış!"
 
         new_hashed_pw = hash_password(new_password)
@@ -371,7 +393,7 @@ def get_all_students_with_results():
     ph = get_placeholder(engine)
 
     try:
-        c.execute("SELECT id, name, username, password, age, gender, login_count FROM students ORDER BY name")
+        c.execute("SELECT id, name, username, password, age, gender, grade, login_count FROM students ORDER BY name")
         students_raw = c.fetchall()
 
         all_data = []
