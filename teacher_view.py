@@ -1907,142 +1907,211 @@ def app():
     info = student_data["info"]
     tests = student_data["tests"]
 
-    # 2. ÖĞRENCİ KİMLİK KARTI
+    # 2. ÖĞRENCİ KLASÖRÜ
     st.markdown(f"""
         <div class="id-card">
-            <div class="id-card-name">🆔 {info.name}</div>
+            <div class="id-card-name">📁 {info.name} — Öğrenci Klasörü</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Yaş / Cinsiyet", f"{info.age} / {info.gender}")
-    c2.metric("Kullanıcı Adı", info.username)
-    c3.metric("Toplam Giriş", info.login_count)
-    c4.metric("Çözülen Test", len(tests))
 
-    st.divider()
+    tab_profil, tab_testler, tab_ai = st.tabs([
+        "📋 Kişisel Bilgiler",
+        "📝 Test Sonuçları",
+        "🤖 AI Analiz Raporları"
+    ])
 
     # ============================================================
-    # 3. TAMAMLANAN TESTLER VE OTOMATİK SONUÇLAR
+    # TAB 1: KİŞİSEL BİLGİLER
     # ============================================================
-    st.subheader("📝 Tamamlanan Testler ve Otomatik Sonuçlar")
-    st.caption("Öğrencinin bitirdiği testlerin anlık sistem raporlarını (yapay zekasız) görebilirsiniz.")
+    with tab_profil:
+        st.markdown("#### 👤 Öğrenci Profili")
 
-    if not tests:
-        st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş.")
-    else:
-        for idx, t in enumerate(tests):
-            btn_label = f"✅ {t['test_name']} (Tarih: {t['date']})"
-            with st.expander(btn_label):
-                if t['scores']:
-                    fig = plot_scores(t['scores'], t['test_name'])
-                    if fig:
-                        st.pyplot(fig)
+        grade_val = getattr(info, 'grade', None)
+        grade_text = f"{grade_val}. Sınıf" if grade_val else "Belirtilmemiş"
 
-                st.markdown("### 📄 Sistem Raporu")
-                if t.get('report'):
-                    st.markdown(t['report'])
-                else:
-                    st.warning("Bu test için otomatik rapor bulunamadı.")
-                    st.write("Ham Cevaplar:", t['raw_answers'])
+        col_left, col_right = st.columns(2)
+        with col_left:
+            st.markdown(f"""
+            | | |
+            |---|---|
+            | **👤 Ad Soyad** | {info.name} |
+            | **🎂 Yaş** | {info.age} |
+            | **⚧ Cinsiyet** | {info.gender} |
+            | **🎓 Sınıf** | {grade_text} |
+            | **📧 E-posta** | {info.username} |
+            """)
 
-    st.divider()
-
-    # ============================================================
-    # 4. KAYITLI AI RAPOR ARŞİVİ
-    # ============================================================
-    st.subheader("📂 Kayıtlı AI Rapor Arşivi")
-    st.caption("Daha önce Claude ile oluşturduğunuz detaylı analizler.")
-
-    history = get_student_analysis_history(info.id)
-
-    if not history:
-        st.info("Bu öğrenci için henüz AI destekli analiz raporu oluşturulmamış.")
-    else:
-        st.markdown(f"**{len(history)} adet** kayıtlı rapor bulundu.")
-
-        for idx, record in enumerate(history):
-            btn_label = f"🤖 AI Raporu {idx+1}: {record['combination']} ({record['date']})"
-            with st.expander(btn_label):
-                st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {record['combination']}</div>", unsafe_allow_html=True)
-
-                archived_test_names = record['combination'].split(' + ')
-                archived_test_data = [t for t in tests if t["test_name"] in archived_test_names]
-
-                if archived_test_data:
-                    st.markdown("#### 📊 Grafik Özeti")
-                    g_cols = st.columns(2)
-                    for i, t_data in enumerate(archived_test_data):
-                        if t_data["scores"]:
-                            fig = plot_scores(t_data["scores"], t_data["test_name"])
-                            if fig:
-                                g_cols[i % 2].pyplot(fig)
-                    st.markdown("---")
-
-                st.markdown(record['report'])
-                st.download_button(
-                    label=f"📥 Raporu İndir ({idx+1})",
-                    data=record['report'],
-                    file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
-                    mime="text/plain",
-                    key=f"dl_{idx}"
-                )
-
-    st.divider()
+        with col_right:
+            st.metric("🔑 Toplam Giriş", info.login_count)
+            st.metric("📊 Çözülen Test", len(tests))
+            if tests:
+                son_test = tests[0]
+                st.metric("📅 Son Test", f"{son_test['test_name']}")
+                st.caption(f"Tarih: {son_test['date']}")
 
     # ============================================================
-    # 5. YENİ AI ANALİZİ OLUŞTURMA
+    # TAB 2: TAMAMLANAN TESTLER VE OTOMATİK SONUÇLAR
     # ============================================================
-    st.subheader("⚡ Yeni AI Analizi Oluştur")
+    with tab_testler:
+        st.markdown("#### 📝 Tamamlanan Testler ve Otomatik Sonuçlar")
+        st.caption("Öğrencinin bitirdiği testlerin anlık sistem raporlarını (yapay zekasız) görebilirsiniz.")
 
-    if not tests:
-        st.write("Analiz yapılacak veri yok.")
-    else:
-        all_completed_tests = [t["test_name"] for t in tests]
+        if not tests:
+            st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş.")
+        else:
+            for idx, t in enumerate(tests):
+                btn_label = f"✅ {t['test_name']} (Tarih: {t['date']})"
+                with st.expander(btn_label):
+                    if t['scores']:
+                        fig = plot_scores(t['scores'], t['test_name'])
+                        if fig:
+                            st.pyplot(fig)
 
-        st.write("Analiz raporu oluşturmak istediğiniz testleri seçiniz:")
-        selected_tests = st.multiselect(
-            "Test Listesi:",
-            options=all_completed_tests,
-            default=all_completed_tests
-        )
+                    st.markdown("### 📄 Sistem Raporu")
+                    if t.get('report'):
+                        st.markdown(t['report'])
+                    else:
+                        st.warning("Bu test için otomatik rapor bulunamadı.")
+                        st.write("Ham Cevaplar:", t['raw_answers'])
 
-        if selected_tests:
-            st.markdown("---")
-            st.write("📊 **Analiz Yöntemini Seçiniz:**")
+    # ============================================================
+    # TAB 3: KAYITLI AI RAPOR ARŞİVİ
+    # ============================================================
+    with tab_ai:
+        st.markdown("#### 📂 Kayıtlı AI Rapor Arşivi")
+        st.caption("Daha önce Claude ile oluşturduğunuz detaylı analizler.")
 
-            analysis_mode = st.radio(
-                "Nasıl bir rapor istiyorsunuz?",
-                options=["BÜTÜNCÜL (Harmanlanmış) Rapor", "AYRI AYRI (Tekil) Raporlar"],
-                index=0,
-                help="Bütüncül: Seçilen tüm testleri birleştirip 'Büyük Resim' sentezi yapar.\nAyrı Ayrı: Seçilen her test için sırayla detaylı psikometrik analiz yapar."
+        history = get_student_analysis_history(info.id)
+
+        if not history:
+            st.info("Bu öğrenci için henüz AI destekli analiz raporu oluşturulmamış.")
+        else:
+            st.markdown(f"**{len(history)} adet** kayıtlı rapor bulundu.")
+
+            for idx, record in enumerate(history):
+                btn_label = f"🤖 AI Raporu {idx+1}: {record['combination']} ({record['date']})"
+                with st.expander(btn_label):
+                    st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {record['combination']}</div>", unsafe_allow_html=True)
+
+                    archived_test_names = record['combination'].split(' + ')
+                    archived_test_data = [t for t in tests if t["test_name"] in archived_test_names]
+
+                    if archived_test_data:
+                        st.markdown("#### 📊 Grafik Özeti")
+                        g_cols = st.columns(2)
+                        for i, t_data in enumerate(archived_test_data):
+                            if t_data["scores"]:
+                                fig = plot_scores(t_data["scores"], t_data["test_name"])
+                                if fig:
+                                    g_cols[i % 2].pyplot(fig)
+                        st.markdown("---")
+
+                    st.markdown(record['report'])
+                    st.download_button(
+                        label=f"📥 Raporu İndir ({idx+1})",
+                        data=record['report'],
+                        file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
+                        mime="text/plain",
+                        key=f"dl_{idx}"
+                    )
+
+        st.divider()
+
+        # ============================================================
+        # 5. YENİ AI ANALİZİ OLUŞTURMA
+        # ============================================================
+        st.subheader("⚡ Yeni AI Analizi Oluştur")
+
+        if not tests:
+            st.write("Analiz yapılacak veri yok.")
+        else:
+            all_completed_tests = [t["test_name"] for t in tests]
+
+            st.write("Analiz raporu oluşturmak istediğiniz testleri seçiniz:")
+            selected_tests = st.multiselect(
+                "Test Listesi:",
+                options=all_completed_tests,
+                default=all_completed_tests
             )
 
-            st.markdown("<br>", unsafe_allow_html=True)
+            if selected_tests:
+                st.markdown("---")
+                st.write("📊 **Analiz Yöntemini Seçiniz:**")
 
-            if st.button("🚀 ANALİZİ BAŞLAT (Claude AI)", type="primary"):
-                analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
+                analysis_mode = st.radio(
+                    "Nasıl bir rapor istiyorsunuz?",
+                    options=["BÜTÜNCÜL (Harmanlanmış) Rapor", "AYRI AYRI (Tekil) Raporlar"],
+                    index=0,
+                    help="Bütüncül: Seçilen tüm testleri birleştirip 'Büyük Resim' sentezi yapar.\nAyrı Ayrı: Seçilen her test için sırayla detaylı psikometrik analiz yapar."
+                )
 
-                # Grafikleri göster
-                st.markdown("### 📊 Puan Grafikleri")
-                gc = st.columns(2)
-                for i, t in enumerate(analyzed_data):
-                    if t["scores"]:
-                        fig = plot_scores(t["scores"], t["test_name"])
-                        if fig:
-                            gc[i % 2].pyplot(fig)
-                        else:
-                            gc[i % 2].info(f"{t['test_name']} için grafik verisi yok.")
+                st.markdown("<br>", unsafe_allow_html=True)
 
-                # ====================================================
-                # MOD 1: BÜTÜNCÜL ANALİZ
-                # ====================================================
-                if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
-                    st.info(f"⏳ Claude AI, seçilen **{len(selected_tests)} testi** harmanlıyor...")
+                if st.button("🚀 ANALİZİ BAŞLAT (Claude AI)", type="primary"):
+                    analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
 
-                    with st.spinner("Stratejik analiz hazırlanıyor..."):
-                        ai_input = []
-                        for t in analyzed_data:
+                    # Grafikleri göster
+                    st.markdown("### 📊 Puan Grafikleri")
+                    gc = st.columns(2)
+                    for i, t in enumerate(analyzed_data):
+                        if t["scores"]:
+                            fig = plot_scores(t["scores"], t["test_name"])
+                            if fig:
+                                gc[i % 2].pyplot(fig)
+                            else:
+                                gc[i % 2].info(f"{t['test_name']} için grafik verisi yok.")
+
+                    # ====================================================
+                    # MOD 1: BÜTÜNCÜL ANALİZ
+                    # ====================================================
+                    if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
+                        st.info(f"⏳ Claude AI, seçilen **{len(selected_tests)} testi** harmanlıyor...")
+
+                        with st.spinner("Stratejik analiz hazırlanıyor..."):
+                            ai_input = []
+                            for t in analyzed_data:
+                                raw = t.get("raw_answers", "")
+                                if isinstance(raw, str):
+                                    try:
+                                        raw = json.loads(raw)
+                                    except (json.JSONDecodeError, ValueError):
+                                        raw = raw
+
+                                ai_input.append({
+                                    "TEST_ADI": t["test_name"],
+                                    "TARİH": str(t["date"]),
+                                    "SONUÇLAR": t["scores"] if t["scores"] else raw
+                                })
+
+                            prompt = build_holistic_prompt(
+                                student_name=info.name,
+                                student_age=info.age,
+                                student_gender=info.gender,
+                                test_data_list=ai_input
+                            )
+
+                            final_report = get_ai_analysis(prompt)
+                            save_holistic_analysis(info.id, selected_tests, final_report)
+
+                            st.success("✅ Bütüncül analiz tamamlandı ve arşive kaydedildi.")
+                            time.sleep(1.5)
+                            st.rerun()
+
+                    # ====================================================
+                    # MOD 2: AYRI AYRI TEKİL ANALİZLER
+                    # ====================================================
+                    else:
+                        progress_text = "Testler sırayla analiz ediliyor..."
+                        my_bar = st.progress(0, text=progress_text)
+                        total_ops = len(analyzed_data)
+
+                        for idx, t in enumerate(analyzed_data):
+                            test_name = t["test_name"]
+                            my_bar.progress(
+                                (idx + 1) / total_ops,
+                                text=f"**{test_name}** analiz ediliyor... ({idx+1}/{total_ops})"
+                            )
+
                             raw = t.get("raw_answers", "")
                             if isinstance(raw, str):
                                 try:
@@ -2050,69 +2119,27 @@ def app():
                                 except (json.JSONDecodeError, ValueError):
                                     raw = raw
 
-                            ai_input.append({
-                                "TEST_ADI": t["test_name"],
+                            test_data_for_prompt = {
+                                "TEST_ADI": test_name,
                                 "TARİH": str(t["date"]),
                                 "SONUÇLAR": t["scores"] if t["scores"] else raw
-                            })
+                            }
 
-                        prompt = build_holistic_prompt(
-                            student_name=info.name,
-                            student_age=info.age,
-                            student_gender=info.gender,
-                            test_data_list=ai_input
-                        )
+                            prompt = build_single_test_prompt(
+                                student_name=info.name,
+                                student_age=info.age,
+                                student_gender=info.gender,
+                                test_name=test_name,
+                                test_data=test_data_for_prompt
+                            )
 
-                        final_report = get_ai_analysis(prompt)
-                        save_holistic_analysis(info.id, selected_tests, final_report)
+                            single_report = get_ai_analysis(prompt)
+                            save_holistic_analysis(info.id, [test_name], single_report)
 
-                        st.success("✅ Bütüncül analiz tamamlandı ve arşive kaydedildi.")
-                        time.sleep(1.5)
+                        my_bar.empty()
+                        st.success(f"✅ {total_ops} test başarıyla analiz edildi ve Arşiv'e eklendi.")
+                        time.sleep(2)
                         st.rerun()
-
-                # ====================================================
-                # MOD 2: AYRI AYRI TEKİL ANALİZLER
-                # ====================================================
-                else:
-                    progress_text = "Testler sırayla analiz ediliyor..."
-                    my_bar = st.progress(0, text=progress_text)
-                    total_ops = len(analyzed_data)
-
-                    for idx, t in enumerate(analyzed_data):
-                        test_name = t["test_name"]
-                        my_bar.progress(
-                            (idx + 1) / total_ops,
-                            text=f"**{test_name}** analiz ediliyor... ({idx+1}/{total_ops})"
-                        )
-
-                        raw = t.get("raw_answers", "")
-                        if isinstance(raw, str):
-                            try:
-                                raw = json.loads(raw)
-                            except (json.JSONDecodeError, ValueError):
-                                raw = raw
-
-                        test_data_for_prompt = {
-                            "TEST_ADI": test_name,
-                            "TARİH": str(t["date"]),
-                            "SONUÇLAR": t["scores"] if t["scores"] else raw
-                        }
-
-                        prompt = build_single_test_prompt(
-                            student_name=info.name,
-                            student_age=info.age,
-                            student_gender=info.gender,
-                            test_name=test_name,
-                            test_data=test_data_for_prompt
-                        )
-
-                        single_report = get_ai_analysis(prompt)
-                        save_holistic_analysis(info.id, [test_name], single_report)
-
-                    my_bar.empty()
-                    st.success(f"✅ {total_ops} test başarıyla analiz edildi ve Arşiv'e eklendi.")
-                    time.sleep(2)
-                    st.rerun()
 
     # 6. HAM VERİ LİSTESİ
     st.divider()
