@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import time
-import time as _time
+# import time as _time  # gereksiz — time zaten import edildi
 import random
 from db_utils import check_test_completed, save_test_result_to_db
 from d2_engine import (
@@ -523,8 +523,8 @@ TEST_META = {
     "Akademik Analiz Testi": {
         "icon": "📚",
         "color": "#9B59B6",
-        "duration": "~20 dk",
-        "questions": "40-54",
+        "duration": "~25 dk",
+        "questions": 67,
         "desc": "Okuma anlama, matematik, mantık ve akademik öz-değerlendirme ile akademik profilini çıkar.",
     },
 }
@@ -977,8 +977,10 @@ def app():
                             st.session_state.sayfa = 0
 
                         elif "Çoklu Zeka" in test:
+                            student_grade = st.session_state.get('student_grade')
                             student_age = st.session_state.get('student_age', 15)
-                            if student_age and student_age <= 13:
+                            is_ilkogretim = (student_grade and student_grade <= 8) or (not student_grade and student_age and student_age <= 13)
+                            if is_ilkogretim:
                                 qs = []
                                 for zk in ZEKA_SIRA:
                                     qs.extend(COKLU_ZEKA_QUESTIONS_ILKOGRETIM[zk])
@@ -1002,7 +1004,7 @@ def app():
                             st.session_state.sayfa = 0
 
                         elif "D2 Dikkat" in test:
-                            seed = hash(str(st.session_state.student_id) + str(_time.time()))
+                            seed = hash(str(st.session_state.student_id) + str(time.time()))
                             st.session_state.current_test_data = {"type": "d2_timed"}
                             st.session_state.d2_rows = generate_d2_test(seed=seed)
                             st.session_state.d2_current_row = -1   # -1 = alıştırma
@@ -1011,15 +1013,27 @@ def app():
                             st.session_state.d2_row_start = None
 
                         elif "Akademik Analiz" in test:
-                            student_age = st.session_state.get("student_age", 15)
-                            version = "ilkogretim" if student_age and student_age <= 13 else "lise"
-                            st.session_state.current_test_data = {
-                                "type": "akademik_perf",
-                                "version": version,
-                            }
+                            student_grade = st.session_state.get("student_grade")
+                            if student_grade:
+                                # Grade bilgisi var — doğrudan 4 kademe sistemi
+                                st.session_state.current_test_data = {
+                                    "type": "akademik_perf",
+                                    "grade": student_grade,
+                                }
+                                st.session_state.akd_version = None
+                                st.session_state.akd_grade = student_grade
+                            else:
+                                # Grade bilgisi yok (eski kayıt) — yaşa göre fallback
+                                student_age = st.session_state.get("student_age", 15)
+                                version = "ilkogretim" if student_age and student_age <= 13 else "lise"
+                                st.session_state.current_test_data = {
+                                    "type": "akademik_perf",
+                                    "version": version,
+                                }
+                                st.session_state.akd_version = version
+                                st.session_state.akd_grade = None
                             st.session_state.akd_section_idx = 0
                             st.session_state.akd_answers = {}
-                            st.session_state.akd_version = version
 
                         st.session_state.page = "test"
                         st.session_state._scroll_top = True
@@ -1405,7 +1419,7 @@ def app():
                         if st.form_submit_button("Alıştırmayı Tamamla ✅", type="primary"):
                             st.session_state.d2_practice_done = True
                             st.session_state.d2_current_row = 0
-                            st.session_state.d2_row_start = _time.time()
+                            st.session_state.d2_row_start = time.time()
                             st.session_state._scroll_top = True
                             st.rerun()
 
@@ -1419,7 +1433,7 @@ def app():
                     st.progress((current_row + 1) / D2_CONFIG["rows"])
 
                     if st.session_state.d2_row_start is None:
-                        st.session_state.d2_row_start = _time.time()
+                        st.session_state.d2_row_start = time.time()
 
                     components.html(
                         render_timer_js(D2_CONFIG["time_per_row"], current_row),
@@ -1453,8 +1467,8 @@ def app():
                         )
 
                     if submitted:
-                        elapsed = _time.time() - (
-                            st.session_state.d2_row_start or _time.time()
+                        elapsed = time.time() - (
+                            st.session_state.d2_row_start or time.time()
                         )
                         selected = [
                             st.session_state.get(
@@ -1476,26 +1490,33 @@ def app():
                             _finish_d2_test(t_name)
                         else:
                             st.session_state.d2_current_row = next_row
-                            st.session_state.d2_row_start = _time.time()
+                            st.session_state.d2_row_start = time.time()
                             st.session_state._scroll_top = True
                             st.rerun()
 
                     if st.session_state.d2_row_start:
-                        if _time.time() - st.session_state.d2_row_start > D2_CONFIG["time_per_row"]:
+                        if time.time() - st.session_state.d2_row_start > D2_CONFIG["time_per_row"]:
                             st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
 
             # ========================================
             # TİP: AKADEMİK ANALİZ (Bölümlü Performans)
             # ========================================
             elif q_type == "akademik_perf":
-                version = st.session_state.akd_version
-                sections = get_akademik_sections(version=version)
+                akd_grade = st.session_state.get("akd_grade")
+                akd_version = st.session_state.get("akd_version")
+                sections = get_akademik_sections(grade=akd_grade, version=akd_version)
                 sec_idx = st.session_state.akd_section_idx
                 total_secs = len(sections)
 
                 if sec_idx < total_secs:
                     sec = sections[sec_idx]
-                    ver_label = "İlköğretim" if version == "ilkogretim" else "Lise"
+                    # Kademe etiketi
+                    KADEME_LABELS = {5: "5-6. Sınıf", 6: "5-6. Sınıf", 7: "7-8. Sınıf", 8: "7-8. Sınıf",
+                                     9: "9-10. Sınıf", 10: "9-10. Sınıf", 11: "11-12. Sınıf", 12: "11-12. Sınıf"}
+                    if akd_grade:
+                        ver_label = KADEME_LABELS.get(akd_grade, f"{akd_grade}. Sınıf")
+                    else:
+                        ver_label = "İlköğretim" if akd_version == "ilkogretim" else "Lise"
 
                     st.markdown(
                         f"### {sec['icon']} Bölüm {sec_idx + 1}/{total_secs}: "
@@ -1660,14 +1681,16 @@ def _finish_d2_test(t_name):
 def _finish_akademik_test(t_name):
     """Akademik analiz testini puanla, rapor üret ve veritabanına kaydet."""
     answers = st.session_state.akd_answers
-    version = st.session_state.akd_version
+    akd_grade = st.session_state.get("akd_grade")
+    akd_version = st.session_state.get("akd_version")
 
     with st.spinner("📊 Akademik analiz sonuçların hesaplanıyor..."):
-        scores = calculate_akademik(answers, version=version)
+        scores = calculate_akademik(answers, grade=akd_grade, version=akd_version)
         report = generate_akademik_report(scores)
 
         scores_for_db = {
-            "version": version,
+            "version": akd_version,
+            "grade": akd_grade,
             "overall": scores["overall"],
             "level": scores["level"],
             "performance_avg": scores["performance_avg"],
