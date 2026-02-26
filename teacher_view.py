@@ -556,246 +556,1012 @@ Bu test, 9 Enneagram kişilik tipini %0-100 ölçeğinde ölçmektedir. Raporda 
         return """
 ## 🔬 ÇALIŞMA DAVRANIŞI ÖLÇEĞİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test 7 alt kategoride ders çalışma alışkanlıklarını ölçer. Her kategoriyi AYRI AYRI ve BİRBİRİYLE İLİŞKİLENDİREREK analiz et:
+Bu test 7 alt kategoride ders çalışma alışkanlıklarını ölçer. Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Kategoriler:**
-- A: Motivasyon ve Ders Çalışmaya Karşı Tutum
-- B: Zaman Yönetimi
-- C: Derse Hazırlık ve Katılım
-- D: Okuma ve Not Tutma Alışkanlıkları
-- E: Yazılı Anlatım ve Ödev Yapma
-- F: Sınava Hazırlanma
-- G: Genel Çalışma Koşulları ve Alışkanlıkları
+### KATMAN 1: 7 KATEGORİ DERİN PROFİLİ
+Her kategoriyi EN AZ 1 PARAGRAF derinliğinde, bu öğrencinin spesifik puanlarına dayalı olarak analiz et:
 
-**Raporda mutlaka yap:**
-- Her kategoriyi 1 paragraf derinliğinde yorumla
-- Kategoriler arası çapraz ilişkileri tespit et (Örn: "Yüksek motivasyon + düşük zaman yönetimi → istekli ama plansız öğrenci profili")
-- "Darboğaz analizi" yap: Hangi kategori diğerlerinin performansını aşağı çekiyor?
-- Güçlü kategorilerin nasıl kaldıraç olarak kullanılabileceğini açıkla
-- Somut bir GÜNLÜK çalışma programı taslağı oluştur (saatler, dersler, aralar dahil)
-- Somut bir HAFTALIK plan oluştur
-- Sınav dönemi özel planı öner
-- Fiziksel çalışma ortamı önerileri (masa düzeni, ışık, ses, telefon yönetimi, araçlar)
-- Dijital araç önerileri (planlama uygulamaları, Pomodoro, not alma araçları)
+**A — Motivasyon ve Ders Çalışmaya Karşı Tutum:**
+- Bu öğrencinin ders çalışmaya bakış açısı nasıl? İçsel motivasyon mu, dışsal baskı mı?
+- Puan %60 altıysa: Motivasyon kaybının olası kaynakları neler? (akademik hayal kırıklığı, aile baskısı, akran etkisi, anlam bulamama)
+- Puan %60 üstüyse: Bu motivasyon sürdürülebilir mi? Hangi koşullarda kırılabilir?
+- Motivasyonun diğer 6 kategoriyi nasıl etkilediğini somut örneklerle göster
+
+**B — Zaman Yönetimi:**
+- Bu öğrenci zamanı nasıl kullanıyor? Planlı mı, reaktif mi, kaotik mi?
+- Düşük puan: Zamanın "nereye gittiği" analizi — sosyal medya, erteleme, öncelik belirleyememe
+- Yüksek puan: Planlama alışkanlığı oturmuş mu yoksa aşırı kontrol ihtiyacı mı var?
+- Zaman yönetiminin sınav başarısıyla doğrudan ilişkisini bu öğrenci özelinde açıkla
+
+**C — Derse Hazırlık ve Katılım:**
+- Derse gelirken hazır mı? Önceki konuyu gözden geçiriyor mu?
+- Sınıf içi katılım düzeyi: Soru soruyor mu, tartışmaya katılıyor mu, pasif mi?
+- Hazırlık eksikliğinin "kartopu etkisi"ni açıkla: Bir dersi kaçırmak → sonrakini anlamamak → motivasyon kaybı
+
+**D — Okuma ve Not Tutma Alışkanlıkları:**
+- Aktif okuma mu yapıyor yoksa pasif göz gezdirme mi?
+- Not tutma stratejisi: Aynen yazma, anahtar kelime, şema, zihin haritası, hiç tutmama?
+- Bu öğrencinin okuma-anlama hızı ve derinliği hakkında puandan çıkarılabilecek ipuçları
+
+**E — Yazılı Anlatım ve Ödev Yapma:**
+- Ödevlere yaklaşımı: Zamanında mı, son dakika mı, kaliteli mi, geçiştirme mi?
+- Yazılı ifade becerisi: Düşüncelerini organize edebiliyor mu?
+- Ödev kalitesi ile not ortalaması arasındaki ilişki
+
+**F — Sınava Hazırlanma:**
+- Sınav hazırlık stratejisi: Düzenli tekrar mı, son gece maratonu mu, ezber mi, anlayarak mı?
+- Sınav takvimi kullanıyor mu? Konuları bölebiliyor mu?
+- Sınav sonrası değerlendirme yapıyor mu? (hataları analiz etme alışkanlığı)
+
+**G — Genel Çalışma Koşulları ve Alışkanlıkları:**
+- Fiziksel çalışma ortamı: Masa, ışık, sessizlik, telefon mesafesi
+- Çalışma süresi ve verimlilik: Kaç saat çalışıyor ve bu sürenin ne kadarı gerçekten verimli?
+- Beslenme, uyku ve egzersizin çalışma performansına etkisi
+
+### KATMAN 2: ÇAPRAZ İLİŞKİ ve DARBOĞAZ ANALİZİ
+- 7 kategoriyi birbirleriyle ilişkilendir — hangi kategoriler birbirini besliyor, hangileri engelliyor?
+- Tipik kombinasyon kalıplarını tespit et:
+  → "Yüksek motivasyon + düşük zaman yönetimi" = İstekli ama plansız öğrenci
+  → "Yüksek hazırlık + düşük sınav performansı" = Kaygı kaynaklı blokaj
+  → "Düşük motivasyon + yüksek ödev" = Dışsal baskıyla çalışan, tükenmişlik riski
+  → "Yüksek zaman yönetimi + düşük okuma" = Planı var ama etkisiz yöntem kullanıyor
+- **Ana darboğaz tespiti:** Hangi tek kategori, diğer tüm kategorilerin performansını aşağı çekiyor? Bu darboğazı kaldırmak neden 6 kategoriyi de yükseltir?
+- **Kaldıraç analizi:** Hangi güçlü kategori, zayıf kategorileri kaldırmak için araç olarak kullanılabilir?
+
+### KATMAN 3: ÇALIŞMA TİPİ PROFİLLEME
+7 kategorinin puan desenine göre bu öğrencinin "çalışma tipi"ni belirle ve adlandır:
+- **Disiplinli Plancı:** Tüm kategoriler dengeli yüksek → Sürdürülebilirlik ve tükenmişlik riski analizi
+- **Motivasyonlu Kaotik:** Yüksek motivasyon, düşük organizasyon → Yapılandırma ihtiyacı
+- **Sessiz Potansiyel:** Düşük motivasyon ama yüksek beceri → Anlam arayışı, ilgi alanı keşfi
+- **Son Dakikacı Başarıcı:** Düşük hazırlık, yüksek sınav → Kısa vadeli hafıza kullanımı, uzun vadeli risk
+- **Mükemmeliyetçi Yorgun:** Yüksek her şey ama stres belirtileri → Dengeleme ihtiyacı
+- **Kaybolmuş Gezgin:** Çoğu kategori düşük → Acil yapılandırılmış destek
+- Bu tipin avantajlarını ve risklerini detaylandır
+
+### KATMAN 4: KİŞİYE ÖZEL EYLEM PLANI
+**Günlük Çalışma Programı (hafta içi + hafta sonu ayrı):**
+| Saat Dilimi | Hafta İçi | Hafta Sonu |
+|------------|-----------|------------|
+| 15:00-16:00 | ... | ... |
+| 16:00-16:30 | ... | ... |
+| ... devamı ... | ... | ... |
+- Her saat dilimine ne yapılacağını, hangi tekniğin kullanılacağını yaz
+- Mola zamanları, atıştırmalık, hareket araları dahil et
+
+**Haftalık Plan Takvimi:**
+| Gün | Ana Odak | Tekrar Konusu | Aktivite |
+|----|----------|--------------|----------|
+| Pazartesi-Pazar her gün için doldur |
+
+**Sınav Dönemi Özel Protokolü:**
+- Sınavdan 2 hafta önce → 1 hafta önce → 3 gün önce → sınav akşamı → sınav sabahı
+- Her dönem için özel çalışma stratejisi, saat planı, beslenme ve uyku önerisi
+
+### KATMAN 5: SOMUT ARAÇ ve TEKNİK REÇETESİ
+- **Pomodoro tekniği:** Bu öğrenciye uygun süre ayarı (standart 25dk mı, 15dk mı, 40dk mı?)
+- **Cornell not alma sistemi:** Nasıl uygulanır, örnek şablon
+- **Feynman tekniği:** Konuyu "birine anlatır gibi" çalışma yöntemi
+- **Aktif hatırlama (active recall):** Flash kart, soru-cevap, kendini test etme
+- **Aralıklı tekrar (spaced repetition):** Anki/Quizlet kullanımı
+- **Dijital araç önerileri:** Forest (odaklanma), Google Calendar (planlama), Notion (not), Todoist (görev) — her biri neden ve nasıl
+- **Fiziksel çalışma ortamı reçetesi:** Masa düzeni, ışık açısı, sıcaklık, telefon mesafesi, su/atıştırmalık hazırlığı
+
+### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
+- **Aileye:**
+  → Bu çocuğun çalışma alışkanlığındaki en büyük engel nedir ve aile bunu nasıl destekleyebilir?
+  → "Ders çalış!" demek NEDEN işe yaramıyor ve bunun yerine ne yapılmalı? (5 alternatif yaklaşım)
+  → Çalışma ortamı hazırlamada ailenin rolü (somut kontrol listesi)
+  → Ödül-ceza dengesini nasıl kurmalı? Bu öğrencinin motivasyon tipine göre ödül sistemi
+  → Sınav döneminde ailenin yapması ve YAPMAMASI gerekenler (5'er madde)
+  → Haftalık "10 dakikalık aile check-in" rutini: Ne sorulmalı, ne sorulMAMALI?
+
+- **Öğretmene:**
+  → Bu öğrenciyi sınıf içinde nasıl desteklenmeli? (3 somut strateji)
+  → Ödev verirken dikkat edilmesi gereken hususlar
+  → Geri bildirim verme yöntemi (bu çalışma profiline en uygun yaklaşım)
 """
 
     elif "Sağ-Sol Beyin" in test_name:
         return """
 ## 🔬 SAĞ-SOL BEYİN DOMINANSI TESTİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test beyin yarım küre baskınlığını ölçer (sağ/sol yüzde + baskınlık seviyesi).
+Bu test beyin yarım küre baskınlığını ölçer (sağ/sol yüzde + baskınlık seviyesi). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Raporda mutlaka yap:**
-- Baskınlık derecesini yorumla: hafif baskınlık vs güçlü baskınlık vs denge
-- Her yarım kürenin bilişsel özelliklerini açıkla ve bu öğrencinin profiline uygula
-- Sol baskınlık özellikleri: analitik, sıralı, mantıksal, detaycı, dil odaklı, zamanlı
-- Sağ baskınlık özellikleri: bütüncül, görsel, yaratıcı, sezgisel, mekan odaklı, eş zamanlı
-- Dengeli profil: her iki yarım küreyi kullanabilme avantajı
+### KATMAN 1: DOMINANS PROFİLİ DERİN ANALİZİ
+- Baskınlık derecesini sayısal farkla yorumla:
+  → %50-55 fark: Hafif baskınlık — iki yarım küre arasında esnek geçiş yapabilir
+  → %56-65 fark: Orta baskınlık — belirgin bir bilişsel tercih oluşmuş
+  → %66-75 fark: Güçlü baskınlık — düşünme stili netleşmiş, zayıf taraf gelişime ihtiyaç duyar
+  → %76+: Çok güçlü baskınlık — tek kanallı düşünme riski, karşı hemisfer atıl kalabilir
+- Baskın yarım kürenin "dünya görüşü" — bu öğrenci hayatı, dersleri, ilişkileri ve sorunları nasıl algılıyor?
+- Bu baskınlığın okul ortamındaki somut yansımaları:
+  → Sınıfta nasıl oturur, nasıl dinler? (Örn: sol baskın öğrenci düzenli not alır, sağ baskın öğrenci şekil çizer)
+  → Ödevlere yaklaşımı nasıldır? (Planlı-sıralı mı, son dakika-yaratıcı atılım mı?)
+  → Sınavda nasıl davranır? (Baştan sona sıralı mı, kolay soruyu önce mi?)
+  → Grup çalışmasında hangi rolü üstlenir? (Organize edici mi, fikir üretici mi?)
+  → Hangi derslerde doğal olarak parlar, hangilerinde zorlanır ve NEDEN?
+- Baskınlık profilinin günlük yaşam alışkanlıklarına etkisi (oda düzeni, zaman algısı, karar verme stili)
 
-**Ders bazlı strateji tablosu oluştur:**
-| Ders | Sol Beyin Stratejisi | Sağ Beyin Stratejisi | Bu Öğrenci İçin Öneri |
-|------|---------------------|---------------------|----------------------|
-| Her ana ders için doldur |
+### KATMAN 2: İKİ HEMİSFER KARŞILAŞTIRMALI ANALİZ
+- **Sol Hemisfer Profili (bu öğrencide %X):**
+  → Analitik düşünme: Parçadan bütüne, adım adım, mantıksal sıralama
+  → Dil ve sözel beceri: Kelime hazinesi, gramer, yazılı ifade
+  → Matematiksel-sayısal işlem: Formül, hesaplama, sıralı problem çözme
+  → Zaman yönetimi: Planlama, takvim, sıralı görev tamamlama
+  → Detay odaklılık: Küçük parçaları fark etme, hata yakalama
+  → Bu öğrencinin sol hemisfer puanının günlük yaşamdaki 3 somut gözlenebilir davranışı
 
-- Sınıf içi oturma, dinleme ve not alma stratejileri
-- Zayıf yarım küreyi güçlendirme egzersizleri
-- Bu baskınlığın kariyer yönelimine etkisi
+- **Sağ Hemisfer Profili (bu öğrencide %X):**
+  → Bütüncül düşünme: Büyük resmi görme, bağlam, ilişkilendirme
+  → Görsel-mekansal beceri: Harita, şekil, resim, 3 boyutlu düşünme
+  → Yaratıcılık ve sezgi: Farklı çözümler üretme, "aha!" anları, beyin fırtınası
+  → Duygusal zeka: Yüz ifadesi okuma, empati, sosyal ipuçlarını yakalama
+  → Müzikal ve ritmik beceri: Melodi, ritim, ses tonu farkındalığı
+  → Bu öğrencinin sağ hemisfer puanının günlük yaşamdaki 3 somut gözlenebilir davranışı
+
+- İki hemisfer arasındaki DENGEYİ veya DENGESİZLİĞİ somut örneklerle açıkla
+- "Corpus callosum köprüsü" metaforu: İki yarım küre arasındaki iletişim ne kadar güçlü?
+
+### KATMAN 3: DERS BAZLI STRATEJİ HARİTASI
+Her ana ders için aşağıdaki tabloyu DOLDUR ve her satırı en az 2 cümle ile açıkla:
+
+| Ders | Bu Öğrencinin Doğal Avantajı | Zorluk Alanı | Baskın Hemisferle Çalışma Tekniği | Zayıf Hemisferi Devreye Sokan Teknik |
+|------|---------------------------|-------------|--------------------------------|-------------------------------------|
+| Matematik | ... | ... | ... | ... |
+| Fen Bilimleri | ... | ... | ... | ... |
+| Türkçe / Edebiyat | ... | ... | ... | ... |
+| Sosyal Bilimler / Tarih | ... | ... | ... | ... |
+| Yabancı Dil | ... | ... | ... | ... |
+| Görsel Sanatlar / Müzik | ... | ... | ... | ... |
+
+Her ders için "çalışma senaryosu" oluştur: "Bu öğrenci Tarih konusu çalışırken önce ... yapmalı, ardından ... kullanmalı, son olarak ... ile pekiştirmeli."
+
+### KATMAN 4: BİLİŞSEL GELİŞİM PROGRAMI
+- **Baskın hemisferi sürdürme:** Bu güçlü tarafı korumak ve ileri taşımak için 5 aktivite
+- **Zayıf hemisferi güçlendirme:** Atıl kalan tarafı aktive etmek için 7 günlük egzersiz programı:
+  → Sol hemisfer zayıfsa: Sudoku, bulmaca, günlük yazma, liste yapma, adım adım tarif takip etme
+  → Sağ hemisfer zayıfsa: Serbest çizim, müzik dinleyerek çalışma, zihin haritası, hikaye yazma, doğa yürüyüşü
+- Her egzersizi "neden işe yarar" ile birlikte açıkla (nöroplastisite prensibi)
+- Haftalık gelişim takvimi oluştur: Hangi gün hangi egzersiz, kaç dakika?
+- 3 ay sonra beklenen gelişimsel değişimler
+
+### KATMAN 5: KARİYER ve GELECEK YÖNELİMİ
+- Bu beyin profilinin doğal olarak yatkın olduğu meslek aileleri (en az 10 meslek):
+  → Sol baskın: Mühendislik, hukuk, muhasebe, yazılım, tıp, akademisyenlik, editörlük...
+  → Sağ baskın: Tasarım, mimarlık, sanat, müzik, girişimcilik, pazarlama, psikoloji...
+  → Dengeli: Yöneticilik, öğretmenlik, danışmanlık, araştırmacılık...
+- Bu öğrencinin spesifik puan dağılımına göre "en uygun 5 kariyer yolu" ve her birinin gerekçesi
+- Lise alan seçimi tavsiyesi (sayısal/eşit ağırlık/sözel) — baskınlıkla ilişkilendirerek
+- Bu profil tipi üniversite sınavına nasıl hazırlanmalı? (Çalışma stratejisi)
+
+### KATMAN 6: AİLE VE ÖĞRETMEN REHBERİ
+- **Aile iletişim rehberi:**
+  → Bu beyin tipiyle konuşurken kullanılması gereken dil ve yaklaşım
+  → Ders çalıştırırken yapılması ve YAPILMAMASI gerekenler (en az 5'er madde)
+  → Ev ortamının bu beyin tipine göre düzenlenmesi (çalışma masası, ışık, ses, renk)
+  → "Bu çocuğun motivasyon anahtarı nedir?" sorusunun cevabı
+- **Öğretmen rehberi:**
+  → Sınıf içi bu öğrenciyi desteklemenin en etkili 5 yolu
+  → Sınav/ödev esnekliği için öneriler
+  → Bu öğrencinin "sıkıldığı an" nasıl fark edilir ve nasıl geri kazanılır?
+  → Grup çalışmasında bu öğrenciye verilecek ideal rol
+- **Bu beyin profilinin "süper gücü":** En iyi versiyonunda bu öğrenci ne başarabilir?
 """
 
     elif "Sınav Kaygısı" in test_name:
         return """
 ## 🔬 SINAV KAYGISI ÖLÇEĞİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test 7 alt boyutta sınav kaygısını ölçer. HER ALT BOYUTU AYRI PARAGRAFTA DERİNLEMESİNE YORUMLA:
+Bu test 7 alt boyutta sınav kaygısını ölçer. Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Alt Boyutlar:**
-1. Başkalarının Görüşü Kaygısı → Sosyal değerlendirme korkusu
-2. Kendi Hakkındaki Görüşü → Öz-yeterlik algısı
-3. Gelecek Endişesi → Uzun vadeli kaygı, belirsizlik intoleransı
-4. Hazırlık Endişesi → Yeterli hazırlanamama korkusu
-5. Bedensel Tepkiler → Somatik belirtiler (mide, terleme, çarpıntı)
-6. Zihinsel Tepkiler → Bilişsel belirtiler (unutma, konsantrasyon kaybı, zihin boşalması)
-7. Genel Kaygı → Yaygın kaygı düzeyi
+### KATMAN 1: 7 ALT BOYUT DERİN PROFİLİ
+Her alt boyutu EN AZ 1 PARAGRAF derinliğinde, bu öğrencinin spesifik puanlarına dayalı olarak analiz et:
 
-**Raporda mutlaka yap:**
-- Her alt boyutu ayrı yorumla ve birbiriyle ilişkilendir
-- "Kaygı profili tipi" belirle: bedensel ağırlıklı mı, zihinsel ağırlıklı mı, sosyal kaynaklı mı, hazırlık odaklı mı?
-- Kaygı-performans ilişkisini açıkla: Yerkes-Dodson yasası çerçevesinde bu öğrencinin kaygısı performansı artırıyor mu yoksa engelliyor mu?
-- Kaygı döngüsünü diyagram şeklinde açıkla: tetikleyici → düşünce → duygu → beden → davranış → sonuç → tetikleyici
-- Bu öğrencinin spesifik kaygı tetikleyicilerini tespit et
-- 5 aşamalı sınav hazırlık protokolü:
-  → Sınavdan 1 hafta önce
-  → Sınavdan 3 gün önce
-  → Sınav akşamı
-  → Sınav sabahı
-  → Sınav anında (ilk 5 dakika stratejisi)
-- Bilişsel yeniden yapılandırma örnekleri (olumsuz düşünce → alternatif düşünce)
-- Nefes ve gevşeme tekniklerini adım adım anlat
-- Aileye özel bölüm: Baskı yapmadan nasıl destek olunur? Sınav döneminde evde nasıl bir ortam yaratılmalı?
+**1. Başkalarının Görüşü Kaygısı (Sosyal Değerlendirme):**
+- Bu öğrenci sınav sonuçlarını başkalarının gözünden mi değerlendiriyor?
+- Kimin görüşü en çok etkiliyor? (Aile, öğretmen, akran, toplum)
+- Yüksek puan: "Ya başaramazsam ne derler?" korkusu — performans kaygısı vs değerlilik kaygısı ayrımı
+- Düşük puan: Sağlıklı bir bağımsızlık mı, yoksa umursamazlık mı?
+- Bu kaygının sınav anındaki somut davranışsal yansıması (kopya bakma dürtüsü, soruyu bildiği halde değiştirme vb.)
+
+**2. Kendi Hakkındaki Görüşü (Öz-Yeterlik Algısı):**
+- Bu öğrenci kendi akademik kapasitesini nasıl değerlendiriyor?
+- "Ben yapamam" inancı ne kadar yerleşmiş? Kanıtları neler? (geçmiş deneyimler, karşılaştırma)
+- Öz-yeterlik ile gerçek performans arasındaki uçurum analizi
+- "Öğrenilmiş çaresizlik" belirtileri var mı?
+- Bu boyutun motivasyon ve ders çalışma isteği üzerindeki doğrudan etkisi
+
+**3. Gelecek Endişesi (Belirsizlik İntoleransı):**
+- "Ya üniversiteyi kazanamazsam?" "Ya hayatım mahvolursa?" düzeyinde felaketleştirme var mı?
+- Kaygının zaman ufku: Sadece yakın sınav mı, yoksa uzun vadeli gelecek kaygısı mı?
+- Belirsizliğe tahammülsüzlük düzeyi — "kesin bilmem lazım" ihtiyacı
+- Bu kaygının ders seçimi, kariyer planlaması gibi kararları nasıl etkilediği
+
+**4. Hazırlık Endişesi (Yeterlilik Kaygısı):**
+- "Yeterince çalışmadım" duygusu: Gerçekçi mi, yoksa mükemmeliyetçilik mi?
+- Ne kadar çalışırsa çalışsın "yetmez" hissi var mı? (sonsuz döngü analizi)
+- Hazırlık endişesi ile erteleme davranışı arasındaki paradoksal ilişki
+- Bu boyutun çalışma süresini artırıp verimliliği düşürme mekanizması
+
+**5. Bedensel Tepkiler (Somatik Kaygı):**
+- Hangi bedensel belirtiler ön planda? Mide bulantısı, terleme, çarpıntı, baş ağrısı, uyuyamama, titreme, nefes darlığı
+- Bu belirtiler ne zaman başlıyor? (günler önce mi, sınav sabahı mı, sınav anında mı?)
+- Bedensel belirtilerin "ikincil kaygı" yaratması: "Ellerim titriyor → Yazamayacağım → Panik"
+- Somatizasyon düzeyi: Kaygı bedene ne kadar yansıyor?
+
+**6. Zihinsel Tepkiler (Bilişsel Kaygı):**
+- Zihin boşalması, unutma, konsantrasyon kaybı, "bildiklerimin hepsini unuttum" deneyimi
+- Ruminasyon (takıntılı düşünme): Sınavdan önce/sonra aynı düşünceleri tekrar tekrar yaşama
+- "White-out" fenomeni: Sınav kağıdını görünce her şeyi unutma
+- Bilişsel kapasitenin kaygı tarafından "işgal edilmesi" mekanizması (çalışma belleği yükü)
+- Bu boyutun gerçek bilgi düzeyi ile sınav performansı arasındaki makası açması
+
+**7. Genel Kaygı (Yaygın Kaygı Düzeyi):**
+- Kaygı sadece sınavlara mı özgü, yoksa genel bir yaşam tutumu mu?
+- Trait kaygı (kişilik özelliği) vs State kaygı (durumsal) ayrımı
+- Genel kaygının diğer 6 alt boyutu nasıl beslediği ve büyüttüğü
+
+### KATMAN 2: KAYGI PROFİLİ TİPLEME
+7 alt boyutun puan desenine göre bu öğrencinin kaygı profilini belirle:
+- **Bedensel Ağırlıklı Kaygı:** Somatik belirtiler dominant → Gevşeme ve beden farkındalığı öncelikli
+- **Bilişsel Ağırlıklı Kaygı:** Zihinsel belirtiler dominant → Bilişsel yeniden yapılandırma öncelikli
+- **Sosyal Kaynaklı Kaygı:** Başkalarının görüşü dominant → Öz-değer çalışması öncelikli
+- **Varoluşsal Kaygı:** Gelecek endişesi dominant → Anlam ve perspektif çalışması öncelikli
+- **Mükemmeliyetçi Kaygı:** Hazırlık endişesi dominant → "Yeterince iyi" kavramı üzerine çalışma
+- **Karma Kaygı:** Birden fazla boyut yüksek → Çok boyutlu müdahale programı
+
+### KATMAN 3: KAYGI DÖNGÜSÜ ve MEKANİZMA ANALİZİ
+Bu öğrencinin spesifik puan profiline göre kişiselleştirilmiş bir kaygı döngüsü çiz:
+```
+Tetikleyici (sınav tarihi açıklanması)
+    ↓
+Otomatik Düşünce ("Bu sınavı geçemeyeceğim çünkü...")
+    ↓
+Duygusal Tepki (korku, endişe, panik, çaresizlik)
+    ↓
+Bedensel Tepki (mide, terleme, çarpıntı, uyuyamama)
+    ↓
+Davranışsal Tepki (erteleme / aşırı çalışma / kaçınma)
+    ↓
+Sonuç (düşük performans / tükenmişlik)
+    ↓
+Doğrulama ("İşte, yine başaramadım") → Döngü başa döner
+```
+- Her adımda bu öğrenciye özel somut örnekler ver
+- Döngüyü kırmak için müdahale edilebilecek EN KOLAY noktayı belirle ve neden orası olduğunu açıkla
+
+### KATMAN 4: YERKES-DODSON PERFORMANS ANALİZİ
+- Kaygı-performans ilişkisini bu öğrenci özelinde değerlendir:
+  → Çok düşük kaygı: Motivasyon eksikliği riski
+  → Optimal kaygı: Performansı artıran sağlıklı gerginlik
+  → Aşırı kaygı: Performansı engelleyen yıkıcı stres
+- Bu öğrenci şu an bu eğrinin neresinde?
+- Optimal bölgeye gelmek için kaygıyı ne yöne hareket ettirmeli?
+- Her ders/sınav tipi için optimal kaygı seviyesi farklı mıdır?
+
+### KATMAN 5: 5 AŞAMALI SINAV HAZIRLIK PROTOKOLÜ
+Bu öğrencinin kaygı profiline özel, adım adım sınav hazırlık programı:
+
+**Aşama 1 — Sınavdan 2 Hafta Önce:**
+- Konuları günlere bölme takvimi (somut şablon)
+- Günlük çalışma rutini (saat, süre, mola)
+- "Endişe saati" tekniği: Günde 15 dk ayrılmış kaygı zamanı, geri kalanında erteleme
+
+**Aşama 2 — Sınavdan 1 Hafta Önce:**
+- Aktif hatırlama ve kendini test etme stratejileri
+- Eksik konuları tamamlama vs mükemmeliyetçilikten vazgeçme dengesi
+- Uyku düzeni oluşturma (saat önerisi)
+
+**Aşama 3 — Sınavdan 3 Gün Önce:**
+- Yeni konu ÖĞRENMEME kuralı — sadece tekrar ve pekiştirme
+- Hafif fiziksel aktivite (yürüyüş, esneme, hafif koşu)
+- Dijital detoks başlangıcı (sosyal medya kısıtlama)
+
+**Aşama 4 — Sınav Akşamı:**
+- Son 2 saat: Özet tarama (detaya girmeme)
+- Çanta hazırlığı, kıyafet seçimi (karar yükünü azaltma)
+- Uyku öncesi gevşeme rutini (4-7-8 nefes tekniği adım adım)
+- "Yarına hazırım" güçlendirme cümlesi
+
+**Aşama 5 — Sınav Sabahı ve Sınav Anı:**
+- Sabah rutini (uyandıktan sınava kadar saat saat)
+- Beslenme önerisi (ne yemeli, ne yememeli)
+- Sınav salonuna giriş stratejisi (erken varma, tanıdıklarla sınav konuşmama)
+- **İlk 5 dakika protokolü:** Kağıdı al → 3 derin nefes → tüm soruları oku → kolay soruyu bul → başla
+- Sınav anı panik stratejisi: "Beynim dondu" anında yapılacak 3 adım
+- Zaman yönetimi: Soru başına süre hesaplama, takılınca geçme kuralı
+
+### KATMAN 6: BİLİŞSEL YENİDEN YAPILANDIRMA ÇALIŞMASI
+Bu öğrencinin kaygı profiline özel en az 7 bilişsel yeniden yapılandırma örneği:
+
+| Otomatik Düşünce | Bilişsel Çarpıtma Türü | Alternatif Düşünce | Kanıt |
+|-------------------|----------------------|-------------------|-------|
+| "Bu sınavda kesin başarısız olacağım" | Felaketleştirme | "Daha önce de zor hissettiğim sınavlarda geçtim" | Geçmiş sınav sonuçları |
+| ... en az 7 satır ... |
+
+- Her düşünce-alternatif çiftini bu öğrencinin yaşına ve durumuna uygun yaz
+- "Düşünce günlüğü" tutma alışkanlığı nasıl oluşturulur (şablon ver)
+
+### KATMAN 7: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Sınav döneminde evde nasıl bir atmosfer yaratılmalı? (5 somut kural)
+- "Nasıl geçti?" sorusu NEDEN yıkıcıdır ve bunun yerine ne sorulmalı?
+- Baskı yapmadan nasıl destek olunur? (Destekleyici vs Baskıcı aile davranışı karşılaştırma tablosu)
+- Çocuğun kaygı belirtilerini nasıl fark eder? (erken uyarı işaretleri listesi)
+- Sınav sonucu kötü geldiğinde yapılması ve YAPILMAMASI gerekenler
+- Ailenin kendi kaygısının çocuğa nasıl bulaştığı ve bunu engellemek için stratejiler
+
+**Öğretmene:**
+- Sınav anında kaygılı öğrenciyi nasıl fark eder ve destekler?
+- Sınav formatında yapılabilecek kaygı azaltıcı düzenlemeler
+- Geri bildirim verirken kaygıyı artırmayan dil kullanımı
+- Sınıf genelinde kaygı azaltıcı ortam yaratma önerileri
+
+**⚠️ NOT:** Klinik düzeyde kaygı belirtileri gözlemlenirse, bu değerlendirme profesyonel psikolojik destek önerisini destekler.
 """
 
     elif "VARK" in test_name:
         return """
 ## 🔬 VARK ÖĞRENME STİLLERİ TESTİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test 4 öğrenme kanalını ölçer: V (Görsel), A (İşitsel), R (Okuma/Yazma), K (Kinestetik).
+Bu test 4 öğrenme kanalını ölçer: V (Görsel), A (İşitsel), R (Okuma/Yazma), K (Kinestetik). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Raporda mutlaka yap:**
-- Baskın stil(ler)i ve multimodal durumu detaylandır (tek baskın mı, çift baskın mı, multimodal mı?)
-- Her stilin ne anlama geldiğini aile dilinde açıkla
-- Baskın stile göre "ideal öğrenme ortamı" tanımla (fiziksel mekan, araçlar, süre, yöntem)
+### KATMAN 1: 4 ÖĞRENME KANALI DERİN PROFİLİ
+Her kanalı EN AZ 1 PARAGRAF derinliğinde, bu öğrencinin spesifik puanlarına dayalı olarak analiz et:
 
-**Her ana ders için detaylı strateji tablosu oluştur:**
+**V — Görsel (Visual) Kanal (Bu öğrencide: ?):**
+- Bilgiyi görsel imgeler, diyagramlar, renkler, şekiller ve mekansal düzenlemelerle işler
+- Bu öğrencide bu kanal ne kadar aktif? Puan düzeyi ne anlama geliyor?
+- Günlük yaşamda gözlemlenebilir belirtiler: Tahtaya mı bakıyor, şekil çiziyor mu, renkli kalemler kullanıyor mu, yüz tanıma becerisi güçlü mü?
+- Bu kanalın güçlü olması: Harita okuma, grafik yorumlama, şema oluşturma, zihin haritası becerisi
+- Bu kanalın zayıf olması: Sözel yönergelerde kaybolma, tahtadaki şekilleri anlamada zorluk
 
-| Ders | Baskın Stile Uygun Teknik | Somut Araç/Materyal | Ders Çalışma Senaryosu |
-|------|--------------------------|--------------------|-----------------------|
-| Matematik | ... | ... | "Önce ... yap, sonra ... kullan, ardından ..." |
-| Fen Bilimleri | ... | ... | ... |
-| Türkçe/Edebiyat | ... | ... | ... |
-| Sosyal Bilimler | ... | ... | ... |
-| Yabancı Dil | ... | ... | ... |
+**A — İşitsel (Aural) Kanal (Bu öğrencide: ?):**
+- Bilgiyi dinleyerek, tartışarak, sesli düşünerek ve ritmik tekrarlarla işler
+- Günlük yaşam belirtileri: Dersi dinleyerek mi öğreniyor, sesli çalışıyor mu, müzik dinlerken çalışabiliyor mu, sözlü talimatları kolayca takip ediyor mu?
+- Bu kanalın güçlü olması: Tartışma grupları, podcast/sesli kitap, öğretmenin anlatımından çok şey alma
+- Bu kanalın zayıf olması: Uzun açıklamalarda dikkat dağılması, sesli ortamda çalışamama
 
-- Her tekniği senaryo formatında anlat: "Tarih konusu çalışırken şunu yap..."
-- Zayıf kanalları güçlendirme stratejileri (neden önemli + nasıl)
-- Dijital araç ve uygulama önerileri (YouTube kanalları, uygulamalar, web siteleri — yaşa uygun)
-- Öğretmenin sınıfta kullanabileceği stile uygun öğretim yöntemleri
-- Sınav çalışmasında stile özel hafıza teknikleri
+**R — Okuma/Yazma (Read/Write) Kanal (Bu öğrencide: ?):**
+- Bilgiyi yazılı metinler, listeler, tanımlar, notlar ve yazma eylemiyle işler
+- Günlük yaşam belirtileri: Kitap okumayı seviyor mu, detaylı not tutuyor mu, yazarak çalışıyor mu, liste yapıyor mu?
+- Bu kanalın güçlü olması: Ders kitabından öğrenme, özet çıkarma, essay yazma, araştırma yapma
+- Bu kanalın zayıf olması: Uzun metinlerden sıkılma, not tutmada isteksizlik
+
+**K — Kinestetik (Kinesthetic) Kanal (Bu öğrencide: ?):**
+- Bilgiyi deneyimleyerek, yaparak, dokunarak, hareket ederek ve pratik uygulama ile işler
+- Günlük yaşam belirtileri: Yerinde duramıyor mu, elleriyle oynuyor mu, laboratuvar ve pratiği seviyor mu, spor/el işi becerisi güçlü mü?
+- Bu kanalın güçlü olması: Deney yapma, model oluşturma, alan gezisi, rol yapma, simülasyon
+- Bu kanalın zayıf olması: Uzun süre oturup dinlemede zorluk, soyut kavramları somutlaştırma ihtiyacı
+
+### KATMAN 2: ÖĞRENME MODALİTESİ ANALİZİ
+4 kanalın puan dağılımına göre bu öğrencinin öğrenme modalitesini belirle:
+- **Tek Baskın (Unimodal):** Bir kanal belirgin yüksek → Bu kanalı maksimize et, diğerlerini destek olarak kullan
+- **Çift Baskın (Bimodal):** İki kanal yakın yüksek → İki kanalın sinerjisini açıkla (Örn: VA=Anlatım dinlerken şekil çizen, VK=Görerek ve yaparak öğrenen)
+- **Üçlü Baskın (Trimodal):** Üç kanal yakın → Esnek öğrenme kapasitesi, farklı ortamlara uyum
+- **Çoklu (Multimodal):** Dört kanal dengeli → Evrensel öğrenici, her yöntemden faydalanır ama hiçbirinde uzmanlaşmamış olabilir
+- Bu modalite tipinin avantajları ve potansiyel riskleri
+- Puan farkları analizi: En güçlü ile en zayıf kanal arasındaki fark ne anlama geliyor?
+
+### KATMAN 3: DERS BAZLI ÖĞRENME REÇETESİ
+Her ana ders için bu öğrencinin baskın stiline uygun detaylı çalışma senaryosu oluştur:
+
+| Ders | Baskın Stile Uygun Teknik | Somut Araç/Materyal | Adım Adım Çalışma Senaryosu |
+|------|--------------------------|--------------------|-----------------------------|
+| **Matematik** | ... | ... | "Önce ... yap, sonra ... kullan, ardından ... ile pekiştir" |
+| **Fen Bilimleri** | ... | ... | "..." |
+| **Türkçe / Edebiyat** | ... | ... | "..." |
+| **Sosyal Bilimler / Tarih** | ... | ... | "..." |
+| **Yabancı Dil (İngilizce)** | ... | ... | "..." |
+| **Görsel Sanatlar / Müzik** | ... | ... | "..." |
+
+Her senaryo EN AZ 3 cümle olmalı ve somut, uygulanabilir adımlar içermeli.
+Senaryo formatı: "Bu öğrenci [ders] konusu çalışırken: 1) ... yapmalı, 2) ... kullanmalı, 3) ... ile pekiştirmeli."
+
+### KATMAN 4: SINAV ve HAFIZA STRATEJİLERİ
+Bu öğrencinin baskın stiline özel sınav hazırlık ve hafıza teknikleri:
+
+**Kodlama (bilgiyi kaydetme) aşaması:**
+- V: Zihin haritası, renk kodlama, şema, infografik oluşturma teknikleri (adım adım)
+- A: Sesli not kaydı, kendine anlatma, çalışma arkadaşıyla tartışma, müzikle eşleştirme
+- R: Cornell notu, özet çıkarma, flash kart yazma, kendi sınav sorusu oluşturma
+- K: Yürürken tekrar, yazı tahtasına yazma, jest ve mimiklerle eşleştirme, model yapma
+→ Bu öğrencinin baskın stiline göre ÖNCELİKLİ 3 kodlama tekniğini seç ve adım adım açıkla
+
+**Depolama (bilgiyi saklama) aşaması:**
+- Aralıklı tekrar takvimi (bu stile uygun: görsel kart mı, sesli tekrar mı, yazılı test mi?)
+- Uyku öncesi 10 dakika tekrarı — stil bazlı format önerisi
+- Hafıza sarayı tekniğinin bu stile uyarlanması
+
+**Geri çağırma (sınavda hatırlama) aşaması:**
+- Sınav anında stil bazlı hatırlama ipuçları:
+  → V: "O şemayı gözünde canlandır", renk ve konum ipuçları
+  → A: "O anlatımı kulaklarında duyar gibi ol", ritmik tekrar ipuçları
+  → R: "O notu yazdığın sayfayı hatırla", liste ve başlık ipuçları
+  → K: "O deneyi yaparken ne hissettiğini hatırla", hareket ve dokunma ipuçları
+
+### KATMAN 5: ZAYIF KANALLARI GÜÇLENDİRME PROGRAMI
+- Neden önemli: Tek kanala bağımlılık riski ve çoklu kanal avantajı
+- Her zayıf kanal için 5 günlük egzersiz programı:
+  → Egzersiz adı, süresi, nasıl yapılır, neden işe yarar
+- Zayıf kanalı güçlendirmenin baskın kanalı ZAYIFLATMAYACAĞI garantisi (nöroplastisite)
+- 1 ay sonra beklenen gelişim ve kontrol yöntemi
+- Evde yapılabilecek kanal geliştirme aktiviteleri (yaşa uygun)
+
+### KATMAN 6: DİJİTAL ARAÇ ve KAYNAK REÇETESİ
+Bu öğrencinin baskın stiline göre kişiselleştirilmiş dijital araç önerileri:
+- **V için:** Canva, MindMeister, YouTube eğitim kanalları (somut kanal isimleri), infografik araçları
+- **A için:** Podcast önerileri, sesli kitap uygulamaları, kayıt araçları, diksiyon uygulamaları
+- **R için:** Notion, Obsidian, Anki, blog yazma platformları, e-kitap kaynakları
+- **K için:** Simülasyon uygulamaları, deney videoları, maker/DIY projeleri, sportif aktiviteler
+→ Bu öğrencinin baskın stiline göre "İLK 3 İNDİR" listesi oluştur
+
+### KATMAN 7: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Bu öğrencinin öğrenme stili evde nasıl desteklenmeli?
+- Çalışma ortamının stile göre düzenlenmesi (masa, ışık, ses, renk, materyal)
+- "Ders çalıştırırken" bu stile uygun yaklaşım (Örn: K baskın çocuğa "Otur, oku!" demek İŞE YARAMAZ)
+- Aile bireylerinin kendi öğrenme stilleri farklıysa oluşan çatışma ve çözümü
+- Bu stilin günlük yaşamda nasıl destekleneceği (hobi, aktivite, sohbet biçimi)
+
+**Öğretmene:**
+- Sınıf içi bu öğrenciyi desteklemenin en etkili 5 yolu
+- Ödev formatını bu stile uygun alternatif şekillerle sunma önerileri
+- Değerlendirme yöntemlerinde stil bazlı esneklik önerileri
+- Bu stilin sınıf dinamiğine katkısı ve risk alanları
 """
 
     elif "Çoklu Zeka" in test_name:
         return """
 ## 🔬 ÇOKLU ZEKA TESTİ (GARDNER) — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test Gardner'ın 8 zeka alanını %0-100 ölçeğinde ölçer:
-Sözel-Dilsel, Mantıksal-Matematiksel, Görsel-Uzamsal, Bedensel-Kinestetik, Müzikal-Ritmik, Kişilerarası (Sosyal), İçsel (Özedönük), Doğacı.
+Bu test Gardner'ın 8 zeka alanını %0-100 ölçeğinde ölçer. Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Raporda mutlaka yap:**
+### KATMAN 1: 8 ZEKA ALANI DERİN PROFİLİ
+Her zeka alanını EN AZ 1 PARAGRAF derinliğinde, bu öğrencinin spesifik puanlarına dayalı olarak analiz et:
 
-**8 Zekanın Her Birini 1 Paragraf Derinliğinde Yorumla:**
-- Puanın ne anlama geldiği
-- Günlük hayatta nasıl gözlemlenir
-- Akademik hayatta nasıl yansır
-- Gelişim önerisi
+**1. Sözel-Dilsel Zeka (Bu öğrencide: %?):**
+- Kelime hazinesi, dil kullanımı, okuma/yazma kapasitesi, ikna becerisi, hikaye anlatma
+- Bu puanın okul ortamındaki yansıması: Türkçe/Edebiyat, yabancı dil derslerindeki performans
+- Günlük yaşam göstergeleri: Kitap okuma isteği, tartışma becerisi, kelime oyunları, yazma alışkanlığı
+- Bu düzeyin gelişim potansiyeli ve somut güçlendirme aktiviteleri
 
-**Zeka Profili Analizi:**
-- Profil tipi: Uzmanlaşmış (1-2 zirve) / Çok yönlü (3-4 yüksek) / Dengeli (hepsi orta)
-- En güçlü 3 zekanın sinerjisi: birlikte ne anlama geliyorlar?
-- En zayıf 2 zekanın akademik etkisi ve telafi stratejileri
-- "Zeka imzası" — bu öğrencinin benzersiz zeka kombinasyonunu 1 cümlede tanımla
+**2. Mantıksal-Matematiksel Zeka (Bu öğrencide: %?):**
+- Sayısal akıl yürütme, problem çözme, örüntü tanıma, neden-sonuç ilişkisi, soyut düşünme
+- Okul yansıması: Matematik, fen, kodlama derslerindeki doğal eğilim
+- Günlük yaşam: Strateji oyunları, bulmaca merakı, "neden?" sorusu sıklığı, sistematik düşünme
+- Gelişim potansiyeli ve aktiviteler
 
-**Zeka-Ders Eşleştirme Tablosu:**
-| Zeka Alanı | Puan | İlgili Dersler | Güçlendirme Aktivitesi |
-|-----------|------|---------------|----------------------|
-| Her 8 zeka için doldur |
+**3. Görsel-Uzamsal Zeka (Bu öğrencide: %?):**
+- 3 boyutlu düşünme, mekansal ilişkiler, görsel hafıza, renk/şekil duyarlılığı, harita okuma
+- Okul yansıması: Geometri, resim, harita, grafik yorumlama, deney şeması çizme
+- Günlük yaşam: Lego/puzzle ilgisi, yön bulma becerisi, çizim/boyama merakı, fotoğraf çekme
+- Gelişim potansiyeli ve aktiviteler
 
-**Zeka-Kariyer Eşleştirme Tablosu:**
-| Güçlü Zeka | Kariyer Alanları | Ünlü İsimler | Somut Adım |
-|-----------|-----------------|-------------|-----------|
-| Her güçlü zeka için doldur |
+**4. Bedensel-Kinestetik Zeka (Bu öğrencide: %?):**
+- Beden kontrolü, el becerisi, koordinasyon, dokunsal öğrenme, fiziksel ifade
+- Okul yansıması: Beden eğitimi, laboratuvar, el işi, drama, dans, spor
+- Günlük yaşam: Sportif yetenek, el işi becerisi, hareket ihtiyacı, tamir/yapma merakı
+- Gelişim potansiyeli ve aktiviteler
 
-- Ders dışı aktivite, kulüp ve hobi önerileri (en az 5)
-- Evde yapılabilecek zeka geliştirme aktiviteleri
+**5. Müzikal-Ritmik Zeka (Bu öğrencide: %?):**
+- Melodi algılama, ritim duygusu, ses tonu farkındalığı, müzikal bellek, enstrüman yeteneği
+- Okul yansıması: Müzik dersi, ritmik sayma, şiir ezberinde ritim kullanma
+- Günlük yaşam: Şarkı söyleme, enstrüman çalma, müzik dinleme tercihleri, ses taklidi
+- Gelişim potansiyeli ve aktiviteler
+
+**6. Kişilerarası (Sosyal) Zeka (Bu öğrencide: %?):**
+- Empati, liderlik, iş birliği, çatışma çözme, ikna, sosyal ipuçlarını okuma
+- Okul yansıması: Grup çalışması, sınıf başkanlığı, akran arabuluculuğu, takım sporları
+- Günlük yaşam: Arkadaşlık kalitesi, sosyal çevre genişliği, organize etme isteği
+- Gelişim potansiyeli ve aktiviteler
+
+**7. İçsel (Özedönük) Zeka (Bu öğrencide: %?):**
+- Öz-farkındalık, duygusal okuryazarlık, kendi güçlü/zayıf yanlarını bilme, içsel motivasyon
+- Okul yansıması: Bağımsız çalışma tercihi, öz-değerlendirme becerisi, kendi hedeflerini koyma
+- Günlük yaşam: Günlük tutma, yalnız vakit geçirme ihtiyacı, derin düşünme, felsefe ilgisi
+- Gelişim potansiyeli ve aktiviteler
+
+**8. Doğacı Zeka (Bu öğrencide: %?):**
+- Doğa gözlemi, sınıflandırma, çevre duyarlılığı, hayvan/bitki ilgisi, ekolojik düşünme
+- Okul yansıması: Fen/biyoloji, çevre projeleri, arazi çalışmaları, koleksiyon yapma
+- Günlük yaşam: Doğa yürüyüşü, hayvan sevgisi, bahçe işleri, doğa belgeselleri
+- Gelişim potansiyeli ve aktiviteler
+
+### KATMAN 2: ZEKA PROFİLİ ŞEKİL ANALİZİ
+8 zekanın puan dağılımının şeklini yorumla:
+- **Uzmanlaşmış Profil (1-2 zirve):** Belirgin güçlü alanlar → Derinleşme stratejisi
+- **Çok Yönlü Profil (3-4 yüksek):** Geniş yetenek yelpazesi → Çapraz alan sinerjisi
+- **Dengeli Profil (hepsi orta):** Esnek ama zirvesiz → Potansiyel keşif ihtiyacı
+- **Dağınık Profil (yüksek-düşük karışık):** Belirgin güçlü ve zayıf yanlar → Stratejik gelişim
+- Bu öğrencinin profil tipi hangisi ve bunun anlamı nedir?
+
+**"Zeka İmzası" Tespiti:**
+- En güçlü 3 zekanın birleşimini tek bir cümlede tanımla: "Bu öğrenci, [X] zekasının [özelliği] ile [Y] zekasının [özelliği]ni birleştiren, [Z] zekasıyla desteklenen bir [etiket] profilidir."
+- Bu imzanın dünyada nasıl bir iz bırakabileceğini anlat
+
+**Sinerjik Zeka Etkileşimleri:**
+- Hangi güçlü zekalar birbirini destekliyor? (Örn: Sözel + Sosyal = Doğal lider/konuşmacı)
+- Hangi zeka çiftleri çelişiyor? (Örn: Yüksek İçsel + Düşük Sosyal = Yalnız çalışmayı tercih)
+- Bu etkileşimlerin okul yaşamındaki somut yansımaları
+
+### KATMAN 3: ZEKA-DERS EŞLEŞTİRME HARİTASI
+Kapsamlı bir tablo oluştur:
+
+| Zeka Alanı | Puan | Doğal Olarak Güçlü Olduğu Dersler | Bu Zekayı Kullanan Çalışma Tekniği | Evde Güçlendirme Aktivitesi |
+|-----------|------|--------------------------------|-----------------------------------|---------------------------|
+| Her 8 zeka için doldur — her satır en az 2 cümle açıklama içermeli |
+
+**Bu öğrencinin güçlü zekalarını kullanarak zayıf dersleri nasıl öğrenebileceğini somut senaryolarla göster:**
+- Örn: Müzikal zeka güçlü + Matematik zayıf → "Formülleri ritmik tekerleme yaparak ezberle, çarpım tablosunu şarkı haline getir"
+- Örn: Kinestetik zeka güçlü + Tarih zayıf → "Tarihi olayları canlandırarak öğren, harita üzerinde yürüyerek ülkeleri keşfet"
+- Bu öğrenciye özel en az 5 çapraz strateji geliştir
+
+### KATMAN 4: ZEKA-KARİYER EŞLEŞTİRME HARİTASI
+Bu öğrencinin güçlü zeka kombinasyonuna göre kariyer yönlendirmesi:
+
+| Güçlü Zeka Kombinasyonu | Uygun Kariyer Alanları | Ünlü Rol Modeller | Bu Öğrenci İçin Somut İlk Adım |
+|------------------------|---------------------|-------------------|-------------------------------|
+| Her güçlü zeka çifti/üçlüsü için en az 5 meslek önerisi |
+
+- Kariyer önerilerini Türkiye iş piyasası gerçekleriyle ilişkilendir
+- Lise alan seçimi tavsiyesi (bu zeka profiline göre)
+- Üniversite bölüm önerileri (en az 8 bölüm, her birinin gerekçesiyle)
+- "21. yüzyıl meslekleri" arasında bu profile uygun yeni nesil kariyer yolları
+
+### KATMAN 5: KİŞİSEL GELİŞİM PROGRAMI
+**Güçlü zekaları derinleştirme (ilk 3):**
+- Her güçlü zeka için: kulüp, yarışma, kurs, atölye, proje önerileri
+- "Uzmanlık yolu" haritası: Bugün → 6 ay sonra → 1 yıl sonra → 3 yıl sonra
+
+**Zayıf zekaları güçlendirme (son 2):**
+- Her zayıf zeka için haftalık 3 egzersiz (süre, yöntem, beklenen etki)
+- Neden zayıf zekaları da geliştirmek gerekir? (nöroplastisite, bütüncül gelişim)
+
+**Ders dışı aktivite programı:**
+- Bu zeka profiline en uygun 7 ders dışı aktivite (her biri için neden ve nasıl)
+- Yaz tatili gelişim planı
+- Hafta sonu aktivite önerileri
+
+### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Bu çocuğun en güçlü zekaları üzerinden nasıl motive edilir?
+- "Bu çocuk neden [şunu] seviyor ama [bunu] yapmak istemiyor?" sorusunun zeka profiliyle açıklaması
+- Ev ortamında zeka geliştirme: Her oda bir öğrenme fırsatı (mutfak=matematik, bahçe=doğacı, salon=sosyal...)
+- Hobi ve kurs seçiminde zeka profilini rehber olarak kullanma
+- Bu profildeki bir çocukla iletişim kurmanın en etkili yolu
+- Yapılması ve YAPILMAMASI gerekenler (en az 5'er madde)
+
+**Öğretmene:**
+- Bu öğrencinin sınıf içi "parlama anları" ne zaman ve nasıl oluşur?
+- Farklılaştırılmış öğretim stratejileri (bu zeka profiline özel ödev/proje alternatifleri)
+- Değerlendirmede zeka dostu yaklaşımlar (sadece yazılı sınav yerine alternatif değerlendirme)
+- Bu öğrenciye "doğru görevi" vermek: Grup çalışmasında, sınıf etkinliğinde, projede ideal rol
+- Bu öğrencinin "süper gücü" — en iyi versiyonunda sınıfa ve dünyaya ne katar?
 """
 
     elif "Holland" in test_name:
         return """
 ## 🔬 HOLLAND MESLEKİ İLGİ ENVANTERİ (RIASEC) — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test 6 mesleki ilgi tipini 0-28 puan aralığında ölçer:
-R (Gerçekçi), I (Araştırmacı), A (Sanatçı), S (Sosyal), E (Girişimci), C (Geleneksel).
+Bu test 6 mesleki ilgi tipini 0-28 puan aralığında ölçer. Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-**Raporda mutlaka yap:**
+### KATMAN 1: 6 TİP DERİN PROFİLİ
+Her tipi EN AZ 1 PARAGRAF derinliğinde, bu öğrencinin spesifik puanlarına dayalı olarak analiz et:
 
-**6 Tipin Her Birini 1 Paragraf Derinliğinde Yorumla:**
-- Bu öğrencinin puanı ne anlama geliyor?
-- Bu düzeydeki ilgi günlük hayatta nasıl gözlemlenir?
-- Hangi aktiviteler, dersler ve ortamlar bu ilgiyle uyumlu?
+**R — Gerçekçi (Realistic) Tip (Bu öğrencide: ?/28):**
+- Somut, pratik, fiziksel, el becerisi, araç-gereç, doğa, yapı-inşa, tamir
+- Bu puanın anlamı: Yüksekse → somut sonuçlar üreten işler ister, düşükse → masabaşı/teorik işleri tercih eder
+- Okul yansıması: Atölye, laboratuvar, teknoloji-tasarım, beden eğitimi, tarım, el sanatları
+- Bu öğrencide R tipinin günlük yaşamdaki 3 somut göstergesi
+- R tipi insanların çalışma ortamı tercihi: Açık hava, atölye, fabrika, laboratuvar, inşaat sahası
 
-**3 Harfli Holland Kodu Analizi:**
-- En yüksek 3 tipi belirle ve kodun birleşik anlamını açıkla
-- Holland altıgenindeki konumlandırma: bitişik tipler (uyumlu) vs karşıt tipler (çelişkili)
-- Bu kodun iş dünyasındaki karşılığı — hangi sektörler, hangi iş ortamları?
+**I — Araştırmacı (Investigative) Tip (Bu öğrencide: ?/28):**
+- Merak, analiz, araştırma, sorgulama, keşfetme, bilimsel yöntem, veri, hipotez
+- Okul yansıması: Fen, matematik, bilim olimpiyatları, araştırma projeleri, deney tasarlama
+- Bu öğrencide I tipinin günlük yaşamdaki göstergeleri (soru sorma sıklığı, okuma tercihleri, belgesel izleme)
+- I tipi insanların çalışma ortamı: Üniversite, araştırma merkezi, laboratuvar, kütüphane
 
-**Kapsamlı Kariyer Haritası:**
+**A — Sanatçı (Artistic) Tip (Bu öğrencide: ?/28):**
+- Yaratıcılık, özgünlük, estetik, hayal gücü, ifade özgürlüğü, kural dışılık
+- Okul yansıması: Görsel sanatlar, müzik, drama, edebiyat, yaratıcı yazarlık, tasarım
+- Bu öğrencide A tipinin göstergeleri (giyim tarzı, oda dekorasyonu, hobi seçimi, müzik tercihi)
+- A tipi insanların çalışma ortamı: Stüdyo, sahne, atölye, serbest çalışma, yaratıcı ajans
 
-| # | Meslek / Alan | Holland Uyumu | Eğitim Yolu | Türkiye'de İş İmkanı | Bu Öğrenci İçin Neden? |
-|---|-------------|-------------|------------|---------------------|---------------------|
-| 1-15 arası doldur — en az 15 meslek önerisi |
+**S — Sosyal (Social) Tip (Bu öğrencide: ?/28):**
+- Yardım etme, öğretme, iyileştirme, rehberlik, empati, ekip çalışması, iletişim
+- Okul yansıması: Grup çalışmaları, akran danışmanlığı, gönüllülük, liderlik, sosyal projeler
+- Bu öğrencide S tipinin göstergeleri (arkadaş çevresi, yardım etme isteği, dinleme becerisi)
+- S tipi insanların çalışma ortamı: Okul, hastane, danışma merkezi, STK, sosyal hizmet
 
-**Eğitim Yönlendirme:**
-- Lise alan seçimi tavsiyesi: Sayısal / Eşit Ağırlık / Sözel / Dil (gerekçesiyle)
-- Üniversite bölüm önerileri: En uygun 8 bölüm ve her birinin neden uygun olduğu
-- Yurt dışı eğitim düşünülüyorsa alternatif yollar
+**E — Girişimci (Enterprising) Tip (Bu öğrencide: ?/28):**
+- Liderlik, ikna, risk alma, rekabet, yönetme, satış, strateji, etki yaratma
+- Okul yansıması: Sınıf/okul başkanlığı, münazara, proje liderliği, kulüp kurma, organizasyon
+- Bu öğrencide E tipinin göstergeleri (karar verme tarzı, ikna becerisi, para/iş merakı)
+- E tipi insanların çalışma ortamı: Ofis, toplantı odası, sahne, pazar, yönetim katı
 
-**Kariyer Keşif Planı:**
-- Bu yaz yapılabilecek staj/gönüllülük önerileri
-- Katılınabilecek kulüp, atölye, yarışma önerileri
-- İzlenecek/okunacak kaynak önerileri (belgesel, kitap, podcast)
-- İş gölgeleme (job shadowing) programları
+**C — Geleneksel (Conventional) Tip (Bu öğrencide: ?/28):**
+- Düzen, detay, doğruluk, sistem, prosedür, veri organizasyonu, güvenilirlik
+- Okul yansıması: Düzenli not tutma, zamanında ödev teslimi, kural takibi, arşivleme
+- Bu öğrencide C tipinin göstergeleri (masa düzeni, planlama alışkanlığı, detaycılık)
+- C tipi insanların çalışma ortamı: Ofis, muhasebe, kütüphane, banka, devlet dairesi
 
-⚠️ *Bu değerlendirme profesyonel kariyer danışmanlığını destekler; tek başına kesin yönlendirme için yeterli değildir.*
+### KATMAN 2: 3 HARFLİ HOLLAND KODU DERİN ANALİZİ
+- En yüksek 3 tipi belirle → Holland kodu (Örn: "IAS", "SEC", "RIA")
+- **Kod yorumlama:** Bu üç harfin birleşik anlamını detaylı açıkla — tek tek değil, BİRLİKTE ne söylüyorlar?
+- **Holland altıgeni (hexagon) analizi:**
+  → Bitişik tipler (Örn: RI, IA, AS, SE, EC, CR) = Uyumlu, doğal geçiş
+  → Karşıt tipler (Örn: R-S, I-E, A-C) = Gerilim veya zenginlik göstergesi
+  → Bu öğrencinin kodundaki tiplerin altıgendeki konumları uyumlu mu, çelişkili mi?
+- **Kodun "hikayesi":** Bu kod, nasıl bir iş ortamı, yaşam tarzı ve değer sistemi arayan birini tarif ediyor?
+- **Kodun puan güvenilirliği:** İlk 3 tip arasındaki puan farkları analizi — net ayrışma var mı yoksa belirsiz mi?
+
+### KATMAN 3: KAPSAMLI KARİYER HARİTASI
+Bu öğrencinin 3 harfli koduna göre detaylı meslek önerileri:
+
+| # | Meslek / Alan | Holland Kodu Uyumu | Gerekli Eğitim | Türkiye'de İş İmkanı | Maaş Potansiyeli | Bu Öğrenci İçin Neden Uygun? |
+|---|-------------|-------------------|---------------|---------------------|-----------------|---------------------------|
+| 1-20 arası doldur — EN AZ 20 meslek önerisi |
+
+Meslekleri aşağıdaki kategorilere ayırarak sun:
+- **💎 En Uygun 5 Meslek:** Tüm 3 tip ile yüksek uyum
+- **🔵 İyi Uyumlu 5 Meslek:** 2 tip ile uyum
+- **🟢 Keşfedilmeye Değer 5 Meslek:** 1 tip ile uyum ama diğer özelliklere de hitap eden
+- **🆕 Gelecek Meslekleri 5 Meslek:** Yapay zeka, dijital dönüşüm, yeşil ekonomi alanlarından
+
+### KATMAN 4: EĞİTİM YÖNLENDİRME
+**Lise Alan Seçimi:**
+- Sayısal / Eşit Ağırlık / Sözel / Dil → hangisi ve NEDEN (Holland koduyla bağlantılı gerekçe)
+- Bu alanda başarılı olmak için gereken özellikler ve bu öğrencinin profiliyle eşleştirme
+- "Ya yanlış alan seçersem?" endişesini ele alma
+
+**Üniversite Bölüm Önerileri:**
+| # | Bölüm | Üniversite Önerileri (Türkiye) | Holland Uyumu | Gelecek Vizyonu |
+|---|-------|-------------------------------|-------------|----------------|
+| 1-10 arası en az 10 bölüm önerisi |
+
+**Alternatif Eğitim Yolları:**
+- Yurt dışı eğitim düşünülüyorsa: Uygun ülkeler ve bölümler
+- Meslek yüksekokulu alternatifi (bu profile uygunsa)
+- Sertifika programları ve online eğitim yolları
+
+### KATMAN 5: KARİYER KEŞİF ve EYLEM PLANI
+Bu öğrencinin kariyer keşif yolculuğu için somut adımlar:
+
+**Hemen Yapılabilecek (Bu Hafta):**
+- Online kariyer testi çapraz doğrulaması (KPSS meslek tercihi, İŞKUR mesleki eğilim vb.)
+- Holland koduna uygun YouTube kanalları, belgeseller, kitap önerileri (somut isimlerle)
+- Sosyal medyada takip edilecek meslek profesyonelleri
+
+**Kısa Vadeli (1-3 Ay):**
+- İş gölgeleme (job shadowing): Bu meslekleri yakından görmek için kimlerle iletişime geçilmeli?
+- Staj/gönüllülük fırsatları (yaşa uygun)
+- Kariyer fuarları, üniversite tanıtım günleri
+
+**Orta Vadeli (3-12 Ay):**
+- Kulüp, yarışma, proje katılımları (Holland koduna uygun)
+- Yaz okulu/kampı önerileri
+- Mentorluk programları
+
+**Uzun Vadeli (1-3 Yıl):**
+- Portfolyo/CV oluşturma alışkanlığı
+- Yetkinlik geliştirme planı (bu kariyer alanı için hangi beceriler gerekli?)
+- Üniversite başvuru stratejisi
+
+### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Bu çocuğun mesleki ilgi profili ne söylüyor? (Aile dilinde, jargonsuz açıklama)
+- "Ben doktor/avukat/mühendis olmasını istiyordum" durumunda: Aile beklentisi vs çocuğun doğal eğilimi çatışmasını nasıl yönetmeli?
+- Bu profildeki bir çocuğu motive etmenin en etkili yolu (hangi ödüller, hangi teşvikler?)
+- Kariyer keşif sürecinde ailenin rolü: Destekleyici vs yönlendirici dengesini nasıl kurar?
+- Yapılması ve YAPILMAMASI gereken 5'er madde
+- Bu profil tipiyle "yemek masasında kariyer sohbeti" nasıl yapılır?
+
+**Öğretmene:**
+- Bu öğrenciyi motive eden ders içi aktivite türleri (Holland tipine göre)
+- Proje ödevi ve performans görevi önerirken bu profili nasıl kullanabilir?
+- Kariyer günü / mesleki tanıtım etkinliklerinde bu öğrenci için özel yönlendirme
+- Rehberlik servisiyle paylaşılabilecek özet bilgiler
+
+**⚠️ YASAL UYARI:** Bu değerlendirme profesyonel kariyer danışmanlığını destekler; tek başına kesin mesleki yönlendirme için yeterli değildir. Nihai kararlar çoklu veri kaynağı ve uzman görüşüyle verilmelidir.
 """
 
     elif "D2 Dikkat" in test_name:
         return """
 ## 🔬 D2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test, Brickenkamp d2 dikkat testinin dijital adaptasyonudur. Aşağıdaki metrikleri analiz et:
+Bu test, Brickenkamp d2 dikkat testinin dijital adaptasyonudur (14 satır × 20 sembol, satır başı 15sn). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-### KATMAN 1: TEMEL METRİKLER
-- **CP (Konsantrasyon Performansı):** Doğru hedefler − Yanlış işaretlemeler. En önemli gösterge.
-- **TN-E (Toplam Performans):** Toplam işaretleme − Toplam hata. Genel performans.
-- **E1 (Atlama Hatası):** Hedef atlandı → Dikkat dağılması göstergesi
-- **E2 (Yanlış İşaretleme):** Hedef olmayan işaretlendi → Dürtüsellik göstergesi
-- **FR (Dalgalanma):** Satırlar arası performans farkı → Dikkat sürdürülebilirliği
+### KATMAN 1: TEMEL METRİKLER DERİN ANALİZİ
+Her metriği ayrı ayrı, bu öğrencinin spesifik değerlerine dayalı olarak yorumla:
 
-### KATMAN 2: PROFİL ANALİZİ
-- Hız-Doğruluk dengesi: Dürtüsel mi (hızlı ama hatalı), temkinli mi (yavaş ama doğru), dengeli mi?
-- Satır performans eğrisi: Yorulma etkisi var mı? İlk satırlar mı son satırlar mı daha iyi?
-- Hata türü dağılımı: E1 > E2 ise dikkat eksikliği, E2 > E1 ise dürtüsellik ön planda
+**CP (Konsantrasyon Performansı) — En Kritik Gösterge:**
+- Hesaplama: Doğru hedef isabetleri − Yanlış işaretlemeler (E2)
+- Bu öğrencinin CP değeri ne anlama geliyor? (Mümkün maksimuma oranla yüzdelik)
+- CP'nin %80+ olması: Üstün konsantrasyon, dikkat kapasitesi çok güçlü
+- CP'nin %60-80 olması: İyi düzeyde, ancak gelişim alanı var
+- CP'nin %40-60 olması: Ortalama, yapılandırılmış dikkat çalışması gerekli
+- CP'nin %40 altı: Dikkat sürdürülebilirliğinde belirgin zorluk, detaylı değerlendirme önerilir
 
-### KATMAN 3: AKADEMİK ETKİ
-- Dikkat seviyesinin ders dinleme, ödev yapma, sınav çözme üzerindeki etkisi
-- Yaşa uygun beklentiler çerçevesinde değerlendirme
-- Dikkat sürdürülebilirliğinin uzun sınavlar ve proje çalışmaları açısından önemi
+**TN-E (Toplam Performans):**
+- Toplam işaretleme − Toplam hata = Net performans
+- Hız ve doğruluğu birlikte değerlendiren bileşik gösterge
+- Bu değerin yaş grubundaki beklentiyle karşılaştırılması
 
-### KATMAN 4: SOMUT ÖNERİLER
-- Dikkat geliştirme egzersizleri (yaşa uygun)
-- Çalışma ortamı düzenlemesi
-- Pomodoro ve odaklanma teknikleri
-- Gerekiyorsa uzman yönlendirmesi (dikkat eksikliği değerlendirmesi)
+**E1 (Atlama Hatası) — Dikkat Dağılması Göstergesi:**
+- Kaçırılan hedef sayısı: Her atlanan hedef, dikkat kesintisi anlamına gelir
+- E1'in hangi satırlarda yoğunlaştığını analiz et (başlangıç, orta, son satırlar)
+- Yüksek E1: "Bakıyor ama göremiyor" — dikkat dağılması, odak kaybı, seçici dikkat zayıflığı
+- E1'in akademik yansıması: Sınavda soruyu atlama, metinde önemli detayı kaçırma
+
+**E2 (Yanlış İşaretleme) — Dürtüsellik Göstergesi:**
+- Hedef olmayan sembolleri işaretleme: Dürtüsel, kontrolsüz tepki verme eğilimi
+- Yüksek E2: "Düşünmeden yapıyor" — hız uğruna doğruluktan vazgeçme
+- E2'nin akademik yansıması: Sınavda aceleyle yanlış şıkkı işaretleme, okuduğunu anlamadan geçme
+
+**E1/E2 Oranı — Hata Profili Tespiti:**
+- E1 >> E2: Dikkat eksikliği ağırlıklı profil (odak kayıp, dalgınlık)
+- E2 >> E1: Dürtüsellik ağırlıklı profil (acelecilik, kontrolsüzlük)
+- E1 ≈ E2: Karma profil (hem dikkat hem dürtüsellik sorunu)
+- Bu oranın klinik önemi ve akademik hayattaki somut etkileri
+
+**FR (Dalgalanma Oranı) — Dikkat Sürdürülebilirliği:**
+- En yüksek satır CP − En düşük satır CP
+- FR ≤3: Çok tutarlı — dikkat sürekliliği mükemmel
+- FR 4-5: Tutarlı — normal dalgalanma
+- FR 6-8: Değişken — dikkat dalgalanması belirgin
+- FR >8: Çok değişken — ciddi dikkat sürdürülebilirlik sorunu
+
+### KATMAN 2: SATIR BAZLI PERFORMANS EĞRİSİ ANALİZİ
+14 satırlık performans eğrisini detaylı analiz et:
+
+**Zamana Bağlı Performans Deseni:**
+- İlk 4 satır (ısınma dönemi): Performans nasıl başlıyor? Yavaş başlangıç mı, hızlı dalış mı?
+- Orta 6 satır (sürdürme dönemi): Performans stabil mi, dalgalı mı?
+- Son 4 satır (yorulma dönemi): Performans düşüyor mu, aynı mı kalıyor, yoksa artıyor mu?
+
+**Desen Tipleri:**
+- **Düz çizgi:** Tutarlı performans → Güçlü dikkat sürdürme kapasitesi
+- **Aşağı eğim:** Artan yorulma → Dikkat süresi sınırlı, uzun görevlerde zorluk
+- **Yukarı eğim:** Geç ısınma → Yavaş başlıyor ama momentum kazanıyor
+- **Testere dişi:** Dalgalı performans → Dikkat gelip gidiyor, odak tutarsız
+- **U şekli:** İyi başlıyor, ortada düşüyor, sona doğru toparlanıyor → "Son dakika motivasyonu"
+- Bu öğrencinin eğrisi hangi desene uyuyor ve bunun AKADEMİK ANLAMI ne?
+
+**Satır bazlı hız analizi:**
+- Hangi satırlarda daha hızlı, hangilerinde daha yavaş çalışmış?
+- Hız-doğruluk değiş-tokuşu: Hızlı satırlarda hata artıyor mu?
+- Optimal çalışma hızı tespiti: Bu öğrenci en iyi performansı hangi hızda gösteriyor?
+
+### KATMAN 3: HIZ-DOĞRULUK DENGESİ PROFİLLEME
+Bu öğrencinin dikkat profilini ayrıntılı tipleme:
+
+**Profil Tipleri:**
+- **⚡ Dengeli (Hızlı ve Doğru):** Hit ≥%80 + Error ≤%10 → İdeal performans
+  → Bu öğrenci buradaysa: Güçlü yanları nasıl korunur ve ileri taşınır?
+- **💨 Dürtüsel (Hızlı ama Hatalı):** Hit ≥%60 + Error >%15 → Hız kontrolü gerekli
+  → Bu öğrenci buradaysa: "Yavaşla ve düşün" stratejileri, kendini kontrol etme egzersizleri
+- **🐢 Temkinli (Yavaş ama Doğru):** Hit <%50 + Error ≤%10 → Cesaret ve hız geliştirme
+  → Bu öğrenci buradaysa: Özgüven artırma, zaman baskısı altında çalışma pratiği
+- **🔀 Gelişime Açık:** Karışık profil → Hem dikkat hem hız çalışması
+  → Bu öğrenci buradaysa: Temel dikkat eğitimi ve yapılandırılmış çalışma ortamı
+
+Bu profilin sınav performansına doğrudan etkisi:
+- Dürtüsel profil: Sınavda aceleyle bitirip hata yapar, "biliyordum ama yanlış işaretledim"
+- Temkinli profil: Sınavda vakit yetmez, son soruları boş bırakır
+- Her profil için sınav stratejisi önerisi
+
+### KATMAN 4: AKADEMİK ETKİ ANALİZİ
+Dikkat profilinin her akademik alanda etkisi:
+
+**Ders Dinleme:**
+- Bu dikkat seviyesinde bir öğrenci 40 dakikalık bir derste kaç dakika gerçekten odaklı kalabilir?
+- Dikkat kaybı anları: Dersin başında mı, ortasında mı, sonunda mı daha çok kopuyor?
+- Not tutma stratejisi: Bu dikkat profiliyle en etkili not alma yöntemi hangisi?
+
+**Ödev Yapma:**
+- Kesintisiz çalışma süresi tahmini (satır performans eğrisinden çıkarım)
+- Ödev tamamlama stratejileri: Parçalama, mola zamanlaması, ödül sistemi
+
+**Sınav Çözme:**
+- Bu dikkat profiliyle sınavda beklenen davranış kalıpları
+- Soru atlama riski, zaman yönetimi sorunu, dikkatsizlik hataları
+- Sınav anı dikkat stratejileri (her 10 dakikada durak, son 5 dakika kontrol rutini)
+
+**Proje ve Uzun Vadeli Görevler:**
+- Dikkat sürdürülebilirliğinin uzun projeler üzerindeki etkisi
+- "Parçala ve zamanla" stratejisi: Büyük görevi küçük parçalara bölme
+
+### KATMAN 5: DİKKAT GELİŞTİRME PROGRAMI
+Bu öğrencinin dikkat profiline özel, yaşa uygun gelişim programı:
+
+**Günlük Dikkat Egzersizleri (15-20 dk):**
+| Egzersiz | Süre | Nasıl Yapılır | Hedeflenen Beceri | Zorluk Artışı |
+|----------|------|--------------|------------------|--------------|
+| Mindfulness nefes | 5dk | ... | Odaklanma başlatma | Her hafta +1dk |
+| Kelime-renk çelişki (Stroop) | 3dk | ... | Seçici dikkat | Hız artırma |
+| Geri sayma (7'şerli) | 3dk | ... | Çalışma belleği | 6'şardan başla |
+| Şekil arama (visual search) | 5dk | ... | Görsel tarama | Daha karmaşık |
+| Dikkat sürdürme okuma | 5dk | ... | Sürdürülebilir dikkat | Süre uzatma |
+
+**Haftalık Program:**
+- Haftada 5 gün, her gün 15-20 dakika
+- 1. hafta: Temel seviye → 2. hafta: Orta → 3. hafta: İleri → 4. hafta: Zorlayıcı
+- Her haftanın sonunda kendini test etme (basit zamanlı görev)
+
+**Çalışma Ortamı Reçetesi:**
+- Masa düzeni: Masada SADECE çalışılan materyal olmalı
+- Telefon: Başka odada veya Forest/AppBlock uygulaması ile kapalı
+- Ses ortamı: Bu profil için ideal ses düzeyi (sessiz mi, beyaz gürültü mü, hafif müzik mi?)
+- Işık: Doğal ışık tercihi, mavi ışık filtresi, masa lambası açısı
+- Mola ritmi: Bu öğrenci için optimal çalışma/mola oranı (Pomodoro varyasyonu)
+
+**Dijital Dikkat Araçları:**
+- Forest (telefon engelleme), Brain Focus (Pomodoro), Peak/Lumosity (bilişsel egzersiz)
+- Her aracı neden ve nasıl kullanacağını açıkla
+
+### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Bu çocuğun dikkat profili ne söylüyor? (Jargonsuz, aile dilinde açıklama)
+- "Bu çocuk neden yerinde duramıyor / neden dalgın?" sorusuna test verisiyle cevap
+- Evde dikkat destekleyici ortam nasıl oluşturulur? (8 maddelik kontrol listesi)
+- Ders çalıştırırken dikkat yönetimi: Ne kadar süre çalıştır, ne kadar mola ver?
+- Ekran süresi ile dikkat ilişkisi ve yönetim önerileri
+- Yapılması ve YAPILMAMASI gerekenler: "Dikkat et!" demek NEDEN işe yaramaz ve bunun yerine ne yapılmalı?
+- Beslenme önerileri: Dikkat destekleyici besinler (omega-3, demir, kompleks karbonhidrat)
+- Uyku düzeni: Dikkat performansı ile uyku kalitesi arasındaki ilişki ve öneriler
+
+**Öğretmene:**
+- Bu öğrenciyi sınıf içinde nasıl desteklemeli? (oturma düzeni, görev verme şekli, mola zamanlaması)
+- Dikkat kaybı anında yeniden odaklanma stratejileri (göz teması, isimle hitap, fiziksel yakınlık)
+- Sınav sırasında bu öğrenciye uygulanabilecek destekler
+- Uzun etkinliklerde dikkat yönetimi (45 dk'lık dersi parçalama stratejisi)
+
+**⚠️ ÖNEMLİ NOT:** Bu test klinik bir tanı aracı DEĞİLDİR. Sonuçlar dikkat eğilimlerini gösterir. Ciddi dikkat sorunları gözlemleniyorsa, uzman değerlendirmesi (çocuk-ergen psikiyatristi/psikoloğu) önerilir.
 """
 
     elif "Akademik Analiz" in test_name:
         return """
 ## 🔬 AKADEMİK ANALİZ TESTİ — UZMAN ANALİZ PROTOKOLÜ
 
-Bu test, 4 alt boyutta akademik yetkinliği ölçen performans bazlı bir testtir:
+Bu test, 4 alt boyutta akademik yetkinliği ölçen performans bazlı bir testtir (İlköğretim: 44 soru, Lise: 54 soru). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 
-### KATMAN 1: OKUMA ANLAMA ANALİZİ
-- Metin kavrama, çıkarım ve ana fikir yakalama becerisi
-- Yaşa göre normatif değerlendirme
-- Akademik metinleri anlama kapasitesinin tüm dersler üzerindeki etkisi
+### KATMAN 1: OKUMA ANLAMA DERİN ANALİZİ
+Bu öğrencinin okuma anlama puanını (%?) derinlemesine analiz et:
 
-### KATMAN 2: MATEMATİKSEL MUHAKEME
-- Sayısal düşünme ve problem çözme becerisi
-- Soyut düşünme kapasitesi
-- Çok adımlı problem çözme yetkinliği
+**Metin Kavrama Becerisi:**
+- Ana fikir yakalama: Metinde "ne anlatılıyor?" sorusuna verdiği cevapların kalitesi
+- Detay hatırlama: Metindeki spesifik bilgilere ulaşabilme becerisi
+- Çıkarım yapma: "Metinde doğrudan söylenmeyen ama ima edilen nedir?" sorusuna cevap verme kapasitesi
+- Kelime anlamı bağlamdan çıkarma: Bilinmeyen kelimelerin anlamını metinden çıkarabilme
 
-### KATMAN 3: MANTIKSAL DÜŞÜNME
-- Örüntü tanıma, analoji, sıralama ve çıkarım becerileri
-- Analitik düşünme kapasitesi
-- Eleştirel düşünme potansiyeli
+**Bu Puanın Akademik Yansımaları:**
+- Okuma anlama TÜM derslerin temelidir — matematik problemi bile önce okuyarak anlaşılır
+- Bu puanla öğrenci, ders kitabından bağımsız öğrenebilir mi?
+- Uzun metinleri (sınav soruları, araştırma makaleleri, kitap) ne kadar etkili işleyebilir?
+- Metin tabanlı sınavlarda (LGS paragraf soruları, YKS Türkçe) beklenen performans
 
-### KATMAN 4: PERFORMANS vs ÖZ-DEĞERLENDİRME UYUMU
-- Öğrencinin kendini değerlendirmesi ile gerçek performansı arasındaki fark
-- Akademik özgüven analizi
-- Farkındalık düzeyi ve motivasyon dinamikleri
+**Gelişim Stratejileri:**
+- %80+: İleri düzey okuma materyalleri, eleştirel okuma, çapraz metin karşılaştırma
+- %60-79: Aktif okuma stratejileri (SQ3R yöntemi), günlük 20 dk okuma rutini
+- %40-59: Yapılandırılmış okuma programı, metin türlerine göre strateji
+- <%40: Temel okuma becerisi güçlendirme, sesli okuma, kelime hazinesi çalışması
+
+### KATMAN 2: MATEMATİKSEL MUHAKEME DERİN ANALİZİ
+Bu öğrencinin matematiksel muhakeme puanını (%?) derinlemesine analiz et:
+
+**Matematiksel Düşünme Kapasitesi:**
+- Temel işlem yetkinliği: Dört işlem, kesir, yüzde hesaplama becerisi
+- Problem çözme: Sözel problemi matematiksel modele dönüştürebilme
+- Soyut düşünme: Formül, denklem, değişken kavramlarını anlama (yaşa göre)
+- Çok adımlı muhakeme: Birden fazla adım gerektiren problemlerde performans
+- Örüntü tanıma: Sayı dizileri, seri tamamlama, matematiksel ilişkileri görme
+
+**Bu Puanın Akademik Yansımaları:**
+- Fen derslerinde formül kullanma ve grafik yorumlama kapasitesi
+- Günlük yaşam matematiksel okuryazarlığı (bütçe, oran, istatistik)
+- Sınav performansı tahmini: Matematiksel soruları hızlı ve doğru çözebilme kapasitesi
+
+**Gelişim Stratejileri:**
+- %80+: Olimpiyat problemleri, ileri düzey mantık soruları, kodlama/programlama
+- %60-79: Çok adımlı problem pratiği, farklı soru tiplerine maruz kalma
+- %40-59: Temel kavramları somutlaştırma (manipülatifler, görsel modeller), günlük pratik
+- <%40: Sayı kavramı güçlendirme, temel işlem otomatikleştirme, birebir destek
+
+### KATMAN 3: MANTIKSAL DÜŞÜNME DERİN ANALİZİ
+Bu öğrencinin mantıksal düşünme puanını (%?) derinlemesine analiz et:
+
+**Analitik Düşünme Kapasitesi:**
+- Analoji kurma: "A, B'ye oranla ne ise; C, D'ye oranla odur" düşünebilme
+- Seri/dizi tamamlama: Sayı, harf, şekil dizilerinde kuralı bulma
+- Sıralama ve sınıflandırma: Bilgiyi organize etme, kategorize etme becerisi
+- Mantıksal çıkarım: "Eğer X ise, o zaman Y" tarzı çıkarımlar yapabilme
+- Eleştirel düşünme (lise): Argüman değerlendirme, tutarsızlık tespiti, varsayım sorgulama
+
+**Bu Puanın Yaşam Yansımaları:**
+- Karar verme kalitesi: Mantıksal düşünme, sağlıklı karar vermenin temelidir
+- Problem çözme yaklaşımı: Sorunlara sistematik mi, rastgele mi yaklaşıyor?
+- Akademik başarı ile korelasyonu: Mantıksal düşünme, tüm derslerdeki başarıyı etkiler
+- Bu öğrencinin "akıl yürütme tarzı": Tümevarımsal mı (örneklerden kurala) yoksa tümdengelimsel mi (kuraldan örneğe)?
+
+**Gelişim Stratejileri:**
+- %80+: Felsefe tartışmaları, münazara, kodlama, strateji oyunları (satranç, Go)
+- %60-79: Mantık bulmacaları, Sudoku, analoji çalışmaları, "neden?" sorusu alışkanlığı
+- %40-59: Temel mantık egzersizleri, somut-soyut geçiş çalışmaları, sınıflandırma oyunları
+- <%40: Somut manipülatiflerle mantık kurma, basit "eğer-ise" çalışmaları, örüntü oyunları
+
+### KATMAN 4: PERFORMANS vs ÖZ-DEĞERLENDİRME UYUM ANALİZİ
+Bu öğrencinin öz-değerlendirmesi (%?) ile gerçek performansı (%?) arasındaki ilişkiyi derinlemesine analiz et:
+
+**Uyum Analizi:**
+- Fark ≤%10 → **Tutarlı (Sağlıklı Farkındalık):**
+  → Bu öğrenci kendini gerçekçi değerlendiriyor — sağlıklı bir akademik benlik algısı var
+  → Bu tutarlılığın avantajları: Gerçekçi hedef koyma, etkili çalışma planlaması
+  → Risk: Yok, ama gelişim motivasyonunu canlı tutmak için yeni hedefler gerekli
+
+- Öz-değerlendirme > Performans (+%10+) → **Aşırı Özgüven:**
+  → Bu öğrenci kendini olduğundan daha başarılı algılıyor
+  → Olası nedenler: Sosyal karşılaştırma eksikliği, aile beklentisinin içselleştirilmesi, gerçekçi geri bildirim alamama
+  → Riskler: Yetersiz çalışma, "zaten biliyorum" yanılgısı, sınav hayal kırıklığı
+  → Müdahale: Sınav analizleri ile gerçeklik testi, spesifik hedefler, "neyi bilmiyorsun?" sorusu
+
+- Öz-değerlendirme < Performans (-%10+) → **Düşük Özgüven:**
+  → Bu öğrenci aslında başarılı ama bunu görmüyor/kabul etmiyor
+  → Olası nedenler: Yüksek aile beklentisi, mükemmeliyetçilik, geçmiş akademik travma, olumsuz geri bildirim geçmişi
+  → Riskler: Motivasyon kaybı, "nasıl olsa yapamam" tuzağı, potansiyelin altında performans
+  → Müdahale: Başarı kanıtlarını somutlaştırma, pozitif geri bildirim, "bunu SEN başardın" vurgusu
+
+**Öz-Değerlendirme Alt Maddeleri Analizi:**
+- Odaklanma algısı, tekrar çalışma alışkanlığı, sınav özgüveni, ödev disiplini, araştırma isteği
+- Hangi alt maddelerde kendini yüksek, hangilerinde düşük değerlendirmiş?
+- Bu alt maddelerin gerçek performans bölümleriyle çapraz karşılaştırması
 
 ### KATMAN 5: BÜTÜNLEŞİK AKADEMİK PROFİL
-- 4 boyutun etkileşim analizi
-- Güçlü alandan zayıf alana transfer stratejileri
-- Kişiye özel gelişim planı (0-1 ay, 1-3 ay, 3-6 ay)
+4 boyutun etkileşim analizi — tüm verileri bir araya getirerek kapsamlı bir profil çiz:
+
+**Güçlü Alan → Zayıf Alan Transfer Stratejisi:**
+- En güçlü alanın yöntemlerini en zayıf alana nasıl aktarılır?
+- Somut örnekler: "Okuma anlama güçlü → Matematik problem metnini önce bir okuma-anlama ödevi gibi ele al"
+- Çapraz beceri geliştirme planı
+
+**Akademik Potansiyel Tahmini:**
+- 4 boyutun ortalaması ve dağılımı: Dengeli mi, tek ayaklı mı?
+- Bu profilin LGS/YKS gibi merkezi sınavlarda beklenen performansı
+- Güçlü alanların kariyer yönelimi ipuçları
+
+**Kişiye Özel 3 Aşamalı Gelişim Planı:**
+
+**Aşama 1 — Acil (0-1 Ay):**
+- En zayıf alandaki temel eksiklikleri kapatma
+- Günlük 15 dakikalık hedefli çalışma rutini
+- Hızlı kazanımlar için kolay hedefler
+
+**Aşama 2 — Orta Vade (1-3 Ay):**
+- Zayıf alanı ortalamaya taşıma
+- Güçlü alanları derinleştirme
+- Haftalık ilerleme ölçümü
+
+**Aşama 3 — Uzun Vade (3-6 Ay):**
+- Tüm alanları dengeli yüksek seviyeye taşıma
+- İleri düzey materyal ve yarışma hazırlığı
+- Kontrol testi ile ilerleme değerlendirmesi
+
+### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
+**Aileye:**
+- Bu çocuğun akademik profili ne söylüyor? (Aile dilinde, jargonsuz, 3 cümlede özet)
+- En güçlü alan üzerinden motivasyon kurma: "Bu alanda çok iyisin, bu yeteneğini [zayıf alan] için de kullanabilirsin"
+- Ev ortamında akademik destek: Hangi alanda nasıl yardım edilebilir?
+- Özel ders / destek eğitimi gerekiyor mu? Hangi alanda, ne düzeyde?
+- Ders çalışma sırasında yapılması ve YAPILMAMASI gerekenler
+- Sınav sonuçlarına nasıl tepki verilmeli? (başarılı ve başarısız sonuç için ayrı strateji)
+- Ekran süresi, oyun ve sosyal medyanın akademik performansa etkisi ve yönetimi
+
+**Öğretmene:**
+- Bu öğrencinin sınıf içi akademik profili: Nerede parlar, nerede zorlanır?
+- Farklılaştırılmış öğretim: Bu öğrenciye uygun zorluk seviyesi ve materyal
+- Grup çalışmasında bu öğrenciye verilecek ideal rol (güçlü alanına göre)
+- Geri bildirim verirken dikkat edilecekler (özgüven durumuna göre yaklaşım)
+- Rehberlik servisine yönlendirme gerekiyor mu? Hangi konuda?
 """
 
     return ""
