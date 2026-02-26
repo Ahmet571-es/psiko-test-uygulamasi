@@ -330,13 +330,14 @@ CALISMA_DAVRANISI_CATEGORIES = {
 
 def calculate_calisma_davranisi(answers):
     """
-    DÜZELTME 1: Key tipi normalize (str → int).
-    DÜZELTME 2: O(n²) döngü → O(n) lookup dict.
+    Çalışma Davranışı puanlama — POZİTİF PUAN SİSTEMİ.
+    Yüksek puan = iyi çalışma davranışı (ters çevrildi).
     """
     answers = {int(k): v for k, v in answers.items()}
-    q_lookup = {q["id"]: q for q in CALISMA_DAVRANISI_QUESTIONS}  # O(n) lookup
+    q_lookup = {q["id"]: q for q in CALISMA_DAVRANISI_QUESTIONS}
 
     category_scores = {}
+    category_positive = {}  # Pozitif puanlar (yüksek = iyi)
     for cat_key, cat_info in CALISMA_DAVRANISI_CATEGORIES.items():
         wrong = 0
         for qid in cat_info["question_ids"]:
@@ -347,53 +348,221 @@ def calculate_calisma_davranisi(answers):
             if student_answer is not None and student_answer != question["key"]:
                 wrong += 1
         category_scores[cat_key] = wrong
+        # Pozitif puan: max - wrong = doğru davranış sayısı
+        category_positive[cat_key] = cat_info["max_score"] - wrong
 
-    total     = sum(category_scores.values())
+    total_wrong = sum(category_scores.values())
     max_total = sum(c["max_score"] for c in CALISMA_DAVRANISI_CATEGORIES.values())
-    scores_named = {CALISMA_DAVRANISI_CATEGORIES[k]["name"]: v for k, v in category_scores.items()}
+    total_positive = max_total - total_wrong
+    positive_pct = round(total_positive / max_total * 100, 1) if max_total else 0
 
-    scores = {"categories": category_scores, "categories_named": scores_named,
-              "total": total, "max_total": max_total}
+    # 5 kademe seviye sistemi
+    if positive_pct >= 80:
+        level, level_emoji = "Çok İyi", "🟢"
+    elif positive_pct >= 65:
+        level, level_emoji = "İyi", "🔵"
+    elif positive_pct >= 45:
+        level, level_emoji = "Orta", "🟡"
+    elif positive_pct >= 25:
+        level, level_emoji = "Gelişime Açık", "🟠"
+    else:
+        level, level_emoji = "Acil Destek", "🔴"
+
+    scores_named = {CALISMA_DAVRANISI_CATEGORIES[k]["name"]: category_positive[k] for k, v in category_positive.items()}
+
+    # Kategori kombinasyon analizi
+    combinations = _detect_calisma_combinations(category_positive, CALISMA_DAVRANISI_CATEGORIES)
+
+    scores = {
+        "categories": category_scores,           # Eski format (geriye uyumluluk)
+        "categories_positive": category_positive, # YENİ: Pozitif puanlar
+        "categories_named": scores_named,
+        "total": total_wrong,                     # Eski (geriye uyumluluk)
+        "total_positive": total_positive,         # YENİ
+        "max_total": max_total,
+        "positive_pct": positive_pct,             # YENİ
+        "level": level,                           # YENİ: 5 kademe
+        "level_emoji": level_emoji,               # YENİ
+        "combinations": combinations,             # YENİ: Kombinasyon yorumları
+    }
     report = generate_calisma_davranisi_report(scores)
     return scores, report
 
 
+def _detect_calisma_combinations(positive, categories):
+    """Kategori kombinasyonlarından anlamlı örüntüleri tespit eder."""
+    combos = []
+
+    def pct(cat_key):
+        mx = categories[cat_key]["max_score"]
+        return round(positive[cat_key] / mx * 100) if mx else 0
+
+    # Motivasyon yüksek + Planlama düşük = İstekli ama plansız
+    if pct("F") >= 60 and pct("A") < 40:
+        combos.append({
+            "type": "istekli_plansiz",
+            "title": "🔥 İstekli ama Plansız",
+            "detail": "Okula karşı olumlu tutumun var ama çalışmaya başlama ve sürdürme konusunda zorluk yaşıyorsun. İyi haber: Motivasyonun güçlü — sadece planlama tekniklerini öğrenmen gerekiyor!",
+            "tip": "Her gün aynı saatte 25 dakikalık çalışma blokları planla (Pomodoro tekniği).",
+        })
+
+    # Planlama iyi + Not tutma zayıf = Disiplinli ama verimsiz
+    if pct("A") >= 60 and pct("C") < 40:
+        combos.append({
+            "type": "disiplinli_verimsiz",
+            "title": "⏰ Disiplinli ama Verimsiz",
+            "detail": "Çalışmaya başlayıp sürdürebiliyorsun — harika! Ama not tutma ve dersi dinleme tekniklerin zayıf. Harcadığın zamanın verimini artırabilirsin.",
+            "tip": "Not tutma tekniklerini öğren: Cornell yöntemi, mind map veya bullet journal.",
+        })
+
+    # Okuma iyi + Sınav hazırlık kötü = Bilen ama sınavda gösteremeyen
+    if pct("D") >= 60 and pct("G") < 40:
+        combos.append({
+            "type": "bilen_gosteremeyen",
+            "title": "📚 Bilgili ama Sınavda Zorlanıyor",
+            "detail": "Okuma ve anlama becerilerin güçlü ama sınava hazırlanma ve sınav stratejilerin zayıf. Bildiklerini sınavda gösteremiyorsun.",
+            "tip": "Sınav stratejileri: Önce tüm soruları oku, kolaylardan başla, zamanı böl.",
+        })
+
+    # Motivasyon düşük + her şey düşük = Genel motivasyon sorunu
+    if pct("F") < 35 and pct("A") < 35:
+        combos.append({
+            "type": "motivasyon_krizi",
+            "title": "⚠️ Genel Motivasyon Sorunu",
+            "detail": "Hem okula karşı tutumun hem de çalışma alışkanlıkların düşük. Bu genellikle geçici bir durum — doğru destekle hızla düzelebilir.",
+            "tip": "Bir rehber öğretmen veya danışmanla konuş. Küçük, ulaşılabilir hedeflerle başla.",
+        })
+
+    # Ödev iyi + Motivasyon iyi = Güçlü temel
+    if pct("E") >= 60 and pct("F") >= 60:
+        combos.append({
+            "type": "guclu_temel",
+            "title": "🌟 Güçlü Temel!",
+            "detail": "Hem ödev yapma alışkanlığın hem de okula karşı tutumun çok iyi. Bu seni başarıya taşıyacak güçlü bir zemin.",
+            "tip": "Bu gücünü koruyarak diğer alanları da geliştirmeye odaklan.",
+        })
+
+    # Her şey yüksek = Mükemmel
+    all_high = all(pct(k) >= 65 for k in ["A", "B", "C", "D", "E", "F", "G"])
+    if all_high:
+        combos.append({
+            "type": "mukemmel",
+            "title": "🏆 Mükemmel Çalışma Profili!",
+            "detail": "Tüm çalışma davranışı alanlarında güçlüsün. Tebrikler!",
+            "tip": "Bu alışkanlıkları sürdür ve arkadaşlarına da ilham ver.",
+        })
+
+    return combos
+
+
 def generate_calisma_davranisi_report(scores):
     category_scores = scores["categories"]
-    total     = scores["total"]
+    positive = scores.get("categories_positive", {})
     max_total = scores["max_total"]
-    genel_pct = round(total / max_total * 100, 1) if max_total else 0
+    total_positive = scores.get("total_positive", max_total - scores["total"])
+    positive_pct = scores.get("positive_pct", round(total_positive / max_total * 100, 1) if max_total else 0)
+    level = scores.get("level", "Orta")
+    level_emoji = scores.get("level_emoji", "🟡")
 
-    if genel_pct >= 60:
-        genel = "🔴 Çalışma davranışlarında önemli güçlükler var. Ama bunların hepsi geliştirilebilir!"
-    elif genel_pct >= 35:
-        genel = "🟡 Çalışma davranışlarında bazı alanlar gelişime açık. Doğru tekniklerle çok daha başarılı olabilirsin!"
-    else:
-        genel = "🟢 Çalışma davranışların genel olarak iyi durumda. Tebrikler, böyle devam et!"
+    # Genel durum mesajı (5 kademe)
+    level_messages = {
+        "Çok İyi": "Çalışma alışkanlıkların mükemmel düzeyde! Sen bir rol model olabilirsin. 🌟",
+        "İyi": "Çalışma alışkanlıkların genel olarak iyi. Küçük iyileştirmelerle mükemmele ulaşabilirsin!",
+        "Orta": "Bazı alanlarda güçlüsün, bazılarında gelişime açıksın. Doğru tekniklerle çok daha başarılı olabilirsin!",
+        "Gelişime Açık": "Çalışma davranışlarında önemli gelişim alanları var. Ama bunların hepsi öğrenilebilen beceriler!",
+        "Acil Destek": "Çalışma alışkanlıklarında acil destek ihtiyacı var. Endişelenme — doğru rehberlikle hızla gelişebilirsin!",
+    }
+    msg = level_messages.get(level, "")
 
-    report = f"# 📊 ÇALIŞMA DAVRANIŞI DEĞERLENDİRME RAPORU\n\n**Genel Durum:** {genel}\n**Toplam Puan:** {total}/{max_total} (%{genel_pct})\n\n---\n\n## 📋 Kategori Bazında Sonuçlar\n\n"
+    report = f"# 📊 ÇALIŞMA DAVRANIŞI DEĞERLENDİRME RAPORU\n\n"
+    report += f"**Genel Durum:** {level_emoji} **{level}** — Doğru Davranış Puanı: {total_positive}/{max_total} (%{positive_pct})\n\n"
+    report += f"{msg}\n\n---\n\n"
 
-    strong, weak = [], []
-    for cat_key in ["A","B","C","D","E","F","G"]:
-        cat  = CALISMA_DAVRANISI_CATEGORIES[cat_key]
+    # Kategori Özet Tablosu
+    report += "## 📋 Kategori Özet Tablosu\n\n"
+    report += "| Kategori | Puan | Seviye | Grafik |\n"
+    report += "|----------|------|--------|--------|\n"
+
+    strong, weak, mid_areas = [], [], []
+    for cat_key in ["A", "B", "C", "D", "E", "F", "G"]:
+        cat = CALISMA_DAVRANISI_CATEGORIES[cat_key]
+        pos = positive.get(cat_key, cat["max_score"] - category_scores.get(cat_key, 0))
+        pct = round(pos / cat["max_score"] * 100, 1) if cat["max_score"] else 0
+        n = round(pct / 10)
+        bar = "█" * n + "░" * (10 - n)
+        if pct >= 65:
+            sev = "🟢"
+            strong.append(cat["name"])
+        elif pct >= 40:
+            sev = "🟡"
+            mid_areas.append(cat["name"])
+        else:
+            sev = "🔴"
+            weak.append(cat["name"])
+        report += f"| {cat_key}. {cat['name']} | {pos}/{cat['max_score']} | {sev} %{pct} | {bar} |\n"
+    report += "\n---\n\n"
+
+    # Detaylı Kategori Analizi
+    report += "## 📝 Detaylı Kategori Analizi\n\n"
+    for cat_key in ["A", "B", "C", "D", "E", "F", "G"]:
+        cat = CALISMA_DAVRANISI_CATEGORIES[cat_key]
         score = category_scores.get(cat_key, 0)
-        pct   = round(score / cat["max_score"] * 100, 1) if cat["max_score"] else 0
-        n = round(pct / 10); bar = "█"*n + "░"*(10-n)
-        report += f"### {cat_key}. {cat['name']}\n**Puanın:** {score}/{cat['max_score']} ({bar} %{pct})\n\n"
+        pos = positive.get(cat_key, cat["max_score"] - score)
+        pct = round(pos / cat["max_score"] * 100, 1) if cat["max_score"] else 0
+
+        report += f"### {cat_key}. {cat['name']}\n"
+        report += f"**Doğru Davranış Puanın:** {pos}/{cat['max_score']} (%{pct})\n\n"
+
         for lk, ld in cat["interpretations"].items():
             lo, hi = ld["range"]
             if lo <= score <= hi:
                 report += ld["text"] + "\n\n"
                 if ld["tips"]:
                     report += "**Sana Özel İpuçları:**\n" + "\n".join(f"- 💡 {t}" for t in ld["tips"]) + "\n\n"
-                if lk == "low":  strong.append(cat["name"])
-                elif lk == "high": weak.append(cat["name"])
                 break
         report += "---\n\n"
 
-    report += "## 🌟 Özet\n\n"
-    if strong: report += f"**Güçlü Yönlerin:** {', '.join(strong)}\n\n"
-    if weak:   report += f"**Öncelikli Gelişim Alanların:** {', '.join(weak)}\n\n"
+    # Kombinasyon Yorumları
+    combinations = scores.get("combinations", [])
+    if combinations:
+        report += "## 🔗 Profil Analizi — Kategoriler Arası Bağlantılar\n\n"
+        for combo in combinations:
+            report += f"### {combo['title']}\n"
+            report += f"{combo['detail']}\n\n"
+            report += f"**💡 Öneri:** {combo['tip']}\n\n"
+        report += "---\n\n"
+
+    # Güçlü/Zayıf Özet
+    report += "## 🌟 Özet Profil\n\n"
+    if strong:
+        report += f"**💪 Güçlü Yönlerin:** {', '.join(strong)}\n\n"
+    if mid_areas:
+        report += f"**🎯 Geliştirebileceğin Alanlar:** {', '.join(mid_areas)}\n\n"
+    if weak:
+        report += f"**⚠️ Öncelikli Destek Alanların:** {', '.join(weak)}\n\n"
+
+    # Ebeveyn Rehberi
+    report += "---\n\n## 👨‍👩‍👦 Ebeveyn Rehberi\n\n"
+    if weak:
+        report += "**Yapmanız Gerekenler:**\n"
+        report += "- ✅ Çocuğunuzla birlikte haftalık bir çalışma planı oluşturun\n"
+        report += "- ✅ Küçük başarıları bile takdir edin — motivasyon için çok önemli\n"
+        report += "- ✅ Düzenli bir çalışma ortamı sağlayın (sessiz, düzenli, iyi aydınlatılmış)\n\n"
+        report += "**Kaçınmanız Gerekenler:**\n"
+        report += "- ❌ Başka çocuklarla kıyaslamaktan kaçının\n"
+        report += "- ❌ Uzun süre kesintisiz çalışmaya zorlamayın (25 dk çalış + 5 dk mola ideal)\n"
+        report += "- ❌ Cezalandırma yerine ödüllendirme sistemi kullanın\n\n"
+    else:
+        report += "Çocuğunuzun çalışma alışkanlıkları güçlü görünüyor. Bu başarıyı desteklemeye devam edin!\n\n"
+
+    # Öğretmen Notu
+    report += "## 👩‍🏫 Öğretmen Notu\n\n"
+    if weak:
+        report += f"Bu öğrencinin öncelikli gelişim alanları: **{', '.join(weak)}**.\n"
+        report += "Sınıf içinde bu alanlara yönelik destekleyici geri bildirimler ve kısa görevler faydalı olacaktır.\n\n"
+    else:
+        report += "Bu öğrenci çalışma davranışları konusunda güçlü bir profile sahip. Akran desteği veya liderlik rolleri verilebilir.\n\n"
+
     report += "\n## 💬 Son Söz\nUnutma, çalışma davranışları doğuştan gelen değil, **öğrenilebilen** becerilerdir! Sen bunu yapabilirsin! 🚀"
     return report.strip()
 
@@ -464,11 +633,12 @@ SINAV_KAYGISI_TERS_MADDELER = {3}
 SINAV_KAYGISI_CATEGORIES = {
     "baskalari_gorusu": {
         "name": "Başkalarının Sizi Nasıl Gördüğü ile İlgili Endişeler", "icon": "👥",
-        "question_ids": [14, 17, 25, 32, 41, 46, 47],  # DÜZELTME: Soru 3 çıkarıldı
+        "question_ids": [14, 17, 25, 32, 41, 46, 47],
         "max_score": 7,
         "interpretations": {
-            "high": {"range": (4, 7), "text": "Başkalarının seni nasıl gördüğü senin için büyük önem taşıyor. Çevrendeki insanların değerlendirmeleri sınav durumunda zihinsel faaliyetini olumsuz etkiliyor.", "tips": ["Unutma: Sınavda ölçülen senin bilgin, kişiliğin veya değerin değil!", "Herkesin farklı güçlü yönleri var — kendini başkalarıyla kıyaslama.", "Güvendiğin birisiyle bu endişelerini paylaş."]},
-            "low": {"range": (0, 3), "text": "Başkalarının seninle ilgili görüşleri seni fazla etkilemiyor. Gereksiz zaman ve enerji kaybetmiyorsun. Harika! 🎉", "tips": []},
+            "high": {"range": (5, 7), "text": "Başkalarının seni nasıl gördüğü senin için büyük önem taşıyor. Çevrendeki insanların değerlendirmeleri sınav durumunda zihinsel faaliyetini olumsuz etkiliyor.", "tips": ["Unutma: Sınavda ölçülen senin bilgin, kişiliğin veya değerin değil!", "Herkesin farklı güçlü yönleri var — kendini başkalarıyla kıyaslama.", "Güvendiğin birisiyle bu endişelerini paylaş."]},
+            "mid": {"range": (3, 4), "text": "Başkalarının görüşleri seni bir miktar etkiliyor. Bu normal bir seviyede ama dikkat etmekte fayda var.", "tips": ["Kendi başarı ölçütlerini belirle — başkalarının standartları değil, seninkiler önemli.", "Küçük başarılarını fark et ve kutla."]},
+            "low": {"range": (0, 2), "text": "Başkalarının seninle ilgili görüşleri seni fazla etkilemiyor. Gereksiz zaman ve enerji kaybetmiyorsun. Harika! 🎉", "tips": []},
         },
     },
     "kendi_gorusu": {
@@ -476,8 +646,9 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [2, 9, 16, 24, 31, 38, 40],
         "max_score": 7,
         "interpretations": {
-            "high": {"range": (4, 7), "text": "Sınavlardaki başarınla kendinize olan saygını eşdeğer görüyorsun. Sınavlarda ölçülenin kişilik değerin değil, bilgi düzeyin olduğunu kabullenmek sana yardımcı olacaktır.", "tips": ["Sınav sonucu senin değerini belirlemez — bunu kendine sık sık hatırlat.", "Başarısızlık bir son değil, öğrenme fırsatıdır.", "Güçlü yönlerinin bir listesini yap ve zor anlarda oku."]},
-            "low": {"range": (0, 3), "text": "Sınavlardaki başarınla kendi kişiliğine verdiğin değeri birbirinden oldukça iyi ayırabildiğin anlaşılıyor. Süper! 🎉", "tips": []},
+            "high": {"range": (5, 7), "text": "Sınavlardaki başarınla kendinize olan saygını eşdeğer görüyorsun. Sınavlarda ölçülenin kişilik değerin değil, bilgi düzeyin olduğunu kabullenmek sana yardımcı olacaktır.", "tips": ["Sınav sonucu senin değerini belirlemez — bunu kendine sık sık hatırlat.", "Başarısızlık bir son değil, öğrenme fırsatıdır.", "Güçlü yönlerinin bir listesini yap ve zor anlarda oku."]},
+            "mid": {"range": (3, 4), "text": "Sınav sonuçları öz güvenini kısmen etkiliyor. Sınavla kişisel değerini ayırt edebiliyorsun ama zaman zaman zorlanıyorsun.", "tips": ["Sınav dışı başarılarını da hatırla — spor, sanat, arkadaşlık gibi.", "Her sınavdan sonra 'ne öğrendim?' diye sor, 'kaç aldım?' yerine."]},
+            "low": {"range": (0, 2), "text": "Sınavlardaki başarınla kendi kişiliğine verdiğin değeri birbirinden oldukça iyi ayırabildiğin anlaşılıyor. Süper! 🎉", "tips": []},
         },
     },
     "gelecek_endisesi": {
@@ -485,8 +656,9 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [1, 8, 15, 23, 30, 49],
         "max_score": 6,
         "interpretations": {
-            "high": {"range": (3, 6), "text": "Sınavlardaki başarını gelecekteki mutluluğunun ve başarının tek ölçüsü olarak görüyorsun. Bu yaklaşım bilgini yeterince ortaya koymayı güçleştiriyor.", "tips": ["Hayatta başarılı olmanın birçok yolu var — sınav bunlardan sadece biri.", "Bugüne odaklan: 'Şimdi ne yapabilirim?' diye sor.", "Sınavları bir tehdit değil, geçilmesi gereken basamaklar olarak gör."]},
-            "low": {"range": (0, 2), "text": "Gelecekteki mutluluğunun tek belirleyicisinin sınavlar olmadığının farkındasın. Harika! 🎉", "tips": []},
+            "high": {"range": (4, 6), "text": "Sınavlardaki başarını gelecekteki mutluluğunun ve başarının tek ölçüsü olarak görüyorsun. Bu yaklaşım bilgini yeterince ortaya koymayı güçleştiriyor.", "tips": ["Hayatta başarılı olmanın birçok yolu var — sınav bunlardan sadece biri.", "Bugüne odaklan: 'Şimdi ne yapabilirim?' diye sor.", "Sınavları bir tehdit değil, geçilmesi gereken basamaklar olarak gör."]},
+            "mid": {"range": (2, 3), "text": "Gelecekle ilgili bazı endişelerin var ama bunlar henüz kontrol dışına çıkmamış durumda.", "tips": ["Kısa vadeli hedefler koy — uzak gelecek yerine 'bu hafta ne yapabilirim?' diye düşün.", "Başarılı insanların hikayelerini oku — çoğunun yolu doğrusal değildi."]},
+            "low": {"range": (0, 1), "text": "Gelecekteki mutluluğunun tek belirleyicisinin sınavlar olmadığının farkındasın. Harika! 🎉", "tips": []},
         },
     },
     "hazirlik_endisesi": {
@@ -494,8 +666,9 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [6, 11, 18, 26, 33, 42],
         "max_score": 6,
         "interpretations": {
-            "high": {"range": (3, 6), "text": "Sınavları kişiliğin ve gelecekteki güvenliğinin bir ölçüsü olarak gördüğün için herhangi bir sınava hazırlık dönemi senin için bir kriz dönemi olabiliyor.", "tips": ["Sınava en az 3 gün öncesinden çalışmaya başla.", "Çalışma planı yap — neyi, ne zaman çalışacağını belirle.", "Çalıştıktan sonra kendini test et — hazır olduğunu görmek güven verir."]},
-            "low": {"range": (0, 2), "text": "Sınavlara büyük bir gerginlik hissetmeden hazırlanıyorsun. Tebrikler! 🎉", "tips": []},
+            "high": {"range": (4, 6), "text": "Sınavları kişiliğin ve gelecekteki güvenliğinin bir ölçüsü olarak gördüğün için herhangi bir sınava hazırlık dönemi senin için bir kriz dönemi olabiliyor.", "tips": ["Sınava en az 3 gün öncesinden çalışmaya başla.", "Çalışma planı yap — neyi, ne zaman çalışacağını belirle.", "Çalıştıktan sonra kendini test et — hazır olduğunu görmek güven verir."]},
+            "mid": {"range": (2, 3), "text": "Sınav hazırlığında bazen endişe yaşıyorsun ama genel olarak baş edebiliyorsun.", "tips": ["Çalışma planını yazıya dök — görünür bir plan güven verir.", "Sınav öncesi küçük testler çözerek hazırlık seviyeni ölç."]},
+            "low": {"range": (0, 1), "text": "Sınavlara büyük bir gerginlik hissetmeden hazırlanıyorsun. Tebrikler! 🎉", "tips": []},
         },
     },
     "bedensel_tepkiler": {
@@ -503,8 +676,9 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [5, 12, 19, 27, 34, 39, 43],
         "max_score": 7,
         "interpretations": {
-            "high": {"range": (4, 7), "text": "Sınava hazırlanırken iştahsızlık, uykusuzluk, gerginlik gibi birçok bedensel rahatsızlıkla mücadele etmek zorunda kaldığın anlaşılıyor.", "tips": ["Derin nefes egzersizleri yap: 4 saniye nefes al, 4 saniye tut, 4 saniye ver.", "Sınavdan önce hafif egzersiz yap (yürüyüş, germe hareketleri).", "Düzenli uyku çok önemli — sınav gecesi erken yat."]},
-            "low": {"range": (0, 3), "text": "Sınava hazırlık sırasında heyecanını kontrol edebildiğin anlaşılıyor. Çok iyi! 🎉", "tips": []},
+            "high": {"range": (5, 7), "text": "Sınava hazırlanırken iştahsızlık, uykusuzluk, gerginlik gibi birçok bedensel rahatsızlıkla mücadele etmek zorunda kaldığın anlaşılıyor.", "tips": ["Derin nefes egzersizleri yap: 4 saniye nefes al, 4 saniye tut, 4 saniye ver.", "Sınavdan önce hafif egzersiz yap (yürüyüş, germe hareketleri).", "Düzenli uyku çok önemli — sınav gecesi erken yat."]},
+            "mid": {"range": (3, 4), "text": "Bazı bedensel belirtiler yaşıyorsun ama bunlar henüz ciddi düzeyde değil.", "tips": ["Stresli dönemlerde fiziksel aktiviteyi artır.", "Düzenli beslenme ve uyku rutini oluştur."]},
+            "low": {"range": (0, 2), "text": "Sınava hazırlık sırasında heyecanını kontrol edebildiğin anlaşılıyor. Çok iyi! 🎉", "tips": []},
         },
     },
     "zihinsel_tepkiler": {
@@ -512,7 +686,8 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [4, 13, 20, 21, 28, 35, 36, 37, 48, 50],
         "max_score": 10,
         "interpretations": {
-            "high": {"range": (4, 10), "text": "Sınava hazırlanırken veya sınav sırasında çevrende olan bitenden fazlasıyla etkilendiğin ve dikkatini toplamakta güçlük çektiğin görülüyor.", "tips": ["Dikkatini toplama egzersizleri yap (mindfulness, meditasyon).", "Sınav sırasında olumsuz düşünceler geldiğinde 'DUR' de ve nefes al.", "Pozitif iç konuşma yap: 'Ben bunu yapabilirim, hazırlandım.'"]},
+            "high": {"range": (7, 10), "text": "Sınava hazırlanırken veya sınav sırasında çevrende olan bitenden fazlasıyla etkilendiğin ve dikkatini toplamakta ciddi güçlük çektiğin görülüyor.", "tips": ["Dikkatini toplama egzersizleri yap (mindfulness, meditasyon).", "Sınav sırasında olumsuz düşünceler geldiğinde 'DUR' de ve nefes al.", "Pozitif iç konuşma yap: 'Ben bunu yapabilirim, hazırlandım.'"]},
+            "mid": {"range": (4, 6), "text": "Bazen dikkat dağınıklığı ve olumsuz düşünceler yaşıyorsun ama tamamen kontrol dışı değil.", "tips": ["Sınav öncesi 5 dakika sessizce otur ve zihnini topla.", "Olumsuz düşünceleri yazıya dök — yazınca güçlerini kaybederler."]},
             "low": {"range": (0, 3), "text": "Zihinsel açıdan sınava hazırlanırken önemli bir rahatsızlık yaşamadığın görülüyor. Muhteşem! 🎉", "tips": []},
         },
     },
@@ -521,8 +696,9 @@ SINAV_KAYGISI_CATEGORIES = {
         "question_ids": [7, 10, 22, 29, 44, 45],
         "max_score": 6,
         "interpretations": {
-            "high": {"range": (3, 6), "text": "Sınavlarda kendine güvenemediğin, sınavları varlığın ve geleceğin için bir tehdit olarak gördüğün anlaşılıyor. Sınav kaygını azaltacak teknikleri öğrenmen hem eğitim başarını yükseltecek hem de hayattan aldığın zevki artıracaktır.", "tips": ["Sınavı bir savaş değil, bir oyun gibi düşün — stratejini belirle ve oyna.", "Geçmiş başarılarını hatırla — daha önce de sınavları geçtin.", "Sınav sonrası kendini ödüllendir."]},
-            "low": {"range": (0, 2), "text": "Genel olarak sınavlara karşı sağlıklı bir tutum içinde olduğun anlaşılıyor. Süper! 🎉", "tips": []},
+            "high": {"range": (4, 6), "text": "Sınavlarda kendine güvenemediğin, sınavları varlığın ve geleceğin için bir tehdit olarak gördüğün anlaşılıyor. Sınav kaygını azaltacak teknikleri öğrenmen hem eğitim başarını yükseltecek hem de hayattan aldığın zevki artıracaktır.", "tips": ["Sınavı bir savaş değil, bir oyun gibi düşün — stratejini belirle ve oyna.", "Geçmiş başarılarını hatırla — daha önce de sınavları geçtin.", "Sınav sonrası kendini ödüllendir."]},
+            "mid": {"range": (2, 3), "text": "Genel sınav kaygın orta düzeyde. Bazı sınavlarda daha çok gerginlik hissediyor olabilirsin.", "tips": ["Her sınav için kısa bir strateji planı yap.", "Sınavdan önce güzel bir aktivite yap — kendini iyi hissetmen performansı artırır."]},
+            "low": {"range": (0, 1), "text": "Genel olarak sınavlara karşı sağlıklı bir tutum içinde olduğun anlaşılıyor. Süper! 🎉", "tips": []},
         },
     },
 }
@@ -530,8 +706,7 @@ SINAV_KAYGISI_CATEGORIES = {
 
 def calculate_sinav_kaygisi(answers):
     """
-    DÜZELTME 1: Key tipi normalize (str → int).
-    DÜZELTME 2: Soru 3 ters madde — D=0 puan, Y=1 puan.
+    Sınav Kaygısı puanlama — 5 kademe + baskın kaygı tipi.
     """
     answers = {int(k): v for k, v in answers.items()}
 
@@ -544,22 +719,74 @@ def calculate_sinav_kaygisi(answers):
                 continue
             if qid in SINAV_KAYGISI_TERS_MADDELER:
                 if ans == "Y":
-                    score += 1  # Ters madde: Y = kaygı göstergesi
+                    score += 1
             else:
                 if ans == "D":
-                    score += 1  # Normal madde: D = kaygı göstergesi
+                    score += 1
         category_scores[cat_key] = score
 
     total     = sum(category_scores.values())
     max_total = sum(c["max_score"] for c in SINAV_KAYGISI_CATEGORIES.values())
     total_pct = round(total / max_total * 100, 1) if max_total else 0
 
-    overall = "Yüksek" if total_pct >= 60 else "Orta" if total_pct >= 35 else "Düşük"
+    # 5 kademe seviye sistemi
+    if total_pct >= 75:
+        overall, level_emoji = "Çok Yüksek", "🔴"
+    elif total_pct >= 55:
+        overall, level_emoji = "Yüksek", "🟠"
+    elif total_pct >= 35:
+        overall, level_emoji = "Orta", "🟡"
+    elif total_pct >= 15:
+        overall, level_emoji = "Düşük", "🔵"
+    else:
+        overall, level_emoji = "Çok Düşük", "🟢"
+
+    # Baskın kaygı tipi profili
+    anxiety_types = {
+        "bedensel": {
+            "categories": ["bedensel_tepkiler"],
+            "name": "Bedensel Kaygı",
+            "icon": "💪",
+            "description": "Kaygın ağırlıklı olarak bedensel belirtilerle kendini gösteriyor: kas gerginliği, mide bulantısı, uykusuzluk.",
+            "strategy": "Fiziksel rahatlama teknikleri (derin nefes, kas gevşetme, hafif egzersiz) en etkili yöntem.",
+        },
+        "bilissel": {
+            "categories": ["zihinsel_tepkiler", "hazirlik_endisesi"],
+            "name": "Bilişsel Kaygı",
+            "icon": "🧠",
+            "description": "Kaygın ağırlıklı olarak düşünce düzeyinde yaşanıyor: dikkat dağınıklığı, olumsuz düşünceler, konsantrasyon güçlüğü.",
+            "strategy": "Bilişsel teknikler (pozitif iç konuşma, düşünce durdurma, görselleştirme) en etkili yöntem.",
+        },
+        "sosyal": {
+            "categories": ["baskalari_gorusu", "kendi_gorusu"],
+            "name": "Sosyal Kaygı",
+            "icon": "👥",
+            "description": "Kaygın ağırlıklı olarak başkalarının seni nasıl göreceği endişesinden kaynaklanıyor.",
+            "strategy": "Öz-değer çalışması (başarıyı kişilikten ayırma, güçlü yönlere odaklanma) en etkili yöntem.",
+        },
+    }
+
+    type_scores = {}
+    for atype, info in anxiety_types.items():
+        atype_total = sum(category_scores.get(c, 0) for c in info["categories"])
+        atype_max = sum(SINAV_KAYGISI_CATEGORIES[c]["max_score"] for c in info["categories"])
+        type_scores[atype] = round(atype_total / max(atype_max, 1) * 100, 1)
+
+    dominant_type = max(type_scores, key=type_scores.get)
+    dominant_info = anxiety_types[dominant_type]
+
     scores_named = {SINAV_KAYGISI_CATEGORIES[k]["name"]: v for k, v in category_scores.items()}
 
-    scores = {"categories": category_scores, "categories_named": scores_named,
-              "total": total, "max_total": max_total,
-              "total_pct": total_pct, "overall_level": overall}
+    scores = {
+        "categories": category_scores,
+        "categories_named": scores_named,
+        "total": total, "max_total": max_total,
+        "total_pct": total_pct, "overall_level": overall,
+        "level_emoji": level_emoji,
+        "dominant_type": dominant_type,
+        "dominant_info": dominant_info,
+        "type_scores": type_scores,
+    }
     report = generate_sinav_kaygisi_report(scores)
     return scores, report
 
@@ -570,39 +797,128 @@ def generate_sinav_kaygisi_report(scores):
     max_total = scores["max_total"]
     total_pct = scores["total_pct"]
     overall   = scores["overall_level"]
+    level_emoji = scores.get("level_emoji", "🟡")
 
-    if overall == "Yüksek":
-        msg = "🔴 Sınav kaygın yüksek görünüyor. Ama endişelenme — bu çok yaygın bir durum ve üstesinden gelmek tamamen mümkün!"
-    elif overall == "Orta":
-        msg = "🟡 Belirli düzeyde sınav kaygın olduğu görülüyor. Bazı alanlarda kendini rahatlatmayı öğrenmen faydalı olacak."
-    else:
-        msg = "🟢 Sınav kaygın düşük seviyede. Sınavlara karşı sağlıklı bir tutum içindesin!"
+    # 5 kademe mesajlar
+    level_messages = {
+        "Çok Yüksek": "Sınav kaygın çok yüksek düzeyde. Bu kesinlikle üstesinden gelinebilir — doğru tekniklerle kısa sürede büyük fark yaratabilirsin!",
+        "Yüksek": "Sınav kaygın yüksek görünüyor. Ama endişelenme — bu çok yaygın bir durum ve başa çıkmak tamamen mümkün!",
+        "Orta": "Belirli düzeyde sınav kaygın var. Bu aslında performansını destekleyebilecek sağlıklı bir seviye — ama dikkat etmekte fayda var.",
+        "Düşük": "Sınav kaygın düşük seviyede. Sınavlara karşı sağlıklı bir tutum içindesin!",
+        "Çok Düşük": "Sınav kaygın çok düşük — sınavlara karşı son derece rahat bir tutumun var! 🎉",
+    }
+    msg = level_messages.get(overall, "")
 
-    report = f"# 📝 SINAV KAYGISI DEĞERLENDİRME RAPORU\n\n**Genel Kaygı Düzeyin:** {overall} ({total}/{max_total} — %{total_pct})\n\n{msg}\n\n---\n\n## 📊 Alt Boyut Sonuçların\n\n"
+    report = f"# 📝 SINAV KAYGISI DEĞERLENDİRME RAPORU\n\n"
+    report += f"**Genel Kaygı Düzeyin:** {level_emoji} **{overall}** ({total}/{max_total} — %{total_pct})\n\n"
+    report += f"{msg}\n\n"
 
-    strong, weak = [], []
-    order = ["baskalari_gorusu","kendi_gorusu","gelecek_endisesi",
-             "hazirlik_endisesi","bedensel_tepkiler","zihinsel_tepkiler","genel_kaygi"]
+    # Yerkes-Dodson notu
+    if overall == "Orta":
+        report += "> 💡 **Biliyor muydun?** Araştırmalar, orta düzeyde bir kaygının aslında performansı artırdığını gösteriyor (Yerkes-Dodson Yasası). Kaygın seni motive ediyor ama kontrol dışına çıkmasına izin vermemelisin.\n\n"
+
+    report += "---\n\n"
+
+    # Baskın Kaygı Tipi Profili
+    dominant_info = scores.get("dominant_info", {})
+    type_scores = scores.get("type_scores", {})
+    if dominant_info and total_pct >= 20:
+        report += f"## 🎯 Baskın Kaygı Tipin: {dominant_info.get('icon', '')} {dominant_info.get('name', '')}\n\n"
+        report += f"{dominant_info.get('description', '')}\n\n"
+        report += f"**En Etkili Başa Çıkma Yöntemi:** {dominant_info.get('strategy', '')}\n\n"
+
+        report += "**Kaygı Tipi Dağılımın:**\n\n"
+        report += "| Tip | Düzey |\n|-----|-------|\n"
+        type_names = {"bedensel": "💪 Bedensel", "bilissel": "🧠 Bilişsel", "sosyal": "👥 Sosyal"}
+        for tkey, tpct in sorted(type_scores.items(), key=lambda x: x[1], reverse=True):
+            n = round(tpct / 10)
+            bar = "█" * n + "░" * (10 - n)
+            report += f"| {type_names.get(tkey, tkey)} | {bar} %{tpct} |\n"
+        report += "\n---\n\n"
+
+    # Alt Boyut Sonuçları (artık 3 kademeli)
+    report += "## 📊 Alt Boyut Sonuçların\n\n"
+
+    strong, weak, mid_areas = [], [], []
+    order = ["baskalari_gorusu", "kendi_gorusu", "gelecek_endisesi",
+             "hazirlik_endisesi", "bedensel_tepkiler", "zihinsel_tepkiler", "genel_kaygi"]
     for cat_key in order:
         cat   = SINAV_KAYGISI_CATEGORIES[cat_key]
         score = category_scores.get(cat_key, 0)
         pct   = round(score / cat["max_score"] * 100, 1) if cat["max_score"] else 0
-        n = round(pct/10); bar = "█"*n + "░"*(10-n)
+        n = round(pct / 10)
+        bar = "█" * n + "░" * (10 - n)
         report += f"### {cat['icon']} {cat['name']}\n**Puanın:** {score}/{cat['max_score']} ({bar} %{pct})\n\n"
-        for lk, ld in cat["interpretations"].items():
+        matched = False
+        for lk in ["high", "mid", "low"]:
+            ld = cat["interpretations"].get(lk)
+            if ld is None:
+                continue
             lo, hi = ld["range"]
             if lo <= score <= hi:
                 report += ld["text"] + "\n\n"
                 if ld["tips"]:
                     report += "**Sana Özel Öneriler:**\n" + "\n".join(f"- 💡 {t}" for t in ld["tips"]) + "\n\n"
-                if lk == "low":  strong.append(cat["name"])
-                elif lk == "high": weak.append(cat["name"])
+                if lk == "low":
+                    strong.append(cat["name"])
+                elif lk == "high":
+                    weak.append(cat["name"])
+                else:
+                    mid_areas.append(cat["name"])
+                matched = True
                 break
+        if not matched:
+            # Fallback for scores between ranges
+            report += "Bu alanda orta düzeyde bir kaygı belirtisi görülüyor.\n\n"
+            mid_areas.append(cat["name"])
         report += "---\n\n"
 
-    report += "## 🌟 Özet\n\n"
-    if strong: report += f"**Güçlü Yönlerin:** {', '.join(strong)}\n\n"
-    if weak:   report += f"**Üzerinde Çalışman Gereken Alanlar:** {', '.join(weak)}\n\n"
+    # Özet
+    report += "## 🌟 Özet Profil\n\n"
+    if strong:
+        report += f"**💪 Güçlü Yönlerin:** {', '.join(strong)}\n\n"
+    if mid_areas:
+        report += f"**🎯 Dikkat Edilmesi Gerekenler:** {', '.join(mid_areas)}\n\n"
+    if weak:
+        report += f"**⚠️ Üzerinde Çalışman Gereken Alanlar:** {', '.join(weak)}\n\n"
+
+    # Pratik Baş Etme Teknikleri
+    if total_pct >= 35:
+        report += "---\n\n## 🛠️ Pratik Baş Etme Teknikleri\n\n"
+        report += "### 🫁 Nefes Tekniği (4-7-8)\n"
+        report += "4 saniye burundan nefes al → 7 saniye tut → 8 saniye ağızdan ver. Sınav öncesi 3 kez tekrarla.\n\n"
+        report += "### 🧠 Düşünce Durdurma\n"
+        report += "Olumsuz düşünce geldiğinde zihninde 'DUR!' de. Sonra yerine olumlu bir düşünce koy: 'Ben hazırlandım, yapabilirim.'\n\n"
+        report += "### 🎬 Görselleştirme\n"
+        report += "Sınavdan önce gözlerini kapat ve kendini sakin, güvenli bir şekilde soruları çözerken hayal et. 2 dakika yeterli.\n\n"
+        report += "### 📝 Kaygı Günlüğü\n"
+        report += "Her sınavdan önce endişelerini kağıda yaz. Araştırmalar, yazmanın kaygıyı %20'ye kadar azalttığını gösteriyor.\n\n"
+
+    # Ebeveyn Rehberi
+    report += "---\n\n## 👨‍👩‍👦 Ebeveyn Rehberi\n\n"
+    if total_pct >= 55:
+        report += "**Yapmanız Gerekenler:**\n"
+        report += "- ✅ Çocuğunuzun kaygısını ciddiye alın — 'Boş ver, bir şey olmaz' demeyin\n"
+        report += "- ✅ Sınav sonucuna değil, çabaya odaklanın: 'Ne kadar çalıştın?' sorusu 'Kaç aldın?' dan daha önemli\n"
+        report += "- ✅ Fiziksel rahatlama tekniklerini birlikte pratik edin\n"
+        report += "- ✅ Gerekirse okul rehberlik servisinden destek isteyin\n\n"
+        report += "**Kaçınmanız Gerekenler:**\n"
+        report += "- ❌ 'Ben senin yaşında çok daha çalışkandım' gibi kıyaslamalar\n"
+        report += "- ❌ Sınav sonuçlarını ödül/ceza sistemiyle ilişkilendirme\n"
+        report += "- ❌ Aşırı beklenti yükleme veya baskı\n\n"
+    else:
+        report += "Çocuğunuzun sınav kaygısı kontrol altında görünüyor. Mevcut destekleyici tutumunuzu sürdürün!\n\n"
+
+    # Öğretmen Notu
+    report += "## 👩‍🏫 Öğretmen Notu\n\n"
+    if total_pct >= 55:
+        report += f"Bu öğrenci yüksek sınav kaygısı yaşıyor. Baskın kaygı tipi: **{dominant_info.get('name', 'Belirtilmemiş')}**.\n"
+        report += "Sınav ortamında ek süre, destekleyici geri bildirim ve başarı deneyimleri yaşatma önerilir.\n\n"
+    elif total_pct >= 35:
+        report += "Bu öğrencinin sınav kaygısı orta düzeyde. Sınav öncesi kısa motivasyon cümleleri faydalı olacaktır.\n\n"
+    else:
+        report += "Bu öğrenci sınavlara karşı sağlıklı bir tutum sergiliyor.\n\n"
+
     report += "\n## 💬 Son Söz\nSınav kaygısı çok yaygın bir durumdur ve başa çıkmak tamamen mümkündür! Sen bunu başarabilirsin! 💪"
     return report.strip()
 
@@ -647,7 +963,7 @@ COKLU_ZEKA_QUESTIONS_ILKOGRETIM = {
 
 
 def calculate_coklu_zeka_lise(answers):
-    """DÜZELTME: Key tipi normalize (str → int)."""
+    """Çoklu Zekâ Lise — profil tipi + sinerji analizi."""
     answers = {int(k): v for k, v in answers.items()}
     scores = {}
     for zeka_key in ZEKA_SIRA:
@@ -659,14 +975,19 @@ def calculate_coklu_zeka_lise(answers):
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1]["pct"], reverse=True)
     scores_named  = {COKLU_ZEKA_DATA[k]["name"]: v["pct"] for k, v in scores.items()}
+
+    profile = _detect_zeka_profile(sorted_scores)
+    synergies = _detect_zeka_synergies(sorted_scores[:3])
+
     result = {"version": "lise", "scores": scores, "scores_named": scores_named,
-              "top3": sorted_scores[:3], "bottom2": sorted_scores[-2:]}
+              "top3": sorted_scores[:3], "bottom2": sorted_scores[-2:],
+              "profile": profile, "synergies": synergies}
     report = generate_coklu_zeka_report(result)
     return result, report
 
 
 def calculate_coklu_zeka_ilkogretim(answers):
-    """DÜZELTME: Key tipi normalize (str → int)."""
+    """Çoklu Zekâ İlköğretim — profil tipi + sinerji analizi."""
     answers = {int(k): v for k, v in answers.items()}
     scores = {}
     for zeka_key in ZEKA_SIRA:
@@ -678,10 +999,99 @@ def calculate_coklu_zeka_ilkogretim(answers):
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1]["pct"], reverse=True)
     scores_named  = {COKLU_ZEKA_DATA[k]["name"]: v["pct"] for k, v in scores.items()}
+
+    profile = _detect_zeka_profile(sorted_scores)
+    synergies = _detect_zeka_synergies(sorted_scores[:3])
+
     result = {"version": "ilkogretim", "scores": scores, "scores_named": scores_named,
-              "top3": sorted_scores[:3], "bottom2": sorted_scores[-2:]}
+              "top3": sorted_scores[:3], "bottom2": sorted_scores[-2:],
+              "profile": profile, "synergies": synergies}
     report = generate_coklu_zeka_report(result)
     return result, report
+
+
+def _detect_zeka_profile(sorted_scores):
+    """Zekâ profil tipini belirler."""
+    if not sorted_scores:
+        return {"type": "belirsiz", "name": "Belirsiz", "description": ""}
+
+    top_pct = sorted_scores[0][1]["pct"]
+    second_pct = sorted_scores[1][1]["pct"] if len(sorted_scores) > 1 else 0
+    bottom_pct = sorted_scores[-1][1]["pct"] if sorted_scores else 0
+    pcts = [s[1]["pct"] for s in sorted_scores]
+    spread = max(pcts) - min(pcts) if pcts else 0
+
+    if spread <= 15:
+        return {
+            "type": "dengeli",
+            "name": "🌈 Dengeli Profil",
+            "description": "Tüm zekâ alanlarında birbirine yakın puanlar aldın. Çok yönlü bir yapın var — farklı alanlarda başarılı olabilirsin!",
+        }
+    elif top_pct - second_pct >= 15:
+        top_name = COKLU_ZEKA_DATA[sorted_scores[0][0]]["name"]
+        return {
+            "type": "tek_baskin",
+            "name": f"🎯 Tek Baskın: {top_name}",
+            "description": f"Bir zekâ alanın ('{top_name}') diğerlerinden belirgin şekilde öne çıkıyor. Bu alanda uzmanlaşma potansiyelin yüksek!",
+        }
+    elif top_pct - sorted_scores[2][1]["pct"] <= 10 if len(sorted_scores) > 2 else False:
+        names = [COKLU_ZEKA_DATA[s[0]]["name"] for s in sorted_scores[:3]]
+        return {
+            "type": "coklu_baskin",
+            "name": f"⚡ Çoklu Baskın",
+            "description": f"Birden fazla zekâ alanında ({', '.join(names)}) güçlüsün. Bu senin en büyük avantajın — bu alanları birleştirerek benzersiz yetenekler geliştirebilirsin!",
+        }
+    else:
+        return {
+            "type": "cift_baskin",
+            "name": f"🔗 Çift Baskın",
+            "description": f"İki zekâ alanın öne çıkıyor: {COKLU_ZEKA_DATA[sorted_scores[0][0]]['name']} ve {COKLU_ZEKA_DATA[sorted_scores[1][0]]['name']}. Bu ikili güçlü bir kombinasyon oluşturuyor!",
+        }
+
+
+def _detect_zeka_synergies(top3):
+    """Top 3 zekâ arasındaki sinerjileri tespit eder."""
+    SYNERGY_MAP = {
+        frozenset(["mantiksal", "gorsel"]): {
+            "name": "🏗️ Mühendislik Profili",
+            "detail": "Mantıksal düşünme + görsel algı = mühendislik, mimarlık, bilgisayar bilimi alanlarında güçlü potansiyel.",
+        },
+        frozenset(["sozel", "sosyal"]): {
+            "name": "🎤 İletişim Profili",
+            "detail": "Dil yeteneği + sosyal zekâ = hukuk, eğitim, gazetecilik, halkla ilişkiler alanlarında güçlü potansiyel.",
+        },
+        frozenset(["muziksel", "bedensel"]): {
+            "name": "🎭 Performans Profili",
+            "detail": "Müzik + beden koordinasyonu = dans, tiyatro, spor, performans sanatları alanlarında güçlü potansiyel.",
+        },
+        frozenset(["icsel", "sozel"]): {
+            "name": "✍️ Yaratıcı Yazar Profili",
+            "detail": "İçsel farkındalık + dil yeteneği = yazarlık, psikoloji, felsefe, danışmanlık alanlarında güçlü potansiyel.",
+        },
+        frozenset(["dogaci", "bedensel"]): {
+            "name": "🌿 Saha Bilimci Profili",
+            "detail": "Doğa bilinci + fiziksel yetenek = biyoloji, veterinerlik, tarım, çevre bilimleri alanlarında güçlü potansiyel.",
+        },
+        frozenset(["mantiksal", "sozel"]): {
+            "name": "⚖️ Akademik-Analitik Profil",
+            "detail": "Mantık + dil = araştırma, hukuk, ekonomi, akademik kariyer alanlarında güçlü potansiyel.",
+        },
+        frozenset(["gorsel", "bedensel"]): {
+            "name": "🎨 Tasarım Profili",
+            "detail": "Görsel algı + el becerisi = endüstriyel tasarım, heykel, mimarlık, moda tasarımı alanlarında güçlü potansiyel.",
+        },
+        frozenset(["sosyal", "icsel"]): {
+            "name": "🧑‍⚕️ İnsan Bilimci Profili",
+            "detail": "Sosyal zekâ + iç görü = psikoloji, danışmanlık, koçluk, sosyal hizmet alanlarında güçlü potansiyel.",
+        },
+    }
+
+    top_keys = [t[0] for t in top3]
+    synergies = []
+    for pair_set, info in SYNERGY_MAP.items():
+        if pair_set.issubset(set(top_keys)):
+            synergies.append(info)
+    return synergies
 
 
 def generate_coklu_zeka_report(result):
@@ -689,16 +1099,27 @@ def generate_coklu_zeka_report(result):
     top3    = result["top3"]
     bottom2 = result["bottom2"]
     ver     = "Lise/Yetişkin" if result["version"] == "lise" else "İlköğretim"
+    profile = result.get("profile", {})
+    synergies = result.get("synergies", [])
 
-    report = f"# 🧠 ÇOKLU ZEKÂ DEĞERLENDİRME RAPORU\n**Versiyon:** {ver}\n\n---\n\n## 📊 Zekâ Profil Tablon\n\n| Zekâ Türü | Puan | Yüzde | Grafik |\n|---|---|---|---|\n"
+    report = f"# 🧠 ÇOKLU ZEKÂ DEĞERLENDİRME RAPORU\n**Versiyon:** {ver}\n\n---\n\n"
+
+    # Profil Tipi
+    if profile:
+        report += f"## 🎯 Zekâ Profil Tipin: {profile.get('name', '')}\n\n"
+        report += f"{profile.get('description', '')}\n\n---\n\n"
+
+    # Zekâ Profil Tablosu
+    report += "## 📊 Zekâ Profil Tablon\n\n| Zekâ Türü | Puan | Yüzde | Grafik |\n|---|---|---|---|\n"
 
     for zeka_key, sd in sorted(scores.items(), key=lambda x: x[1]["pct"], reverse=True):
         d = COKLU_ZEKA_DATA[zeka_key]
-        n = round(sd["pct"]/10); bar = "█"*n + "░"*(10-n)
+        n = round(sd["pct"] / 10)
+        bar = "█" * n + "░" * (10 - n)
         report += f"| {d['icon']} {d['name']} | {sd['raw']}/{sd['max']} | %{sd['pct']} | {bar} |\n"
 
     report += "\n---\n\n## 🏆 En Güçlü 3 Zekâ Alanın\n\n"
-    medals = ["🥇","🥈","🥉"]
+    medals = ["🥇", "🥈", "🥉"]
     for rank, (zk, sd) in enumerate(top3, 1):
         d = COKLU_ZEKA_DATA[zk]
         report += f"### {medals[rank-1]} {rank}. {d['icon']} {d['name']} (%{sd['pct']})\n\n{d['description']}\n\n"
@@ -706,11 +1127,33 @@ def generate_coklu_zeka_report(result):
         report += "**Ders Çalışma İpuçları:**\n" + "\n".join(f"- 💡 {t}" for t in d["study_tips"]) + "\n\n"
         report += f"**Sana Uygun Kariyer Alanları:** {', '.join(d['careers'])}\n\n---\n\n"
 
+    # Sinerji Bölümü
+    if synergies:
+        report += "## 🔗 Zekâ Sinerjilerin — Güçlü Kombinasyonlar\n\n"
+        for syn in synergies:
+            report += f"### {syn['name']}\n{syn['detail']}\n\n"
+        report += "---\n\n"
+
+    # Gelişime Açık Alanlar
     report += "## 🌱 Gelişime Açık Alanların\n\n"
     for zk, sd in bottom2:
         d = COKLU_ZEKA_DATA[zk]
         report += f"### {d['icon']} {d['name']} (%{sd['pct']})\n\nBu alanda henüz keşfetmediğin yeteneklerin olabilir. İşte geliştirmek için birkaç ipucu:\n\n"
         report += "\n".join(f"- 🌱 {t}" for t in d["study_tips"]) + "\n\n"
+
+    # Ebeveyn Rehberi
+    report += "---\n\n## 👨‍👩‍👦 Ebeveyn Rehberi\n\n"
+    top_names = [COKLU_ZEKA_DATA[t[0]]["name"] for t in top3]
+    report += f"Çocuğunuzun en güçlü zekâ alanları: **{', '.join(top_names)}**\n\n"
+    report += "**Öneriler:**\n"
+    report += "- ✅ Bu güçlü alanları destekleyecek etkinlikler ve kurslar araştırın\n"
+    report += "- ✅ Zayıf alanları güçlü alanlar üzerinden geliştirin (ör: Görsel zekâsı güçlü bir çocuğa matematiği şemalarla öğretin)\n"
+    report += "- ✅ Her zekâ türü eşit değerdedir — tek bir alana odaklanmak yerine çocuğunuzun doğal yeteneklerini keşfetmesine izin verin\n\n"
+
+    # Öğretmen Notu
+    report += "## 👩‍🏫 Öğretmen Notu\n\n"
+    report += f"Bu öğrencinin güçlü zekâ alanları: **{', '.join(top_names)}**.\n"
+    report += "Ders materyallerini bu zekâ alanlarına uygun çeşitlendirmek öğrenme verimliliğini artıracaktır.\n\n"
 
     report += "\n---\n\n## 💬 Son Söz\nUnutma, herkesin farklı zekâ alanlarında güçlü ve gelişime açık yönleri vardır. Hiçbir zekâ türü diğerinden daha iyi ya da kötü değildir! Sen benzersizsin! 🌟"
     return report.strip()
@@ -811,7 +1254,8 @@ def generate_vark_report(scores):
     for sk, cnt in sorted_styles:
         s   = VARK_STYLES[sk]
         pct = percentages[sk]
-        n   = round(pct/10); bar = "█"*n + "░"*(10-n)
+        n   = round(pct / 10)
+        bar = "█" * n + "░" * (10 - n)
         report += f"| {s['icon']} {s['name']} | {cnt} | %{pct} | {bar} |\n"
 
     report += "\n---\n\n"
@@ -830,6 +1274,73 @@ def generate_vark_report(scores):
         report += "**Seni Tanımlayan Özellikler:**\n" + "\n".join(f"- ✅ {c}" for c in s["characteristics"]) + "\n\n"
         report += "**Sana Özel Ders Çalışma İpuçları:**\n" + "\n".join(f"- {t}" for t in s["study_tips"]) + "\n\n"
         report += f"⚠️ **Dikkat:** {s['avoid']}\n\n"
+
+    # DERSE ÖZEL ÖĞRENME STRATEJİLERİ
+    active_style = dominant_key if not is_multimodal else sorted_styles[0][0]
+    report += "---\n\n## 📚 Derse Özel Öğrenme Stratejilerin\n\n"
+
+    DERS_STRATEJILERI = {
+        "V": {
+            "Matematik": "Formülleri renkli kartlara yaz. Grafik ve diyagramlarla çalış. Geometri konularında çizim yap.",
+            "Türkçe/Edebiyat": "Zihin haritaları çiz. Dil bilgisi kurallarını şemalarla öğren. Kitap özetlerini görsel notlarla yap.",
+            "Fen Bilimleri": "Deney süreçlerini şemalarla çiz. Hücre, atom gibi yapıları görselleştir. Renkli tablolar oluştur.",
+            "Sosyal Bilimler": "Tarih çizelgeleri oluştur. Haritalar üzerinde çalış. Olayları görsel akış şemalarıyla ilişkilendir.",
+        },
+        "A": {
+            "Matematik": "Formülleri sesli tekrarla. Çözüm adımlarını kendine anlat. Problem çözerken sesli düşün.",
+            "Türkçe/Edebiyat": "Metinleri sesli oku. Şiirleri ve hikayeleri dinle. Tartışma gruplarına katıl.",
+            "Fen Bilimleri": "Konuları birine anlatarak öğren. Podcast ve video dersleri dinle. Grup tartışması yap.",
+            "Sosyal Bilimler": "Belgeseller ve podcast dinle. Tarihi olayları hikayeleştirerek anlat. Sözlü soru-cevap yap.",
+        },
+        "R": {
+            "Matematik": "Formülleri yazarak tekrarla. Örnek soruları adım adım yaz. Not kartları (flashcard) hazırla.",
+            "Türkçe/Edebiyat": "Kitap özetleri yaz. Kompozisyon pratiği yap. Kelime listeleri oluştur ve düzenli tekrarla.",
+            "Fen Bilimleri": "Deney raporları yaz. Konuları kendi cümlelerinle özetle. Kitaptan önemli yerleri çıkar.",
+            "Sosyal Bilimler": "Kronolojik notlar tut. Konu özetleri yaz. Kavramları kendi kelimelerinle tanımla.",
+        },
+        "K": {
+            "Matematik": "Problem çözerken kağıt-kaleme sık başvur. Geometride modeller yap. Hesap makinesi ve araçlarla pratik yap.",
+            "Türkçe/Edebiyat": "Rol yapma ve canlandırma yap. Hikayeleri sahnele. Kelime kartlarını fiziksel olarak sırala.",
+            "Fen Bilimleri": "Laboratuvar deneyleri yap. Modeller ve maketler inşa et. Doğa gözlemleri yaparak öğren.",
+            "Sosyal Bilimler": "Tarihsel olayları canlandır. Müze ve tarihi mekan ziyaretleri yap. Haritaları kendin çiz.",
+        },
+    }
+
+    strategies = DERS_STRATEJILERI.get(active_style, {})
+    if strategies:
+        report += "| Ders | Strateji |\n|------|----------|\n"
+        for ders, strateji in strategies.items():
+            report += f"| **{ders}** | {strateji} |\n"
+        report += "\n"
+
+    # Zayıf Stilini Güçlendirme
+    weakest_key = sorted_styles[-1][0]
+    weakest_style = VARK_STYLES[weakest_key]
+    report += f"---\n\n## 🌱 Zayıf Stilini Güçlendirme: {weakest_style['icon']} {weakest_style['name']}\n\n"
+    report += f"En az kullandığın öğrenme stili **{weakest_style['name']}**. Bu stili de geliştirmek, öğrenme esnekliğini artırır:\n\n"
+    report += "\n".join(f"- 🌱 {t}" for t in weakest_style["study_tips"][:3]) + "\n\n"
+
+    # Ebeveyn Rehberi
+    active_name = VARK_STYLES[active_style]["name"]
+    report += "---\n\n## 👨‍👩‍👦 Ebeveyn Rehberi\n\n"
+    report += f"Çocuğunuzun baskın öğrenme stili: **{active_name}**\n\n"
+    parent_tips = {
+        "V": "Çocuğunuza renkli kalemler, poster kağıtları ve görsel materyaller sağlayın. Çalışma odasında görsel düzen oluşturun.",
+        "A": "Çocuğunuzla konuları tartışın. Sesli okuma ve dinleme materyalleri sağlayın. Sessiz bir çalışma ortamı çok önemli — diğer sesleri engelleyin.",
+        "R": "Çocuğunuza kaliteli defterler ve not araçları sağlayın. Yazarak özetleme alışkanlığını destekleyin. Kitap okumasını teşvik edin.",
+        "K": "Çocuğunuza yaparak öğrenme fırsatları sunun. Deney setleri, lego, maket malzemeleri sağlayın. Uzun süre oturmasını beklemeyin — kısa molalarla hareket etmesine izin verin.",
+    }
+    report += parent_tips.get(active_style, "") + "\n\n"
+
+    # Öğretmen Notu
+    report += "## 👩‍🏫 Öğretmen Notu\n\n"
+    teacher_tips = {
+        "V": "Bu öğrenci görsel materyallerden en çok verim alır. Tahta kullanımı, şemalar, renkli gösterimler etkili olacaktır.",
+        "A": "Bu öğrenci işitsel öğrenir. Sınıf tartışmaları, sesli anlatım ve soru-cevap etkinlikleri etkili olacaktır.",
+        "R": "Bu öğrenci okuyarak/yazarak öğrenir. Not tutma, özet çıkarma ve yazılı materyaller etkili olacaktır.",
+        "K": "Bu öğrenci yaparak/deneyimleyerek öğrenir. Laboratuvar, atölye, rol yapma ve fiziksel etkinlikler etkili olacaktır.",
+    }
+    report += teacher_tips.get(active_style, "") + "\n\n"
 
     report += "---\n\n## 💬 Son Söz\nÖğrenme stilini bilmek, daha verimli çalışmanın anahtarıdır! Baskın stilini kullanarak başla, diğer stilleri de deneyerek öğrenme repertuarını genişlet. 🚀"
     return report.strip()
