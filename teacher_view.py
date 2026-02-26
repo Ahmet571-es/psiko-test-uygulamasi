@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from db_utils import (
     get_all_students_with_results, reset_database,
     delete_specific_students, save_holistic_analysis,
-    get_student_analysis_history
+    get_student_analysis_history, is_using_sqlite
 )
 
 # --- API AYARLARI ---
@@ -172,8 +172,9 @@ def plot_scores(data_dict, title):
 # PROMPT ÜRETME FONKSİYONLARI — TİCARİ KALİTE v3.0
 # ============================================================
 
-def build_holistic_prompt(student_name, student_age, student_gender, test_data_list):
+def build_holistic_prompt(student_name, student_age, student_gender, test_data_list, student_grade=None):
     """Bütüncül (harmanlanmış) analiz için ticari kalite prompt."""
+    grade_text = f"{student_grade}. Sınıf" if student_grade else "Belirtilmemiş"
     return f"""# ROL ve KİMLİK
 
 Sen, Türkiye'nin önde gelen eğitim psikolojisi merkezlerinde 20 yıl deneyim kazanmış, psikometrik değerlendirme, kariyer danışmanlığı ve gelişim psikolojisi alanlarında uzmanlaşmış bir Klinik Eğitim Psikoloğusun. 
@@ -195,6 +196,7 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Ai
 |------|-------|
 | İsim | {student_name} |
 | Yaş | {student_age} |
+| Sınıf | {grade_text} |
 | Cinsiyet | {student_gender} |
 | Değerlendirme Türü | Bütüncül Çoklu Test Analizi |
 
@@ -211,7 +213,7 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Ai
 
 2. **SENTEZ MERKEZLİ:** Testleri ayrı ayrı özetleme. Asıl değer, testler arasındaki BAĞLANTILARDA, KORELASYONLARDA ve ÇELİŞKİLERDE yatıyor. Her paragrafta en az 2 farklı testten veri çaprazla.
 
-3. **GELİŞİMSEL BAĞLAM:** {student_age} yaşındaki bir bireyin gelişimsel dönem özelliklerini (bilişsel, duygusal, sosyal, kimlik gelişimi) göz önünde bulundurarak yorumla. Yaşa özgü beklentileri ve normları referans al.
+3. **GELİŞİMSEL BAĞLAM:** {student_age} yaşında, {grade_text} düzeyinde bir bireyin gelişimsel dönem özelliklerini (bilişsel, duygusal, sosyal, kimlik gelişimi) göz önünde bulundurarak yorumla. Yaşa ve sınıf seviyesine özgü beklentileri ve normları referans al.
 
 4. **TIBBİ TANI YASAĞI:** "DEHB", "depresyon", "anksiyete bozukluğu", "otizm spektrumu", "disleksi" gibi klinik tanı terimleri kesinlikle kullanma. Bunun yerine davranışsal betimleme yap.
 
@@ -1577,10 +1579,11 @@ Bu öğrencinin öz-değerlendirmesi (%?) ile gerçek performansı (%?) arasınd
     return ""
 
 
-def build_single_test_prompt(student_name, student_age, student_gender, test_name, test_data):
+def build_single_test_prompt(student_name, student_age, student_gender, test_name, test_data, student_grade=None):
     """Tekil test analizi için ticari kalite prompt — her teste özel uzman protokolü içerir."""
 
     test_guidance = _get_test_specific_guidance(test_name)
+    grade_text = f"{student_grade}. Sınıf" if student_grade else "Belirtilmemiş"
 
     return f"""# ROL ve KİMLİK
 
@@ -1596,6 +1599,7 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Te
 |------|-------|
 | İsim | {student_name} |
 | Yaş | {student_age} |
+| Sınıf | {grade_text} |
 | Cinsiyet | {student_gender} |
 | Analiz Edilen Test | {test_name} |
 | Değerlendirme Türü | Tekil Test Derinlikli Analiz |
@@ -1622,7 +1626,7 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Te
 
 4. **TIBBİ TANI YASAĞI:** Klinik tanı terimleri (DEHB, depresyon, disleksi, anksiyete bozukluğu vb.) kesinlikle kullanma.
 
-5. **GELİŞİMSEL BAĞLAM:** {student_age} yaşındaki bir bireyin gelişimsel özelliklerini referans al.
+5. **GELİŞİMSEL BAĞLAM:** {student_age} yaşında, {grade_text} düzeyinde bir bireyin gelişimsel özelliklerini referans al.
 
 6. **UZUNLUK:** Bu rapor minimum 2500 kelime olmalıdır. Her bölüm ödenen ücrete değecek derinlikte olmalı.
 
@@ -1831,6 +1835,15 @@ def app():
 
     st.markdown("## 👨‍🏫 Öğretmen Yönetim Paneli")
     st.caption("EĞİTİM CHECK UP — Kişisel Eğitim & Kariyer Analiz Merkezi")
+
+    # Kalıcı veritabanı uyarısı
+    if is_using_sqlite():
+        st.warning(
+            "⚠️ **Veri Kalıcılığı Uyarısı:** Şu an SQLite (geçici) veritabanı kullanılıyor. "
+            "Uygulama yeniden başladığında tüm öğrenci verileri silinecektir. "
+            "Kalıcı veri için Streamlit Secrets'a `SUPABASE_DB_URL` ekleyin."
+        )
+
     st.markdown("---")
 
     # Veritabanından verileri çek
@@ -2087,7 +2100,8 @@ def app():
                                 student_name=info.name,
                                 student_age=info.age,
                                 student_gender=info.gender,
-                                test_data_list=ai_input
+                                test_data_list=ai_input,
+                                student_grade=getattr(info, 'grade', None)
                             )
 
                             final_report = get_ai_analysis(prompt)
@@ -2130,7 +2144,8 @@ def app():
                                 student_age=info.age,
                                 student_gender=info.gender,
                                 test_name=test_name,
-                                test_data=test_data_for_prompt
+                                test_data=test_data_for_prompt,
+                                student_grade=getattr(info, 'grade', None)
                             )
 
                             single_report = get_ai_analysis(prompt)
