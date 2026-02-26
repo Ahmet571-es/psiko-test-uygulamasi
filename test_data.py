@@ -1562,3 +1562,575 @@ Holland kodun, sana en uygun meslekleri belirlemende güçlü bir rehber!
 ## 💬 Son Söz
 Holland teorisine göre insanlar iş ortamlarını, kendi kişilikleriyle en uyumlu çevreleri seçmeye çalışırlar. Kişilik-çevre uyumu ne kadar yüksek olursa, iş tatmini ve başarı da o kadar yüksek olur. Kendi koduna uygun bir kariyer yolu seçmek, hem mutlu hem başarılı olmanın anahtarıdır! 🚀"""
     return report.strip()
+
+
+# ============================================================
+# SABİT ENNEAGRAM VERİLERİ
+# ============================================================
+ENNEAGRAM_QUESTIONS = {
+    1: [
+        "Hata yaptığımda kendime çok kızarım.",
+        "Neyin doğru neyin yanlış olduğunu hemen hissederim.",
+        "Yaptığım işin kusursuz olması için çok uğraşırım.",
+        "Kurallara uymak ve adil olmak benim için çok önemlidir.",
+        "Sözümün eri olmak, dürüst olmak her şeyden önce gelir.",
+        "Duygularımla değil, mantığımla hareket etmeyi severim.",
+        "Bazen o kadar ciddi olurum ki eğlenmeyi unutabilirim.",
+        "Beni en çok eleştiren kişi yine benim.",
+        "Bir ortamda bir şey düzgün değilse hemen gözüme batar.",
+        "İşlerimi baştan savma değil, tam olması gerektiği gibi yaparım.",
+        "Randevularıma sadık kalmaya ve düzenli olmaya çok dikkat ederim.",
+        "Ahlaklı olmak benim kırmızı çizgimdir.",
+        "Başkalarının göremediği eksiklikleri şıp diye görürüm.",
+        "Detayların atlanmasından hiç hoşlanmam.",
+        "İşler karışınca biraz sert ve kuralcı olabilirim.",
+        "Rahatladığımda ise çok daha anlayışlı ve neşeli olurum.",
+        "Yanlış anlaşılmaktan çok korkarım.",
+        "Bana yapılan yanlışı affetmekte bazen zorlanırım.",
+        "Benim için olaylar ya siyahtır ya beyaz, griyi pek sevmem.",
+        "Haksız olduğumu kabul etmek bana biraz zor gelir."
+    ],
+    2: [
+        "Hayatımdaki en önemli şey sevdiklerimle olan ilişkimdir.",
+        "İnsanlara yardım etmek beni çok mutlu eder.",
+        "Biri benden bir şey isteyince 'Hayır' demekte zorlanırım.",
+        "Hediye vermeyi, hediye almaktan daha çok severim.",
+        "İnsanlarla samimi ve yakın olmayı isterim.",
+        "Başkalarının bana ihtiyaç duyması hoşuma gider.",
+        "Genelde sıcakkanlı ve güler yüzlüyümdür.",
+        "Üzgün olduğumu pek belli etmem, hep güçlü görünmeye çalışırım.",
+        "Yaptığım iyiliğin fark edilmesi ve 'Teşekkür' duymak beni motive eder.",
+        "Sevdiklerimin her an yanımda olmasını isterim.",
+        "'Seni seviyorum' demekten ve duymaktan hiç çekinmem.",
+        "Arkadaşlarım dertlerini hep bana anlatır, iyi bir sırdaşımdır.",
+        "Arkadaşlıklarımı korumak için kendimden çok ödün veririm.",
+        "Çok strese girersem biraz sitemkar olabilirim.",
+        "Mutluysam etrafıma neşe ve sevgi saçarım.",
+        "İnsanları sevmeye çok hazırım.",
+        "İlgi görmediğim zaman içten içe kırılırım.",
+        "Birinin işini kolaylaştırmak beni iyi hissettirir.",
+        "Sevilmek ve bir gruba ait olmak benim için hava, su kadar önemlidir.",
+        "Endişelendiğimde insanlara daha çok yardım etmeye çalışırım."
+    ],
+    3: [
+        "Girdiğim ortamlarda kendimi iyi ifade ederim.",
+        "Aynı anda birkaç işi birden yönetebilirim.",
+        "Başarılı olmak ve parmakla gösterilmek isterim.",
+        "Boş durmayı sevmem, üretken olmak beni canlı tutar.",
+        "Bir hedef koyduysam ona kilitlenirim.",
+        "Dışarıdan nasıl göründüğüme ve imajıma önem veririm.",
+        "Rakiplerimden önce harekete geçmeyi severim.",
+        "Takım çalışmasını severim ama lider olmak isterim.",
+        "Bir işin en kısa ve en pratik yolunu hemen bulurum.",
+        "Bazen heyecanlanıp yapabileceğimden fazla söz verebilirim.",
+        "Duygularımı işime karıştırmayı pek sevmem.",
+        "Yarışma ortamları beni daha çok çalışmaya iter.",
+        "Okulda veya işte en tepede olmayı hayal ederim.",
+        "Çok stresliysem başkalarını biraz küçümseyebilirim.",
+        "Rahatsam çok dürüst ve herkesi motive eden biri olurum.",
+        "Olumsuz düşüncelerin beni yavaşlatmasına izin vermem.",
+        "Yeni bir ortama girdiğimde hemen uyum sağlarım.",
+        "Başarılı insanlarla arkadaşlık etmeyi severim.",
+        "Yaptığım her işin 'En İyisi' olmaya çalışırım.",
+        "Başardığımı görmek benim yakıtımdır."
+    ],
+    4: [
+        "Hayal gücüm çok geniştir, kafamda filmler çekerim.",
+        "Kendimi çoğu insandan biraz farklı ve özel hissederim.",
+        "Bazen sebepsiz yere hüzünlenirim, melankoliyi severim.",
+        "Çok hassas bir kalbim vardır, çabuk etkilenirim.",
+        "Sanki hayatımda bir parça eksikmiş gibi hissederim.",
+        "Başkalarının mutluluğunu görünce bazen 'Neden ben değil?' derim.",
+        "Duygularımı sanatla, müzikle veya yazıyla ifade etmeyi severim.",
+        "Beni anlamadıklarını düşündüğümde kabuğuma çekilirim.",
+        "Romantik ve duygusal filmlerden/kitaplardan hoşlanırım.",
+        "Sıradan ve herkes gibi olmak benim korkulu rüyamdır.",
+        "Kimsede olmayan, orijinal eşyalara sahip olmayı severim.",
+        "Duyguları çok yoğun yaşarım, ya hep ya hiç.",
+        "Stresliyken biraz huysuz ve mesafeli olabilirim.",
+        "Rahatsam çok şefkatli ve anlayışlı olurum.",
+        "Eleştirildiğim zaman çok alınırım.",
+        "Hayatın anlamını ve derinliğini sık sık düşünürüm.",
+        "Sürüden ayrılmayı, kendi tarzımı yaratmayı severim.",
+        "Estetik ve güzellik benim için çok önemlidir.",
+        "Bazen olayları biraz dramatik hale getirebilirim.",
+        "Duyguların samimi olması benim için her şeyden önemlidir."
+    ],
+    5: [
+        "Çok vıcık vıcık duygusal ortamlardan kaçarım.",
+        "Bir konuyu en ince detayına kadar araştırmayı severim.",
+        "Biraz utangaç olabilirim, kalabalıkta kaybolmayı tercih ederim.",
+        "Duygularımı anlatmaktansa fikirlerimi anlatmayı severim.",
+        "Bir şey söylemeden önce kafamda tartar, öyle konuşurum.",
+        "Kavgadan ve gürültüden nefret ederim.",
+        "Tek başıma vakit geçirmek benim için şarj olmak gibidir.",
+        "Eleştiriye gelemem ama bunu dışarı pek belli etmem.",
+        "Kimseye muhtaç olmadan, kendi ayaklarımın üzerinde durmak isterim.",
+        "Özel hayatımı ve sırlarımı kolay kolay paylaşmam.",
+        "Kafamın içinde sürekli projeler, fikirler döner durur.",
+        "Zamanımı ve odamı kimsenin işgal etmesini istemem.",
+        "Bilmeden konuşan insanlara tahammül edemem.",
+        "İlgi duyduğum konularda ayaklı kütüphane gibiyimdir.",
+        "Sadece kafamın uyuştuğu, zeki insanlarla konuşmayı severim.",
+        "Stresliyken insanlardan tamamen kopabilirim.",
+        "Rahatsam bilgimi paylaşan, çok zeki ve esprili biri olurum.",
+        "Derin ve felsefi tartışmalara bayılırım.",
+        "Grup ödevi yerine bireysel ödevi tercih ederim.",
+        "Kararlarımı hislerimle değil, aklımla veririm."
+    ],
+    6: [
+        "Sorumluluklarımı asla aksatmam, ödevimi son ana bırakmam.",
+        "Her zaman 'B planım', hatta 'C planım' vardır.",
+        "İnsanların niyetini hemen anlamam, biraz şüpheciyimdir.",
+        "Karar verirken çok düşünürüm, hata yapmaktan korkarım.",
+        "Güvende hissetmek benim için en önemli şeydir.",
+        "Kendi kararımdan emin olamayıp başkalarına danışırım.",
+        "Bir gruba veya takıma ait olmak beni rahatlatır.",
+        "Kötü bir şey olacakmış gibi endişelenirim.",
+        "Ailem ve arkadaşlarım benim güvenli limanımdır.",
+        "Küçük sorunları kafamda büyütüp felaket senaryoları yazabilirim.",
+        "Yeni tanıştığım insanlara hemen güvenmem, zaman tanırım.",
+        "Tehlikeyi ve riski önceden sezerim.",
+        "Stresliyken çok kaygılı ve evhamlı olurum.",
+        "Rahatsam dünyanın en sadık ve eğlenceli dostu olurum.",
+        "Korktuğum zaman ya donup kalırım ya da saldırganlaşabilirim.",
+        "Kurallara uyan, düzenli biriyimdir.",
+        "Biri bana söz verip tutmazsa çok sinirlenirim.",
+        "Korkularımın üzerine gitmek için çabalarım.",
+        "Çoğu insandan daha tedbirliyimdir.",
+        "Bana destek olan, arkamda duran insanları asla bırakmam."
+    ],
+    7: [
+        "Hayatın tadını çıkarmak, eğlenmek benim işim.",
+        "Çok konuşkan, neşeli ve fıkır fıkır biriyimdir.",
+        "Planlarımın kesinleşmesinden hoşlanmam, seçeneklerim açık olsun isterim.",
+        "Çevrem geniştir, her yerden arkadaşım vardır.",
+        "Sürekli yeni şeyler denemek, maceralara atılmak isterim.",
+        "Geleceğe hep umutla bakarım, bardağın dolu tarafını görürüm.",
+        "İnsanları güldürmeyi, hikayeler anlatmayı severim.",
+        "Yerimde duramam, enerjim hiç bitmez.",
+        "Farklı hobiler, farklı tatlar denemeye bayılırım.",
+        "Sıkılmak benim en büyük düşmanımdır.",
+        "Bazen ölçüyü kaçırıp aşırıya kaçabilirim (çok yemek, çok gezmek).",
+        "Özgürlüğümün kısıtlanmasına asla gelemem.",
+        "Stresliyken daldan dala atlar, hiçbir işi bitiremem.",
+        "Rahatsam çok yaratıcı ve vizyoner olurum.",
+        "Sevdiğim bir işse harikalar yaratırım ama sıkılırsam bırakırım.",
+        "Acıdan, üzüntüden kaçmak için kendimi eğlenceye veririm.",
+        "Bir güne çok fazla plan sığdırmaya çalışırım.",
+        "Negatif ve sürekli şikayet eden insanlardan kaçarım.",
+        "Aklıma bir fikir gelince hemen yapmak isterim.",
+        "Mutluluk ve heyecan benim yakıtımdır."
+    ],
+    8: [
+        "İstediğim şeyi almak için sonuna kadar mücadele ederim.",
+        "Doğuştan liderimdir, yönetmeyi severim.",
+        "Güçlü görünmek hoşuma gider, zayıflıktan nefret ederim.",
+        "Mızmız ve kararsız insanlara tahammülüm yoktur.",
+        "Yarışmayı ve kazanmayı severim, kaybetmek kitabımda yazmaz.",
+        "Sevdiklerimi canım pahasına korurum, onlara laf ettirmem.",
+        "İplerin elimde olmasını, kontrolün bende olmasını isterim.",
+        "Saygı benim için sevgiden önce gelir.",
+        "Risk almaktan korkmam, cesurumdur.",
+        "Çok çalışırım, yorulmak nedir bilmem.",
+        "Biri bana meydan okursa cevabını fazlasıyla alır.",
+        "Lafı dolandırmam, neysem oyum, yüzüne söylerim.",
+        "Bir grubun başına geçip organize etmekte iyiyimdir.",
+        "Dobra konuşurum, bazen bu yüzden insanlar kırılabilir.",
+        "Stresliyken çok baskıcı ve sinirli olabilirim.",
+        "Rahatsam koca yürekli, koruyucu bir kahraman olurum.",
+        "Duygularımı göstermeyi zayıflık olarak görürüm.",
+        "Sadece gerçekten güvendiğim insanlara kalbimi açarım.",
+        "Hayatı dolu dolu, yüksek sesle yaşamayı severim.",
+        "Haksızlığa asla gelemem, hemen müdahale ederim."
+    ],
+    9: [
+        "Kavgadan, gürültüden hiç hoşlanmam, huzur isterim.",
+        "Herkes 'Çok sakinsin' der, kolay kolay sinirlenmem.",
+        "İnsanları çok iyi dinlerim, herkesin derdini anlarım.",
+        "Önemli işleri son ana kadar erteleyebilirim.",
+        "Alışkanlıklarımı severim, düzenimin bozulmasını istemem.",
+        "Karar vermek bana zor gelir, 'Fark etmez' demek daha kolaydır.",
+        "Acele ettirilmekten nefret ederim, kendi hızımda gitmek isterim.",
+        "Bazen detayları unuturum, dalgın olabilirim.",
+        "Öfkemi içime atarım, dışarıya pek yansıtmam.",
+        "Boş zamanımda hiçbir şey yapmadan uzanmayı severim.",
+        "Evde vakit geçirmek, kendi halimde olmak hoşuma gider.",
+        "Ortam gerilmesin diye alttan alırım.",
+        "Birinin bana sürekli ne yapacağımı söylemesi beni inatçı yapar.",
+        "Önemsiz işlerle oyalanıp asıl işi kaçırabilirim.",
+        "Stresliyken pasifleşirim, hiçbir şey yapasım gelmez.",
+        "Rahatsam çok üretken ve herkesi birleştiren biri olurum.",
+        "Başkalarını memnun etmek için kendi isteğimden vazgeçebilirim.",
+        "Çok fazla seçenek arasında kalmak beni yorar.",
+        "Herkesle iyi geçinmeye çalışırım, düşmanım yoktur.",
+        "Huzurlu ve sakin bir hayat hayalimdir."
+    ]
+}
+
+ENNEAGRAM_DATA = {
+    1: {
+        "title": "Tip 1: Reformcu",
+        "role": "Mükemmeliyetçi, Düzenleyici",
+        "icon": "⚖️",
+        "fear": "Hata yapmak, yozlaşmak ve kusurlu olmak.",
+        "desire": "Doğruyu yapmak, iyi ve ahlaklı bir insan olmak.",
+        "stress": 4, "growth": 7,
+        "desc": (
+            "Sen dünyaya 'Doğru olan şeyi yapmalıyız' gözlüğüyle bakıyorsun. "
+            "İçinde adeta sürekli çalışan bir 'iç ses' var — bu ses sana nelerin "
+            "daha iyi, daha doğru, daha adil olabileceğini fısıldıyor. "
+            "Bu yüzden hem kendin hem de çevreni sürekli geliştirmeye çalışıyorsun. "
+            "Titizliğin, dürüstlüğün ve etik değerlere bağlılığın seni gerçek anlamda "
+            "güvenilir bir insan yapıyor. Ancak bu iç ses bazen çok gürültülü hale gelip "
+            "seni kendinle ve başkalarıyla barışık olmaktan alıkoyabiliyor."
+        ),
+        "strengths": [
+            "Güçlü etik değerleri ve ilkeleri — söz verdiğinde tutarsın",
+            "Titizlik ve dikkat — işlerin ayrıntılarını başkalarının gözünden kaçmayacak şekilde görürsün",
+            "Adalet duygusu — haksızlığa karşı durmaktan çekinmezsin",
+            "Sorumluluk sahibi — üstlendiğin işi sonuna kadar götürürsün",
+            "Öz disiplin — hedeflerine ulaşmak için kendini motive edebilirsin",
+        ],
+        "weaknesses": [
+            "Mükemmeliyetçilik seni felç edebilir — 'ya tam olacak ya hiç' tuzağına düşebilirsin",
+            "Eleştirel iç ses yorucu olabilir — hem kendinle hem başkalarıyla çok sert olabilirsin",
+            "Sert ve esnek olmayan tutum — kurallara sıkı bağlılık bazen ilişkileri zorlar",
+            "Öfkeyi bastırma — adaletsizlik karşısında duyduğun öfkeyi içe atarsın",
+            "Gri alanlarla başa çıkmakta zorlanma — her şeyin siyah-beyaz olmadığını kabullenmek zor gelebilir",
+        ],
+        "work_style": "Net kuralları, standartları ve beklentileri olan yapılandırılmış ortamlarda parlıyorsun. Kalite kontrol, hukuk, eğitim, tıp, muhasebe gibi titizlik ve etik gerektiren alanlarda doğal olarak güçlüsün. Kaotik veya kuralsız ortamlar seni strese sokar.",
+        "relationship_style": "İlişkilerinde dürüstlük, sadakat ve tutarlılık ararsın. Söz verilip tutulmaması veya haksızlık seni derinden yaralar. Bazen yüksek beklentilerin partnerin veya arkadaşların üzerinde baskı oluşturabilir. Sevildiğini görmek için 'mükemmel' olmana gerek olmadığını hatırlatmak gerekiyor.",
+        "stress_behavior": "Stres altında Tip 4'e (Bireyci) kayarsın: melankolik, kendini geri çeken, duygusal açıdan kapalı biri haline gelebilirsin. Eleştirini kendine yöneltirsin ve 'Hiçbir şeyi doğru yapamıyorum' hissine kapılabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 7'ye (Hevesli) yönelirsin: daha oyuncu, daha esnek ve daha neşeli biri olursun. Hayatın güzelliklerini fark edip, 'Yeterince iyi' diyebildiğinde gerçek huzuru bulursun.",
+        "danger_signals": [
+            "Her şeyi ve herkesi sürekli düzeltme ihtiyacı hissetmek",
+            "Dinginlik yerine sürekli gerginlik içinde olmak",
+            "Öfkeni 'ince alınganlık' veya soğukluk olarak dışa vurmak",
+            "'Ben daha iyi biliyorum' tavrıyla ilişkileri zorlamak",
+        ],
+        "prescription": [
+            "🌿 Kendinle barış: Hata yapmak insani bir durum. Bugün bilerek küçük bir hata yap ve nasıl hissettiğini izle.",
+            "🎭 Espri ve oyun: Haftada en az bir kez 'verimli' olmayan, sadece eğlenceli bir şey yap.",
+            "🤍 Takdir et: Bugün hem kendin hem de çevrende üç şeyin 'yeterince iyi' olduğunu fark et.",
+            "🗣️ Öfkeni ifade et: Öfkeni içine atmak yerine, güvendiğin birine sakin bir şekilde ilet.",
+        ],
+        "famous_examples": "Mahatma Gandhi, Nelson Mandela, Meryl Streep",
+        "careers": ["Hukukçu", "Doktor", "Muhasebeci", "Eğitimci", "Etik danışmanı", "Kalite uzmanı"],
+    },
+    2: {
+        "title": "Tip 2: Yardımcı",
+        "role": "Şefkatli, İlgi Gösteren",
+        "icon": "🤗",
+        "fear": "İstenmemek, sevilmemek ve değersiz hissedilmek.",
+        "desire": "Sevilmek, ihtiyaç duyulmak ve başkaları için önemli olmak.",
+        "stress": 8, "growth": 4,
+        "desc": "Sen dünyaya 'İnsanlara yardım etmeli ve onları sevmeliyim' gözlüğüyle bakıyorsun. Başkalarının ihtiyaçlarını kendi ihtiyaçlarından önce görme konusunda adeta bir antene sahipsin — odaya girer girmez kimin üzgün olduğunu, kimin desteğe ihtiyaç duyduğunu hissedebilirsin. Bu empatin ve cömertliğin seni insanların çok değer verdiği biri yapıyor. Ancak bazen kendi ihtiyaçlarını o kadar arka plana atıyorsun ki, zamanla tükenmişlik ve kırgınlık sinyalleri vermeye başlayabiliyor.",
+        "strengths": ["Derin empati", "Koşulsuz destek", "Sosyal zeka", "Cömertlik", "Sıcaklık ve bağlanma"],
+        "weaknesses": ["'Hayır' diyememek", "Kendi ihtiyaçlarını görmezden gelme", "Takdir görmek isteme", "Duygusal manipülasyon riski", "Başkalarına bağımlılık"],
+        "work_style": "İnsan odaklı, ilişki kurma gerektiren işlerde parıldıyorsun.",
+        "relationship_style": "İlişkilerinde derin bağ ve karşılıklı şefkat ararsın.",
+        "stress_behavior": "Stres altında Tip 8'e kayarsın: kontrolcü ve talep edici hale gelebilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 4'e yönelirsin: kendi duygularını keşfetmeye başlarsın.",
+        "danger_signals": ["Sürekli başkalarının ihtiyaçlarını düşünmek", "'Beni kimse görmüyor' hissi", "Yardımını takdir etmeyeni cezalandırmak", "Tükenmişliği inkâr etmek"],
+        "prescription": ["🌱 Kendin için bir şey yap", "🗣️ İhtiyacını dile getir", "⛔ Hayır pratiği", "🪞 İçe dön"],
+        "famous_examples": "Desmond Tutu, Princess Diana, Dolly Parton",
+        "careers": ["Hemşire", "Psikolog", "Öğretmen", "Sosyal hizmet uzmanı", "İK yöneticisi", "Terapist"],
+    },
+    3: {
+        "title": "Tip 3: Başarılı",
+        "role": "Odaklı, Performansçı",
+        "icon": "🏆",
+        "fear": "Başarısız olmak, değersiz ve sıradan görünmek.",
+        "desire": "Başarılı, değerli ve hayranlık duyulan biri olmak.",
+        "stress": 9, "growth": 6,
+        "desc": "Sen dünyaya 'Başarılı olmalı ve değer kanıtlamalıyım' gözlüğüyle bakıyorsun. Hedef koymak, strateji geliştirmek ve o hedefe doğru ilerlemek seni canlı tutuyor.",
+        "strengths": ["Hedef odaklılık", "Enerji ve motivasyon", "Adaptasyon yeteneği", "Verimlilik", "Liderlik karizması"],
+        "weaknesses": ["Kimlik-başarı karışıklığı", "Duyguları erteleme", "İmaj kaygısı", "Aşırı iş yükü", "İlişkileri proje gibi yönetme"],
+        "work_style": "Rekabetçi, ölçülebilir başarı kriterleri olan ortamlarda parıldıyorsun.",
+        "relationship_style": "İlişkilerinde hayranlık ve takdir önemlidir.",
+        "stress_behavior": "Stres altında Tip 9'a kayarsın: hareketsizleşir ve içine kapanabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 6'ya yönelirsin: daha sadık ve dürüst olursun.",
+        "danger_signals": ["Dinlenmenin boşa harcanan zaman gibi gelmesi", "Başarısızlık karşısında savunmacı olmak", "Gerçek hislerini 'verimli olmayan şey' görmek", "İlişkilerde statüyü ön plana koymak"],
+        "prescription": ["🧘 Dur ve hisset", "🎭 Maske indir", "🏅 Başarısız olmayı dene", "❤️ Koşulsuz bağ"],
+        "famous_examples": "Oprah Winfrey, Tom Cruise, Taylor Swift",
+        "careers": ["Girişimci", "Satış müdürü", "Aktör/Sunucu", "Pazarlama uzmanı", "Yönetici", "Koç"],
+    },
+    4: {
+        "title": "Tip 4: Bireyci",
+        "role": "Romantik, Özgün",
+        "icon": "🎨",
+        "fear": "Kimliği olmamak, sıradan ve anlamsız biri olmak.",
+        "desire": "Kendine özgü, anlamlı ve otantik bir kimliğe sahip olmak.",
+        "stress": 2, "growth": 1,
+        "desc": "Sen dünyaya 'Ben farklıyım ve bu farkı anlamlı kılmalıyım' gözlüğüyle bakıyorsun. Duyguların yoğunluğu ve derinliği seni hem çok zengin hem de bazen çok ağır bir iç dünyaya sürüklüyor.",
+        "strengths": ["Derin duygusal zeka", "Yaratıcılık ve estetik duyarlılık", "Otantiklik", "Empati derinliği", "Anlam arayışı"],
+        "weaknesses": ["Melankoli ve hüzne gömülme", "Kendini eksik hissetme", "Dramatizasyon eğilimi", "Günlük rutine direnç", "İlişkilerde idealizm"],
+        "work_style": "Yaratıcı özgürlük sunan, anlam ve estetik barındıran işlerde parıldıyorsun.",
+        "relationship_style": "Derin, tutkulu ve anlam dolu bağlar ararsın.",
+        "stress_behavior": "Stres altında Tip 2'ye kayarsın: başkalarına aşırı yönelirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 1'e yönelirsin: disiplin ve yapıya kavuşursun.",
+        "danger_signals": ["Uzun süre hüzün içinde kalmak", "Başkalarını idealleştirip yıkılmak", "Sorumluluklardan kaçmak", "İzolasyona çekilmek"],
+        "prescription": ["🌱 Rutini benimse", "🚶 Bedenle bağlan", "📓 Minnet listesi", "🛠️ Tamamla"],
+        "famous_examples": "Frida Kahlo, Virginia Woolf, Bob Dylan",
+        "careers": ["Sanatçı", "Yazar", "Terapist", "Tasarımcı", "Müzisyen", "Fotoğrafçı"],
+    },
+    5: {
+        "title": "Tip 5: Araştırmacı",
+        "role": "Gözlemci, Uzman",
+        "icon": "🔬",
+        "fear": "Yetersiz olmak, kaynaklarının tükenmesi.",
+        "desire": "Yetkin, bilgili ve çevresini anlayan biri olmak.",
+        "stress": 7, "growth": 8,
+        "desc": "Sen dünyaya 'Önce anlamalıyım, sonra hareket ederim' gözlüğüyle bakıyorsun. Zihnin sürekli merakla dolu.",
+        "strengths": ["Derin analitik düşünme", "Uzmanlık", "Bağımsızlık", "Gözlem gücü", "Sakinlik"],
+        "weaknesses": ["İzolasyon", "Eylemden kaçınma", "Duygusal kopukluk", "Cimrilik (enerji/bilgi/zaman)", "Sosyal yorgunluk"],
+        "work_style": "Bağımsız çalışma ve uzmanlık gerektiren ortamlarda güçlüsün.",
+        "relationship_style": "Bağımsızlığına saygı duyan, entelektüel derinliği olan birini ararsın.",
+        "stress_behavior": "Stres altında Tip 7'ye kayarsın: dağınık ve hiperaktif olabilirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 8'e yönelirsin: harekete geçer, liderlik edebilirsin.",
+        "danger_signals": ["İnsanlardan uzak kalmak", "Bilgi toplamayı eyleme tercih etmek", "Hisleri analiz etmek", "Sosyal iletişimi gereksiz görmek"],
+        "prescription": ["🤝 Bağlan", "⚡ Harekete geç", "💬 Hislerini söyle", "🌍 Dışarı çık"],
+        "famous_examples": "Albert Einstein, Stephen Hawking, Bill Gates",
+        "careers": ["Araştırmacı", "Yazılımcı", "Mühendis", "Analist", "Akademisyen", "Yazar"],
+    },
+    6: {
+        "title": "Tip 6: Sadık",
+        "role": "Sorgulayıcı, Güvenilir",
+        "icon": "🛡️",
+        "fear": "Güvensizlik, yalnız kalmak ve desteğini kaybetmek.",
+        "desire": "Güvende olmak, güvenilir ilişkilere sahip olmak.",
+        "stress": 3, "growth": 9,
+        "desc": "Sen dünyaya 'Güvende miyim? Güvenebilir miyim?' gözlüğüyle bakıyorsun.",
+        "strengths": ["Sadakat", "Sorumluluk", "Risk analizi", "Ekip ruhu", "Soru sorma cesareti"],
+        "weaknesses": ["Aşırı kaygı", "Kararsızlık", "Güvensizlik", "Felaket senaryoları", "Otoriteyle çelişki"],
+        "work_style": "Net roller ve güvenilir yapıların olduğu ortamlarda güçlüsün.",
+        "relationship_style": "Sadakat ve güven senin için ilişkinin temeli.",
+        "stress_behavior": "Stres altında Tip 3'e kayarsın: aşırı çalışır, performans odaklı olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 9'a yönelirsin: zihin sakinleşir, huzur bulursun.",
+        "danger_signals": ["Kötü senaryo düşünerek karar verememek", "Güvendiğin insanları test etmek", "Fiziksel kaygı belirtileri", "Otoriteye hem muhtaç hem öfkeli hissetmek"],
+        "prescription": ["🧘 Zihni durdur", "💪 İçgüdüne güven", "✅ Tamamlananları gör", "🤲 Destek iste"],
+        "famous_examples": "Barack Obama, Ellen DeGeneres, Malala Yousafzai",
+        "careers": ["Avukat", "Risk analisti", "Güvenlik uzmanı", "Muhasebeci", "Polis memuru", "Danışman"],
+    },
+    7: {
+        "title": "Tip 7: Hevesli",
+        "role": "Maceracı, Vizyoner",
+        "icon": "🚀",
+        "fear": "Acı çekmek, kısıtlanmak ve eğlencesiz hayat.",
+        "desire": "Mutlu, özgür ve doyumsuz bir hayat sürmek.",
+        "stress": 1, "growth": 5,
+        "desc": "Sen dünyaya 'Hayat güzel olmalı ve ben her şeyi deneyimlemeliyim' gözlüğüyle bakıyorsun.",
+        "strengths": ["Sınır tanımayan iyimserlik", "Hızlı öğrenme", "Yaratıcılık ve yenilikçilik", "Enerji ve coşku", "Esneklik"],
+        "weaknesses": ["Odaklanma güçlüğü", "Acıdan kaçma", "Söz verip tutamamak", "Derinleşme güçlüğü", "Anlık tatmin"],
+        "work_style": "Çeşitlilik, yaratıcılık ve hareket sunan ortamlarda parıldıyorsun.",
+        "relationship_style": "Eğlenceli, spontane ve macera dolu ilişkiler ararsın.",
+        "stress_behavior": "Stres altında Tip 1'e kayarsın: eleştirel ve mükemmeliyetçi olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 5'e yönelirsin: derinleşir ve odaklanırsın.",
+        "danger_signals": ["Projeleri yarım bırakmak", "Sürekli meşguliyet arayışı", "Duygusal derinlikten kaçmak", "Bağlanmaktan kaçınmak"],
+        "prescription": ["🎯 Bir şeyi bitir", "🌑 Karanlıkla otur", "📅 Derinleş", "🤝 Söz tut"],
+        "famous_examples": "Robin Williams, Jim Carrey, Freddie Mercury",
+        "careers": ["Girişimci", "Medya profesyoneli", "Rehber/Eğitimci", "Komedyen", "Turizm uzmanı"],
+    },
+    8: {
+        "title": "Tip 8: Meydan Okuyan",
+        "role": "Lider, Koruyucu",
+        "icon": "⚡",
+        "fear": "Kontrol edilmek, manipüle edilmek ve zayıf görünmek.",
+        "desire": "Kendi hayatını kontrol etmek, güçlü ve bağımsız olmak.",
+        "stress": 5, "growth": 2,
+        "desc": "Sen dünyaya 'Ben güçlü olmalıyım ve kontrol bendeyken herkes güvende' gözlüğüyle bakıyorsun.",
+        "strengths": ["Liderlik gücü", "Karar alma hızı", "Adalet duygusu", "Güç ve dayanıklılık", "Dürüstlük"],
+        "weaknesses": ["Kırılganlığı reddetme", "Baskıcılık", "Öfkenin ani çıkması", "Dinleme güçlüğü", "İktidar mücadelesi"],
+        "work_style": "Liderlik ve bağımsızlık sunan ortamlarda güçlüsün.",
+        "relationship_style": "Tutkulu, sadık ve koruyucu bir partner olursun.",
+        "stress_behavior": "Stres altında Tip 5'e kayarsın: içine çekilir, izole olursun.",
+        "growth_behavior": "Gelişim yolunda Tip 2'ye yönelirsin: şefkat açılır, kırılgan olabilirsin.",
+        "danger_signals": ["Her şeyin kontrolde olması gerektiği hissi", "İnsanların senden korkması", "Duygusal kapıları kapatmak", "İlişkileri feda etmek"],
+        "prescription": ["🤍 Kırılgan ol", "👂 Dinle", "🌿 Kontrol bırak", "❤️ Şefkat yönelt"],
+        "famous_examples": "Winston Churchill, Martin Luther King, Serena Williams",
+        "careers": ["CEO", "Politikacı", "Avukat", "Girişimci", "Askeri lider", "Aktivist"],
+    },
+    9: {
+        "title": "Tip 9: Barışçı",
+        "role": "Uzlaştırıcı, Diplomat",
+        "icon": "☮️",
+        "fear": "Çatışma, kopukluk ve iç huzurun kaybı.",
+        "desire": "İç ve dış huzura sahip olmak, herkesin uyum içinde olduğunu görmek.",
+        "stress": 6, "growth": 3,
+        "desc": "Sen dünyaya 'Herkes iyi olsun, uyum bozulmasın' gözlüğüyle bakıyorsun.",
+        "strengths": ["Doğal arabuluculuk", "Sabır ve anlayış", "Güven verme", "Empati", "İstikrar"],
+        "weaknesses": ["Kendi sesini kaybetme", "Erteleme", "Pasif-agresif tepkiler", "Önceliklendirme güçlüğü", "Dışsal uyaranlara bağımlılık"],
+        "work_style": "İşbirliği gerektiren, uyum içinde çalışılan ortamlarda güçlüsün.",
+        "relationship_style": "Destekleyici, uyumlu ve sakin bir bağ ararsın.",
+        "stress_behavior": "Stres altında Tip 6'ya kayarsın: kaygılanır ve güvensizleşirsin.",
+        "growth_behavior": "Gelişim yolunda Tip 3'e yönelirsin: harekete geçer ve hedefler belirlersin.",
+        "danger_signals": ["İsteklerini bastırmak", "Kararları ertelemek", "İçine atmak", "Kendininkinde pasif olmak"],
+        "prescription": ["🗣️ Sesini çıkar", "⚡ Bir adım at", "📋 Önceliklendir", "🔍 Çatışmaya gir"],
+        "famous_examples": "Dalai Lama, Abraham Lincoln, Mister Rogers",
+        "careers": ["Arabulucu", "Danışman", "Terapist", "Öğretmen", "Sosyal hizmet uzmanı", "Diplomat"],
+    },
+}
+
+WING_DESCRIPTIONS = {
+    "1w9": "Daha sakin ve filozofik mükemmeliyetçi.", "1w2": "Daha yardımsever ve dışa dönük.",
+    "2w1": "Daha prensipli ve sorumlu yardımcı.", "2w3": "Daha hırslı ve sosyal.",
+    "3w2": "Daha ilişki odaklı ve sıcakkanlı.", "3w4": "Daha sanatsal ve bireysel.",
+    "4w3": "Daha hırslı ve performans odaklı.", "4w5": "Daha analitik ve içe dönük.",
+    "5w4": "Daha yaratıcı ve duygusal araştırmacı.", "5w6": "Daha planlı ve sadık.",
+    "6w5": "Daha bağımsız ve mesafeli.", "6w7": "Daha sosyal ve iyimser.",
+    "7w6": "Daha sorumlu ve grup odaklı.", "7w8": "Daha lider ruhlu ve kararlı.",
+    "8w7": "Daha enerjik ve eğlenceli lider.", "8w9": "Daha barışçıl ve sakin güç.",
+    "9w8": "Daha iddialı ve kararlı barışçı.", "9w1": "Daha disiplinli ve idealist."
+}
+
+
+
+
+# --- ENNEAGRAM PUANLAMA ---
+def calculate_enneagram_report(all_answers):
+    scores = {t: 0 for t in range(1, 10)}
+    for q_id, val in all_answers.items():
+        tip = int(q_id.split('_')[0])
+        scores[tip] += val
+
+    max_score = 20 * 5
+    normalized = {t: round(s / max_score * 100, 1) for t, s in scores.items()}
+
+    main_type  = max(scores, key=scores.get)
+    main_score = normalized[main_type]
+
+    wings = [9, 2] if main_type == 1 else ([8, 1] if main_type == 9 else [main_type - 1, main_type + 1])
+    wing_type = max(wings, key=lambda w: normalized[w])
+    wing_score = normalized[wing_type]
+    full_type_str = f"{main_type}w{wing_type}" if wing_score > main_score * 0.7 else f"{main_type} (Saf Tip)"
+
+    data     = ENNEAGRAM_DATA[main_type]
+    wing_txt = WING_DESCRIPTIONS.get(f"{main_type}w{wing_type}", "Dengeli kanat etkisi.")
+
+    stress_data = ENNEAGRAM_DATA[data["stress"]]
+    growth_data = ENNEAGRAM_DATA[data["growth"]]
+
+    sorted_scores = sorted(normalized.items(), key=lambda x: x[1], reverse=True)
+
+    def bar(pct):
+        n = round(pct / 10)
+        return "█" * n + "░" * (10 - n)
+
+    score_table = "\n".join(
+        f"| {ENNEAGRAM_DATA[t]['icon']} Tip {t}: {ENNEAGRAM_DATA[t]['role'].split(',')[0]} "
+        f"| %{p} | {bar(p)} |"
+        for t, p in sorted_scores
+    )
+
+    strengths_txt  = "\n".join(f"- ✅ {s}" for s in data["strengths"])
+    weaknesses_txt = "\n".join(f"- ⚠️ {w}" for w in data["weaknesses"])
+    danger_txt     = "\n".join(f"- 🚨 {d}" for d in data["danger_signals"])
+    prescription_txt = "\n".join(f"- {p}" for p in data["prescription"])
+    careers_txt    = ", ".join(data.get("careers", []))
+
+    report = f"""# {data['icon']} ENNEAGRAM KİŞİLİK RAPORU
+
+**Senin Tipin:** {data['title']}
+**Tam Profilin:** {full_type_str}
+**Temel Rolün:** {data['role']}
+
+---
+
+## 📊 Tüm Tip Puanların
+
+| Kişilik Tipi | Yüzde | Grafik |
+|---|---|---|
+{score_table}
+
+---
+
+## 🌟 Sen Kimsin?
+
+{data['desc']}
+
+---
+
+## 🦅 Kanat Etkisi: {main_type}w{wing_type}
+
+{wing_txt}
+
+---
+
+## 🔑 Temel Motivasyonun
+
+| | |
+|---|---|
+| 😨 **Temel Korku** | {data['fear']} |
+| 💛 **Temel Arzu** | {data['desire']} |
+
+---
+
+## 💪 Güçlü Yönlerin
+
+{strengths_txt}
+
+---
+
+## 🌱 Gelişim Alanların
+
+{weaknesses_txt}
+
+---
+
+## 💼 Çalışma Stilin
+
+{data['work_style']}
+
+**Sana Uygun Kariyer Alanları:** {careers_txt}
+
+---
+
+## 💑 İlişki Stilin
+
+{data['relationship_style']}
+
+---
+
+## 🔴 Stres Altında Ne Olur?
+
+{data['stress_behavior']}
+
+> Stres tipine kayarsın: **{stress_data['title']}** ({stress_data['role']})
+
+---
+
+## 🟢 Gelişim Yolunda Ne Olur?
+
+{data['growth_behavior']}
+
+> Gelişim tipine doğru yol alırsın: **{growth_data['title']}** ({growth_data['role']})
+
+---
+
+## 🚨 Dikkat Sinyalleri
+
+{danger_txt}
+
+---
+
+## 🛠️ Sana Özel Büyüme Taktikleri
+
+{prescription_txt}
+
+---
+
+## 🌍 Aynı Tipdeki Tanınmış İsimler
+
+{data.get('famous_examples', '—')}
+
+---
+
+## 💬 Son Söz
+
+Enneagram bir kısıtlama değil, bir harita. Tipini bilmek seni kutucuğa hapsetmez —
+aksine, neden böyle davrandığını, neyin seni harekete geçirdiğini ve nereye büyüyebileceğini
+anlamana yardım eder. En sağlıklı versiyonuna ulaşmak için güçlü yönlerini kullan,
+gelişim sinyallerini merak ve şefkatle karşıla. Değişim, kendini tanımakla başlar. 🌱
+"""
+    return scores, report.strip()
