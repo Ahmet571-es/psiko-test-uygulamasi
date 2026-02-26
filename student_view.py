@@ -2,8 +2,18 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import time
+import time as _time
 import random
 from db_utils import check_test_completed, save_test_result_to_db
+from d2_engine import (
+    D2_CONFIG, generate_d2_test, generate_practice_row,
+    render_symbol_html, render_row_legend_html, render_timer_js,
+    calculate_d2, generate_d2_report,
+)
+from akademik_engine import (
+    get_akademik_sections, get_total_questions,
+    calculate_akademik, generate_akademik_report,
+)
 
 # --- TEST VERİLERİ MODÜLÜ ---
 from test_data import (
@@ -503,6 +513,20 @@ TEST_META = {
         "questions": 84,
         "desc": "Hangi meslek alanları sana en uygun? RIASEC koduyla kariyer haritanı çıkar.",
     },
+    "D2 Dikkat Testi": {
+        "icon": "🎯",
+        "color": "#E74C3C",
+        "duration": "~5 dk",
+        "questions": 280,
+        "desc": "Dikkat ve konsantrasyon kapasiteni ölç. Zamanlı performans testi.",
+    },
+    "Akademik Analiz Testi": {
+        "icon": "📚",
+        "color": "#9B59B6",
+        "duration": "~20 dk",
+        "questions": "40-54",
+        "desc": "Okuma anlama, matematik, mantık ve akademik öz-değerlendirme ile akademik profilini çıkar.",
+    },
 }
 
 
@@ -823,7 +847,9 @@ def app():
         "Sınav Kaygısı Ölçeği",
         "VARK Öğrenme Stilleri Testi",
         "Çoklu Zeka Testi",
-        "Holland Mesleki İlgi Envanteri"
+        "Holland Mesleki İlgi Envanteri",
+        "D2 Dikkat Testi",
+        "Akademik Analiz Testi",
     ]
 
     # ============================================================
@@ -974,6 +1000,26 @@ def app():
                             st.session_state.current_test_data = {"type": "holland_5", "questions": HOLLAND_QUESTIONS}
                             st.session_state.cevaplar = {}
                             st.session_state.sayfa = 0
+
+                        elif "D2 Dikkat" in test:
+                            seed = hash(str(st.session_state.student_id) + str(_time.time()))
+                            st.session_state.current_test_data = {"type": "d2_timed"}
+                            st.session_state.d2_rows = generate_d2_test(seed=seed)
+                            st.session_state.d2_current_row = -1   # -1 = alıştırma
+                            st.session_state.d2_row_results = []
+                            st.session_state.d2_practice_done = False
+                            st.session_state.d2_row_start = None
+
+                        elif "Akademik Analiz" in test:
+                            student_age = st.session_state.get("student_age", 15)
+                            version = "ilkogretim" if student_age and student_age <= 13 else "lise"
+                            st.session_state.current_test_data = {
+                                "type": "akademik_perf",
+                                "version": version,
+                            }
+                            st.session_state.akd_section_idx = 0
+                            st.session_state.akd_answers = {}
+                            st.session_state.akd_version = version
 
                         st.session_state.page = "test"
                         st.session_state._scroll_top = True
@@ -1320,6 +1366,328 @@ def app():
                     st.divider()
 
                 _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+            # ========================================
+            # TİP: D2 DİKKAT TESTİ (Zamanlı)
+            # ========================================
+            elif q_type == "d2_timed":
+                current_row = st.session_state.d2_current_row
+
+                # ---- ALIŞTIRMA TURU ----
+                if current_row == -1 and not st.session_state.d2_practice_done:
+                    st.markdown("### 🎯 Alıştırma Turu")
+                    st.info(
+                        "Aşağıda kısa bir alıştırma satırı var. "
+                        "**d** harfi + **toplam 2 çizgi** olan sembolleri bul ve işaretle. "
+                        "Bu tur puanlanmaz."
+                    )
+                    st.markdown(render_row_legend_html(), unsafe_allow_html=True)
+
+                    practice = generate_practice_row()
+
+                    with st.form("d2_practice"):
+                        D2_COLS = 5
+                        for sub_r in range((len(practice) + D2_COLS - 1) // D2_COLS):
+                            cols = st.columns(D2_COLS)
+                            for c in range(D2_COLS):
+                                idx = sub_r * D2_COLS + c
+                                if idx < len(practice):
+                                    with cols[c]:
+                                        st.markdown(
+                                            render_symbol_html(practice[idx]),
+                                            unsafe_allow_html=True,
+                                        )
+                                        st.checkbox(
+                                            "Hedef", key=f"d2p_{idx}",
+                                            label_visibility="collapsed",
+                                        )
+
+                        if st.form_submit_button("Alıştırmayı Tamamla ✅", type="primary"):
+                            st.session_state.d2_practice_done = True
+                            st.session_state.d2_current_row = 0
+                            st.session_state.d2_row_start = _time.time()
+                            st.session_state._scroll_top = True
+                            st.rerun()
+
+                # ---- ANA TEST SATIRLARI ----
+                elif 0 <= current_row < D2_CONFIG["rows"]:
+                    row_symbols = st.session_state.d2_rows[current_row]
+
+                    st.markdown(
+                        f"### 🎯 Satır {current_row + 1} / {D2_CONFIG['rows']}"
+                    )
+                    st.progress((current_row + 1) / D2_CONFIG["rows"])
+
+                    if st.session_state.d2_row_start is None:
+                        st.session_state.d2_row_start = _time.time()
+
+                    components.html(
+                        render_timer_js(D2_CONFIG["time_per_row"], current_row),
+                        height=55,
+                    )
+
+                    st.markdown(render_row_legend_html(), unsafe_allow_html=True)
+
+                    with st.form(f"d2_row_{current_row}"):
+                        D2_COLS = 5
+                        for sub_r in range(
+                            (len(row_symbols) + D2_COLS - 1) // D2_COLS
+                        ):
+                            cols = st.columns(D2_COLS)
+                            for c in range(D2_COLS):
+                                idx = sub_r * D2_COLS + c
+                                if idx < len(row_symbols):
+                                    with cols[c]:
+                                        st.markdown(
+                                            render_symbol_html(row_symbols[idx]),
+                                            unsafe_allow_html=True,
+                                        )
+                                        st.checkbox(
+                                            "Hedef",
+                                            key=f"d2r{current_row}_s{idx}",
+                                            label_visibility="collapsed",
+                                        )
+
+                        submitted = st.form_submit_button(
+                            "Satırı Gönder ➡️", type="primary"
+                        )
+
+                    if submitted:
+                        elapsed = _time.time() - (
+                            st.session_state.d2_row_start or _time.time()
+                        )
+                        selected = [
+                            st.session_state.get(
+                                f"d2r{current_row}_s{i}", False
+                            )
+                            for i in range(len(row_symbols))
+                        ]
+
+                        st.session_state.d2_row_results.append(
+                            {
+                                "symbols": row_symbols,
+                                "selected": selected,
+                                "elapsed_time": elapsed,
+                            }
+                        )
+
+                        next_row = current_row + 1
+                        if next_row >= D2_CONFIG["rows"]:
+                            _finish_d2_test(t_name)
+                        else:
+                            st.session_state.d2_current_row = next_row
+                            st.session_state.d2_row_start = _time.time()
+                            st.session_state._scroll_top = True
+                            st.rerun()
+
+                    if st.session_state.d2_row_start:
+                        if _time.time() - st.session_state.d2_row_start > D2_CONFIG["time_per_row"]:
+                            st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
+
+            # ========================================
+            # TİP: AKADEMİK ANALİZ (Bölümlü Performans)
+            # ========================================
+            elif q_type == "akademik_perf":
+                version = st.session_state.akd_version
+                sections = get_akademik_sections(version)
+                sec_idx = st.session_state.akd_section_idx
+                total_secs = len(sections)
+
+                if sec_idx < total_secs:
+                    sec = sections[sec_idx]
+                    ver_label = "İlköğretim" if version == "ilkogretim" else "Lise"
+
+                    st.markdown(
+                        f"### {sec['icon']} Bölüm {sec_idx + 1}/{total_secs}: "
+                        f"{sec['name']}"
+                    )
+                    st.progress((sec_idx + 1) / total_secs)
+                    st.caption(f"📎 Versiyon: {ver_label}")
+
+                    with st.form(f"akd_sec_{sec_idx}"):
+
+                        # ---- Okuma Anlama (metin + sorular) ----
+                        if sec["type"] == "passage_mc":
+                            for p_idx, passage in enumerate(sec["data"]):
+                                st.markdown(
+                                    f"<div style='background:#f8f9fa;border-left:4px solid "
+                                    f"#9B59B6;padding:15px;border-radius:8px;margin:10px 0;'>"
+                                    f"<b>📄 Metin {p_idx + 1}</b><br><br>"
+                                    f"{passage['passage']}</div>",
+                                    unsafe_allow_html=True,
+                                )
+                                for q in passage["questions"]:
+                                    prev = st.session_state.akd_answers.get(q["id"])
+                                    opts = list(q["options"].values())
+                                    keys = list(q["options"].keys())
+                                    idx_prev = (
+                                        keys.index(prev) if prev in keys else None
+                                    )
+                                    val = st.radio(
+                                        f"**{q['text']}**",
+                                        keys,
+                                        index=idx_prev,
+                                        format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
+                                        key=f"akd_{q['id']}",
+                                    )
+                                    if val:
+                                        st.session_state.akd_answers[q["id"]] = val
+                                    st.divider()
+
+                        # ---- Çoktan Seçmeli (matematik, mantık) ----
+                        elif sec["type"] == "mc":
+                            for q in sec["data"]:
+                                prev = st.session_state.akd_answers.get(q["id"])
+                                keys = list(q["options"].keys())
+                                idx_prev = (
+                                    keys.index(prev) if prev in keys else None
+                                )
+                                val = st.radio(
+                                    f"**{q['text']}**",
+                                    keys,
+                                    index=idx_prev,
+                                    format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
+                                    key=f"akd_{q['id']}",
+                                )
+                                if val:
+                                    st.session_state.akd_answers[q["id"]] = val
+                                st.divider()
+
+                        # ---- Likert (öz-değerlendirme) ----
+                        elif sec["type"] == "likert":
+                            likert_labels = {
+                                1: "Hiç Katılmıyorum",
+                                2: "Katılmıyorum",
+                                3: "Kararsızım",
+                                4: "Katılıyorum",
+                                5: "Tamamen Katılıyorum",
+                            }
+                            for q in sec["data"]:
+                                prev = st.session_state.akd_answers.get(q["id"])
+                                idx_prev = (
+                                    prev - 1 if isinstance(prev, int) and 1 <= prev <= 5
+                                    else None
+                                )
+                                val = st.radio(
+                                    f"**{q['text']}**",
+                                    [1, 2, 3, 4, 5],
+                                    index=idx_prev,
+                                    format_func=lambda x: f"{x} — {likert_labels[x]}",
+                                    key=f"akd_{q['id']}",
+                                    horizontal=True,
+                                )
+                                if val:
+                                    st.session_state.akd_answers[q["id"]] = val
+                                st.divider()
+
+                        # ---- Navigasyon butonları ----
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            if sec_idx > 0:
+                                back = st.form_submit_button("⬅️ Önceki Bölüm")
+                            else:
+                                back = False
+                        with col_b:
+                            if sec_idx < total_secs - 1:
+                                nxt = st.form_submit_button(
+                                    "Sonraki Bölüm ➡️", type="primary"
+                                )
+                            else:
+                                nxt = st.form_submit_button(
+                                    "Testi Bitir ✅", type="primary"
+                                )
+
+                    if back:
+                        st.session_state.akd_section_idx = max(0, sec_idx - 1)
+                        st.session_state._scroll_top = True
+                        st.rerun()
+                    if nxt:
+                        if sec_idx < total_secs - 1:
+                            st.session_state.akd_section_idx = sec_idx + 1
+                            st.session_state._scroll_top = True
+                            st.rerun()
+                        else:
+                            _finish_akademik_test(t_name)
+
+
+# ============================================================
+# D2 TEST BİTİRME FONKSİYONU
+# ============================================================
+def _finish_d2_test(t_name):
+    """D2 testini puanla, rapor üret ve veritabanına kaydet."""
+    row_results = st.session_state.d2_row_results
+
+    with st.spinner("📊 D2 sonuçların hesaplanıyor..."):
+        scores = calculate_d2(row_results)
+        report = generate_d2_report(scores)
+
+        scores_for_db = {
+            "TN": scores["TN"], "E1": scores["E1"],
+            "E2": scores["E2"], "E": scores["E"],
+            "TN_E": scores["TN_E"], "CP": scores["CP"],
+            "FR": scores["FR"],
+            "hit_rate": scores["hit_rate"],
+            "error_pct": scores["error_pct"],
+            "cp_pct": scores["cp_pct"],
+            "level": scores["level"],
+            "balance": scores["balance"],
+            "consistency": scores["consistency"],
+            "row_performances": scores["row_performances"],
+        }
+
+        raw_answers = {
+            f"row_{i}": {
+                "selected": r["selected"],
+                "elapsed_time": round(r["elapsed_time"], 2),
+            }
+            for i, r in enumerate(row_results)
+        }
+
+        save_test_result_to_db(
+            st.session_state.student_id, t_name,
+            raw_answers, scores_for_db, report,
+        )
+
+        st.session_state.last_report = report
+        st.session_state.page = "success_screen"
+        st.session_state._scroll_top = True
+        st.rerun()
+
+
+# ============================================================
+# AKADEMİK ANALİZ TEST BİTİRME FONKSİYONU
+# ============================================================
+def _finish_akademik_test(t_name):
+    """Akademik analiz testini puanla, rapor üret ve veritabanına kaydet."""
+    answers = st.session_state.akd_answers
+    version = st.session_state.akd_version
+
+    with st.spinner("📊 Akademik analiz sonuçların hesaplanıyor..."):
+        scores = calculate_akademik(answers, version)
+        report = generate_akademik_report(scores)
+
+        scores_for_db = {
+            "version": version,
+            "overall": scores["overall"],
+            "level": scores["level"],
+            "performance_avg": scores["performance_avg"],
+            "self_assessment": scores["self_assessment"],
+            "strongest": scores["strongest"]["name"],
+            "weakest": scores["weakest"]["name"],
+        }
+        for sec_name, sec_data in scores["sections"].items():
+            key = sec_name.split(" ")[-1] if " " in sec_name else sec_name
+            scores_for_db[key] = sec_data["pct"]
+
+        save_test_result_to_db(
+            st.session_state.student_id, t_name,
+            answers, scores_for_db, report,
+        )
+
+        st.session_state.last_report = report
+        st.session_state.page = "success_screen"
+        st.session_state._scroll_top = True
+        st.rerun()
 
 
 # ============================================================
