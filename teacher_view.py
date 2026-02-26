@@ -15,6 +15,16 @@ from db_utils import (
 # --- API AYARLARI ---
 load_dotenv()
 
+# Claude model — ortam değişkeni veya Streamlit secrets ile değiştirilebilir
+DEFAULT_MODEL = "claude-sonnet-4-20250514"
+def _get_claude_model():
+    try:
+        if "CLAUDE_MODEL" in st.secrets:
+            return st.secrets["CLAUDE_MODEL"]
+    except Exception:
+        pass
+    return os.getenv("CLAUDE_MODEL", DEFAULT_MODEL)
+
 
 def get_claude_client():
     """
@@ -47,7 +57,7 @@ def get_ai_analysis(prompt):
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=_get_claude_model(),
             max_tokens=16000,
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
