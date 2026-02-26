@@ -282,9 +282,10 @@ def main_auth_flow():
             
             with st.form("register_form"):
                 name = st.text_input("👤 Ad Soyad", placeholder="Tam adını yaz...")
-                c1, c2 = st.columns(2)
+                c1, c2, c3 = st.columns(3)
                 age = c1.number_input("🎂 Yaş", min_value=5, max_value=99, step=1, value=15)
-                gender = c2.selectbox("⚧ Cinsiyet", ["Kız", "Erkek"])
+                grade = c2.selectbox("🎓 Sınıf", options=[5, 6, 7, 8, 9, 10, 11, 12], index=3)
+                gender = c3.selectbox("⚧ Cinsiyet", ["Kız", "Erkek"])
                 
                 st.markdown("---")
                 new_user = st.text_input("📧 E-posta Adresi", placeholder="ornek@email.com")
@@ -309,7 +310,7 @@ def main_auth_flow():
                     else:
                         success, result = register_student(
                             name.title(), new_user.strip().lower(), new_pw,
-                            age, gender, secret_word.lower().strip()
+                            age, gender, secret_word.lower().strip(), grade
                         )
                         if success:
                             st.success("✅ Kayıt Başarılı! Giriş ekranına yönlendiriliyorsun...")
@@ -351,6 +352,7 @@ def main_auth_flow():
                             st.session_state.student_id = student_obj.id
                             st.session_state.student_name = student_obj.name
                             st.session_state.student_age = student_obj.age
+                            st.session_state.student_grade = student_obj.grade
                             st.session_state.login_phase = student_obj.login_count
                             time.sleep(0.5)
                             st.rerun()
