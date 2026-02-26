@@ -70,6 +70,11 @@ def get_connection():
     return conn, "sqlite"
 
 
+def is_using_sqlite():
+    """Veritabanı SQLite mi kullanıyor? (Kalıcılık uyarısı için)"""
+    return get_db_url() is None
+
+
 def get_placeholder(engine):
     """SQL placeholder: PostgreSQL=%s, SQLite=?"""
     return "%s" if engine == "postgresql" else "?"
@@ -526,9 +531,9 @@ def reset_database():
             c.execute("DROP TABLE IF EXISTS results CASCADE")
             c.execute("DROP TABLE IF EXISTS students CASCADE")
             conn.commit()
-            conn.close()
         else:
             conn.close()
+            conn = None
             if os.path.exists(SQLITE_DB_NAME):
                 os.remove(SQLITE_DB_NAME)
 
@@ -536,13 +541,20 @@ def reset_database():
         return True
 
     except Exception as e:
-        try:
-            conn.rollback()
-            conn.close()
-        except Exception:
-            pass
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         print(f"Sıfırlama hatası: {e}")
         return False
+
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def repair_database():
