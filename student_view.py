@@ -1489,7 +1489,7 @@ def app():
             # ========================================
             elif q_type == "akademik_perf":
                 version = st.session_state.akd_version
-                sections = get_akademik_sections(version)
+                sections = get_akademik_sections(version=version)
                 sec_idx = st.session_state.akd_section_idx
                 total_secs = len(sections)
 
@@ -1663,7 +1663,7 @@ def _finish_akademik_test(t_name):
     version = st.session_state.akd_version
 
     with st.spinner("📊 Akademik analiz sonuçların hesaplanıyor..."):
-        scores = calculate_akademik(answers, version)
+        scores = calculate_akademik(answers, version=version)
         report = generate_akademik_report(scores)
 
         scores_for_db = {
