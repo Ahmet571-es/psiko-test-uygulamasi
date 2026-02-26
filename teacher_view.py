@@ -78,6 +78,33 @@ def plot_scores(data_dict, title):
     if "categories" in data_dict and isinstance(data_dict["categories"], dict):
         plot_data = data_dict["categories"]
 
+    # 1b. Durum: D2 Dikkat Testi
+    elif "CP" in data_dict and "TN_E" in data_dict:
+        d2_labels = {
+            "CP": "Konsantrasyon (CP)",
+            "TN_E": "Toplam Performans (TN-E)",
+            "TN": "Toplam İşaretleme (TN)",
+            "E1": "Atlama Hatası (E1)",
+            "E2": "Yanlış İşaretleme (E2)",
+            "FR": "Dalgalanma (FR)",
+        }
+        for key, label in d2_labels.items():
+            if key in data_dict and isinstance(data_dict[key], (int, float)):
+                plot_data[label] = data_dict[key]
+
+    # 1c. Durum: Akademik Analiz Testi
+    elif "overall" in data_dict and "performance_avg" in data_dict:
+        akd_keys = {
+            "overall": "Genel Skor",
+            "Anlama": "Okuma Anlama",
+            "Muhakeme": "Matematiksel Muhakeme",
+            "Düşünme": "Mantıksal Düşünme",
+            "Öz-Değerlendirme": "Öz-Değerlendirme",
+        }
+        for key, label in akd_keys.items():
+            if key in data_dict and isinstance(data_dict[key], (int, float)):
+                plot_data[label] = data_dict[key]
+
     # 2. Durum: 'scores' anahtarı varsa (Çoklu Zeka)
     elif "scores" in data_dict and isinstance(data_dict["scores"], dict):
         temp_data = {}
@@ -707,6 +734,68 @@ R (Gerçekçi), I (Araştırmacı), A (Sanatçı), S (Sosyal), E (Girişimci), C
 - İş gölgeleme (job shadowing) programları
 
 ⚠️ *Bu değerlendirme profesyonel kariyer danışmanlığını destekler; tek başına kesin yönlendirme için yeterli değildir.*
+"""
+
+    elif "D2 Dikkat" in test_name:
+        return """
+## 🔬 D2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
+
+Bu test, Brickenkamp d2 dikkat testinin dijital adaptasyonudur. Aşağıdaki metrikleri analiz et:
+
+### KATMAN 1: TEMEL METRİKLER
+- **CP (Konsantrasyon Performansı):** Doğru hedefler − Yanlış işaretlemeler. En önemli gösterge.
+- **TN-E (Toplam Performans):** Toplam işaretleme − Toplam hata. Genel performans.
+- **E1 (Atlama Hatası):** Hedef atlandı → Dikkat dağılması göstergesi
+- **E2 (Yanlış İşaretleme):** Hedef olmayan işaretlendi → Dürtüsellik göstergesi
+- **FR (Dalgalanma):** Satırlar arası performans farkı → Dikkat sürdürülebilirliği
+
+### KATMAN 2: PROFİL ANALİZİ
+- Hız-Doğruluk dengesi: Dürtüsel mi (hızlı ama hatalı), temkinli mi (yavaş ama doğru), dengeli mi?
+- Satır performans eğrisi: Yorulma etkisi var mı? İlk satırlar mı son satırlar mı daha iyi?
+- Hata türü dağılımı: E1 > E2 ise dikkat eksikliği, E2 > E1 ise dürtüsellik ön planda
+
+### KATMAN 3: AKADEMİK ETKİ
+- Dikkat seviyesinin ders dinleme, ödev yapma, sınav çözme üzerindeki etkisi
+- Yaşa uygun beklentiler çerçevesinde değerlendirme
+- Dikkat sürdürülebilirliğinin uzun sınavlar ve proje çalışmaları açısından önemi
+
+### KATMAN 4: SOMUT ÖNERİLER
+- Dikkat geliştirme egzersizleri (yaşa uygun)
+- Çalışma ortamı düzenlemesi
+- Pomodoro ve odaklanma teknikleri
+- Gerekiyorsa uzman yönlendirmesi (dikkat eksikliği değerlendirmesi)
+"""
+
+    elif "Akademik Analiz" in test_name:
+        return """
+## 🔬 AKADEMİK ANALİZ TESTİ — UZMAN ANALİZ PROTOKOLÜ
+
+Bu test, 4 alt boyutta akademik yetkinliği ölçen performans bazlı bir testtir:
+
+### KATMAN 1: OKUMA ANLAMA ANALİZİ
+- Metin kavrama, çıkarım ve ana fikir yakalama becerisi
+- Yaşa göre normatif değerlendirme
+- Akademik metinleri anlama kapasitesinin tüm dersler üzerindeki etkisi
+
+### KATMAN 2: MATEMATİKSEL MUHAKEME
+- Sayısal düşünme ve problem çözme becerisi
+- Soyut düşünme kapasitesi
+- Çok adımlı problem çözme yetkinliği
+
+### KATMAN 3: MANTIKSAL DÜŞÜNME
+- Örüntü tanıma, analoji, sıralama ve çıkarım becerileri
+- Analitik düşünme kapasitesi
+- Eleştirel düşünme potansiyeli
+
+### KATMAN 4: PERFORMANS vs ÖZ-DEĞERLENDİRME UYUMU
+- Öğrencinin kendini değerlendirmesi ile gerçek performansı arasındaki fark
+- Akademik özgüven analizi
+- Farkındalık düzeyi ve motivasyon dinamikleri
+
+### KATMAN 5: BÜTÜNLEŞİK AKADEMİK PROFİL
+- 4 boyutun etkileşim analizi
+- Güçlü alandan zayıf alana transfer stratejileri
+- Kişiye özel gelişim planı (0-1 ay, 1-3 ay, 3-6 ay)
 """
 
     return ""
