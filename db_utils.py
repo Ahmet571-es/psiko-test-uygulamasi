@@ -123,6 +123,20 @@ def hash_password(password: str) -> str:
 # VERİTABANI BAŞLATMA
 # ============================================================
 
+def _pg_safe_alter(cursor, sql):
+    """
+    PostgreSQL'de ALTER TABLE gibi hata verebilecek komutları
+    SAVEPOINT ile güvenli çalıştırır.
+    Hata olursa transaction bozulmaz.
+    """
+    try:
+        cursor.execute("SAVEPOINT safe_alter")
+        cursor.execute(sql)
+        cursor.execute("RELEASE SAVEPOINT safe_alter")
+    except Exception:
+        cursor.execute("ROLLBACK TO SAVEPOINT safe_alter")
+
+
 def init_db():
     """
     Veritabanı tablolarını oluşturur.
@@ -146,11 +160,10 @@ def init_db():
                 secret_word TEXT
             )''')
 
-            # Mevcut tablo varsa grade sütunu ekle (migration)
-            try:
-                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
-            except Exception:
-                pass
+            # Mevcut tablo varsa eksik sütunları ekle (migration)
+            # SAVEPOINT ile sarmalanmış — hata verse bile transaction bozulmaz
+            _pg_safe_alter(c, "ALTER TABLE students ADD COLUMN grade INTEGER")
+            _pg_safe_alter(c, "ALTER TABLE students ADD COLUMN secret_word TEXT")
 
             c.execute('''CREATE TABLE IF NOT EXISTS results (
                 id SERIAL PRIMARY KEY,
