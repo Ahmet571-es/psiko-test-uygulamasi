@@ -389,6 +389,27 @@ def check_test_completed(student_id, test_name):
         conn.close()
 
 
+def get_completed_tests(student_id):
+    """
+    Öğrencinin tamamladığı tüm test adlarını döndürür.
+    PERFORMANS: Tek sorgu ile 9 ayrı check_test_completed çağrısını değiştirir.
+    """
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+
+    try:
+        c.execute(
+            f"SELECT DISTINCT test_name FROM results WHERE student_id={ph}",
+            (student_id,)
+        )
+        return {row[0] for row in c.fetchall()}
+    except Exception:
+        return set()
+    finally:
+        conn.close()
+
+
 # ============================================================
 # ÖĞRETMEN VERİ ÇEKME İŞLEMLERİ
 # ============================================================
