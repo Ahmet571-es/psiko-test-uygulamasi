@@ -466,46 +466,106 @@ def generate_d2_report(scores):
 
 
 # ============================================================
-# İNTERAKTİF STREAMLIT BİLEŞENİ
+# D2 KART STİLİ CSS (Checkbox → Tıklanabilir Kart)
 # ============================================================
-import os as _os
-import streamlit.components.v1 as _components
 
-_COMPONENT_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "d2_component")
-_d2_grid_component = _components.declare_component("d2_grid", path=_COMPONENT_DIR)
+D2_CARD_CSS = """
+<style>
+/* ── D2 Grid Layout ── */
+div[data-testid="stForm"] .d2-grid-row {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+}
+@media (max-width: 700px) {
+    div[data-testid="stForm"] .d2-grid-row {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+/* ── Sembol kartlarını stillendir ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] {
+    background: #f8f9fc;
+    border: 2px solid #dde1e8;
+    border-radius: 10px;
+    padding: 6px 2px 8px;
+    text-align: center;
+    transition: all 0.12s ease;
+    cursor: pointer;
+}
+div[data-testid="stForm"] div[data-testid="stCheckbox"]:hover {
+    border-color: #64b5f6;
+    background: #e8f0fe;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.10);
+}
+
+/* ── Seçili kart stili ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) {
+    border-color: #4CAF50 !important;
+    background: #e8f5e9 !important;
+    box-shadow: 0 0 0 2px #4CAF50, 0 2px 8px rgba(76,175,80,0.25);
+}
+
+/* ── Checkbox native görünümünü gizle ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div[data-testid="stMarkdownContainer"] {
+    display: block !important;
+}
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-child {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+/* ── Seçim sayacı ── */
+.d2-counter {
+    text-align:center; margin: 4px 0;
+    font-size:0.85rem; color:#555;
+}
+.d2-counter b { color:#1B2A4A; }
+
+/* ── Legend ── */
+.d2-legend {
+    background:#f0f7ff; border:1px solid #b0d4f1; border-radius:10px;
+    padding:8px 12px; margin-bottom:10px; text-align:center;
+    font-size:0.85rem; color:#1B2A4A;
+}
+.d2-legend b { color:#0d47a1; }
+</style>
+"""
 
 
-def d2_interactive_row(symbols, time_seconds=15, row_num=0, is_practice=False, key=None):
+def render_symbol_label(symbol):
     """
-    Tıklanabilir D2 sembol kartları bileşeni.
-
-    Parametreler
-    ------------
-    symbols      : list[dict]  — generate_d2_row / generate_practice_row çıktısı
-    time_seconds : int         — satır süresi (saniye)
-    row_num      : int         — satır numarası (timer id için)
-    is_practice  : bool        — alıştırma turu mu
-    key          : str         — Streamlit widget key
-
-    Döndürür
-    --------
-    dict | None
-        Kullanıcı göndermediyse None.
-        Gönderdiyse: {"selected": [bool, ...], "elapsed": float}
+    Bir D2 sembolünü checkbox label'ı olarak render eder.
+    Tıklanabilir kart içeriği.
     """
-    # Sembol verilerini serialize et (sadece gerekli alanlar)
-    sym_data = [
-        {"letter": s["letter"], "above": s["above"], "below": s["below"],
-         "is_target": s["is_target"], "index": s.get("index", i)}
-        for i, s in enumerate(symbols)
-    ]
+    above = symbol["above"]
+    below = symbol["below"]
+    letter = symbol["letter"]
+    idx = symbol.get("index", 0) + 1
 
-    result = _d2_grid_component(
-        symbols=sym_data,
-        time_seconds=time_seconds,
-        row_num=row_num,
-        is_practice=is_practice,
-        key=key,
-        default=None,
+    def marks(count):
+        if count == 0:
+            return '<div style="height:14px;">&nbsp;</div>'
+        bars = "".join(
+            '<span style="display:inline-block;width:3px;height:12px;'
+            'background:#444;border-radius:1px;margin:0 2px;"></span>'
+            for _ in range(count)
+        )
+        return (
+            f'<div style="height:14px;display:flex;'
+            f'justify-content:center;align-items:center;">{bars}</div>'
+        )
+
+    return (
+        f'<div style="text-align:center;min-width:36px;padding:2px 0;">'
+        f'<div style="font-size:9px;color:#aaa;margin-bottom:1px;">{idx}</div>'
+        f'{marks(above)}'
+        f'<div style="font-size:24px;font-weight:800;color:#1B2A4A;line-height:28px;">{letter}</div>'
+        f'{marks(below)}'
+        f'</div>'
     )
-    return result
