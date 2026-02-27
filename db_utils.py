@@ -7,8 +7,9 @@ import streamlit as st
 # ============================================================
 # 🗄️ VERİTABANI BAĞLANTI YÖNETİMİ
 # ============================================================
-# Supabase (PostgreSQL) bağlantısı varsa onu kullanır.
-# Yoksa SQLite ile çalışır (lokal geliştirme / fallback).
+# PERFORMANS: Bağlantı pooling ile her çağrıda yeni TCP/SSL
+# bağlantısı açılmaz. Tek bağlantı @st.cache_resource ile
+# tüm rerun'lar boyunca canlı tutulur.
 # ============================================================
 
 try:
@@ -45,31 +46,103 @@ def get_db_url():
     return None
 
 
-def get_connection():
-    """
-    Veritabanı bağlantısı döndürür.
-    - Supabase URL varsa → PostgreSQL bağlantısı
-    - Yoksa → SQLite fallback (lokal geliştirme)
-    """
-    db_url = get_db_url()
+# ============================================================
+# BAĞLANTI POOLING — @st.cache_resource
+# ============================================================
+# Streamlit her butona basışta tüm script'i yeniden çalıştırır.
+# @st.cache_resource ile PostgreSQL bağlantısı SADECE İLK SEFERDE
+# açılır ve tüm rerun'lar boyunca yeniden kullanılır.
+# Bu ~300-500ms tasarruf sağlar (DNS + TCP + SSL + PG auth).
+# ============================================================
 
+class _PgConnWrapper:
+    """
+    PostgreSQL cached connection wrapper.
+    close() gerçekten kapatmaz — sadece rollback yapar.
+    Böylece mevcut tüm kod değişmeden çalışır.
+    """
+    def __init__(self, real_conn):
+        self._conn = real_conn
+
+    def cursor(self):
+        return self._conn.cursor()
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        try:
+            self._conn.rollback()
+        except Exception:
+            pass
+
+    def close(self):
+        # Kapatma! Sadece temizle.
+        try:
+            self._conn.rollback()
+        except Exception:
+            pass
+
+    @property
+    def autocommit(self):
+        return self._conn.autocommit
+
+    @autocommit.setter
+    def autocommit(self, val):
+        self._conn.autocommit = val
+
+
+@st.cache_resource
+def _get_cached_pg_conn():
+    """Cached PostgreSQL bağlantısı — rerun'lar arası yaşar."""
+    db_url = get_db_url()
     if db_url and DB_ENGINE == "postgresql":
         try:
             conn = psycopg2.connect(db_url, connect_timeout=10)
-            conn.autocommit = False
-            return conn, "postgresql"
+            return conn
         except Exception as e:
-            print(f"PostgreSQL bağlantı hatası, SQLite'a geçiliyor: {e}")
+            print(f"PostgreSQL bağlantı hatası: {e}")
+    return None
+
+
+def _check_pg_conn(conn):
+    """Bağlantı hala canlı mı kontrol et."""
+    try:
+        conn.cursor().execute("SELECT 1")
+        conn.rollback()
+        return True
+    except Exception:
+        return False
+
+
+def get_connection():
+    """
+    Veritabanı bağlantısı döndürür.
+    PostgreSQL: Cached bağlantı (hızlı — yeni TCP açmaz)
+    SQLite: Her seferinde yeni bağlantı (lokal, zaten hızlı)
+    """
+    if DB_ENGINE == "postgresql":
+        raw_conn = _get_cached_pg_conn()
+        if raw_conn is not None:
+            if _check_pg_conn(raw_conn):
+                raw_conn.autocommit = False
+                return _PgConnWrapper(raw_conn), "postgresql"
+            else:
+                # Bağlantı kopmuş — cache'i temizle, yeniden bağlan
+                _get_cached_pg_conn.clear()
+                raw_conn = _get_cached_pg_conn()
+                if raw_conn is not None:
+                    raw_conn.autocommit = False
+                    return _PgConnWrapper(raw_conn), "postgresql"
 
     # SQLite Fallback
-    if DB_ENGINE == "sqlite":
+    try:
         conn = sqlite3.connect(SQLITE_DB_NAME)
         return conn, "sqlite"
-
-    # psycopg2 yüklü ama bağlantı başarısız → SQLite fallback
-    import sqlite3 as sq3
-    conn = sq3.connect(SQLITE_DB_NAME)
-    return conn, "sqlite"
+    except NameError:
+        import sqlite3 as sq3
+        conn = sq3.connect(SQLITE_DB_NAME)
+        return conn, "sqlite"
 
 
 def is_using_sqlite():
