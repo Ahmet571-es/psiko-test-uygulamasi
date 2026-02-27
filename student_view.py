@@ -8,6 +8,7 @@ from d2_engine import (
     D2_CONFIG, generate_d2_test, generate_practice_row,
     render_symbol_html, render_row_legend_html, render_timer_js,
     calculate_d2, generate_d2_report,
+    get_time_per_row, d2_interactive_row,
 )
 from akademik_engine import (
     get_akademik_sections, get_total_questions,
@@ -438,12 +439,14 @@ def app():
 
                         elif "D2 Dikkat" in test:
                             seed = hash(str(st.session_state.student_id) + str(time.time()))
+                            student_age = st.session_state.get("student_age", 15)
                             st.session_state.current_test_data = {"type": "d2_timed"}
                             st.session_state.d2_rows = generate_d2_test(seed=seed)
                             st.session_state.d2_current_row = -1   # -1 = alıştırma
                             st.session_state.d2_row_results = []
                             st.session_state.d2_practice_done = False
                             st.session_state.d2_row_start = None
+                            st.session_state.d2_time_per_row = get_time_per_row(student_age)
 
                         elif "Akademik Analiz" in test:
                             student_grade = st.session_state.get("student_grade")
@@ -815,46 +818,37 @@ def app():
                 _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
 
             # ========================================
-            # TİP: D2 DİKKAT TESTİ (Zamanlı)
+            # TİP: D2 DİKKAT TESTİ (İnteraktif Tıklama)
             # ========================================
             elif q_type == "d2_timed":
                 current_row = st.session_state.d2_current_row
+                time_per_row = st.session_state.get("d2_time_per_row", D2_CONFIG["time_per_row"])
+                student_age = st.session_state.get("student_age", 15)
 
                 # ---- ALIŞTIRMA TURU ----
                 if current_row == -1 and not st.session_state.d2_practice_done:
                     st.markdown("### 🎯 Alıştırma Turu")
                     st.info(
-                        "Aşağıda kısa bir alıştırma satırı var. "
-                        "**d** harfi + **toplam 2 çizgi** olan sembolleri bul ve işaretle. "
-                        "Bu tur puanlanmaz."
+                        f"Aşağıdaki sembollere **tıklayarak** hedefleri işaretle. "
+                        f"Ana testte her satır için **{time_per_row} saniye** süren olacak. "
+                        f"Bu tur puanlanmaz."
                     )
-                    st.markdown(render_row_legend_html(), unsafe_allow_html=True)
 
                     practice = generate_practice_row()
+                    result = d2_interactive_row(
+                        symbols=practice,
+                        time_seconds=0,
+                        row_num=-1,
+                        is_practice=True,
+                        key="d2_practice",
+                    )
 
-                    with st.form("d2_practice"):
-                        D2_COLS = 5
-                        for sub_r in range((len(practice) + D2_COLS - 1) // D2_COLS):
-                            cols = st.columns(D2_COLS)
-                            for c in range(D2_COLS):
-                                idx = sub_r * D2_COLS + c
-                                if idx < len(practice):
-                                    with cols[c]:
-                                        st.markdown(
-                                            render_symbol_html(practice[idx]),
-                                            unsafe_allow_html=True,
-                                        )
-                                        st.checkbox(
-                                            "Hedef", key=f"d2p_{idx}",
-                                            label_visibility="collapsed",
-                                        )
-
-                        if st.form_submit_button("Alıştırmayı Tamamla ✅", type="primary"):
-                            st.session_state.d2_practice_done = True
-                            st.session_state.d2_current_row = 0
-                            st.session_state.d2_row_start = time.time()
-                            st.session_state._scroll_top = True
-                            st.rerun()
+                    if result is not None:
+                        st.session_state.d2_practice_done = True
+                        st.session_state.d2_current_row = 0
+                        st.session_state.d2_row_start = time.time()
+                        st.session_state._scroll_top = True
+                        st.rerun()
 
                 # ---- ANA TEST SATIRLARI ----
                 elif 0 <= current_row < D2_CONFIG["rows"]:
@@ -868,47 +862,17 @@ def app():
                     if st.session_state.d2_row_start is None:
                         st.session_state.d2_row_start = time.time()
 
-                    components.html(
-                        render_timer_js(D2_CONFIG["time_per_row"], current_row),
-                        height=55,
+                    result = d2_interactive_row(
+                        symbols=row_symbols,
+                        time_seconds=time_per_row,
+                        row_num=current_row,
+                        is_practice=False,
+                        key=f"d2_row_{current_row}",
                     )
 
-                    st.markdown(render_row_legend_html(), unsafe_allow_html=True)
-
-                    with st.form(f"d2_row_{current_row}"):
-                        D2_COLS = 5
-                        for sub_r in range(
-                            (len(row_symbols) + D2_COLS - 1) // D2_COLS
-                        ):
-                            cols = st.columns(D2_COLS)
-                            for c in range(D2_COLS):
-                                idx = sub_r * D2_COLS + c
-                                if idx < len(row_symbols):
-                                    with cols[c]:
-                                        st.markdown(
-                                            render_symbol_html(row_symbols[idx]),
-                                            unsafe_allow_html=True,
-                                        )
-                                        st.checkbox(
-                                            "Hedef",
-                                            key=f"d2r{current_row}_s{idx}",
-                                            label_visibility="collapsed",
-                                        )
-
-                        submitted = st.form_submit_button(
-                            "Satırı Gönder ➡️", type="primary"
-                        )
-
-                    if submitted:
-                        elapsed = time.time() - (
-                            st.session_state.d2_row_start or time.time()
-                        )
-                        selected = [
-                            st.session_state.get(
-                                f"d2r{current_row}_s{i}", False
-                            )
-                            for i in range(len(row_symbols))
-                        ]
+                    if result is not None:
+                        selected = result.get("selected", [False] * len(row_symbols))
+                        elapsed = result.get("elapsed", time.time() - (st.session_state.d2_row_start or time.time()))
 
                         st.session_state.d2_row_results.append(
                             {
@@ -926,10 +890,6 @@ def app():
                             st.session_state.d2_row_start = time.time()
                             st.session_state._scroll_top = True
                             st.rerun()
-
-                    if st.session_state.d2_row_start:
-                        if time.time() - st.session_state.d2_row_start > D2_CONFIG["time_per_row"]:
-                            st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
 
             # ========================================
             # TİP: AKADEMİK ANALİZ (Bölümlü Performans)
@@ -1087,6 +1047,8 @@ def _finish_d2_test(t_name):
             "balance": scores["balance"],
             "consistency": scores["consistency"],
             "row_performances": scores["row_performances"],
+            "student_age": st.session_state.get("student_age"),
+            "time_per_row": st.session_state.get("d2_time_per_row", D2_CONFIG["time_per_row"]),
         }
 
         raw_answers = {
