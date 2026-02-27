@@ -1,6 +1,5 @@
 import json
 import hashlib
-import pandas as pd
 from datetime import datetime
 import os
 import streamlit as st
@@ -22,6 +21,9 @@ except ImportError:
 
 # SQLite fallback DB adı
 SQLITE_DB_NAME = "school_data.db"
+
+# init_db tekrar çağrılmasını önleyen bayrak
+_db_initialized = False
 
 
 def get_db_url():
@@ -123,25 +125,16 @@ def hash_password(password: str) -> str:
 # VERİTABANI BAŞLATMA
 # ============================================================
 
-def _pg_safe_alter(cursor, sql):
-    """
-    PostgreSQL'de ALTER TABLE gibi hata verebilecek komutları
-    SAVEPOINT ile güvenli çalıştırır.
-    Hata olursa transaction bozulmaz.
-    """
-    try:
-        cursor.execute("SAVEPOINT safe_alter")
-        cursor.execute(sql)
-        cursor.execute("RELEASE SAVEPOINT safe_alter")
-    except Exception:
-        cursor.execute("ROLLBACK TO SAVEPOINT safe_alter")
-
-
 def init_db():
     """
     Veritabanı tablolarını oluşturur.
     PostgreSQL ve SQLite uyumlu.
+    PERFORMANS: Sadece ilk çağrıda çalışır, sonraki çağrılar atlanır.
     """
+    global _db_initialized
+    if _db_initialized:
+        return
+    
     conn, engine = get_connection()
     c = conn.cursor()
 
@@ -160,10 +153,11 @@ def init_db():
                 secret_word TEXT
             )''')
 
-            # Mevcut tablo varsa eksik sütunları ekle (migration)
-            # SAVEPOINT ile sarmalanmış — hata verse bile transaction bozulmaz
-            _pg_safe_alter(c, "ALTER TABLE students ADD COLUMN grade INTEGER")
-            _pg_safe_alter(c, "ALTER TABLE students ADD COLUMN secret_word TEXT")
+            # Mevcut tablo varsa grade sütunu ekle (migration)
+            try:
+                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
+            except Exception:
+                pass
 
             c.execute('''CREATE TABLE IF NOT EXISTS results (
                 id SERIAL PRIMARY KEY,
@@ -222,6 +216,7 @@ def init_db():
                           date TIMESTAMP)''')
 
         conn.commit()
+        _db_initialized = True
     except Exception as e:
         conn.rollback()
         print(f"init_db hatası: {e}")
@@ -235,8 +230,6 @@ def init_db():
 
 def register_student(name, username, password, age, gender, secret_word="", grade=None):
     """Yeni öğrenci kaydeder."""
-    init_db()
-
     conn, engine = get_connection()
     c = conn.cursor()
     ph = get_placeholder(engine)
@@ -265,8 +258,6 @@ def register_student(name, username, password, age, gender, secret_word="", grad
 
 def login_student(username, password):
     """Öğrenci girişi doğrular."""
-    init_db()
-
     conn, engine = get_connection()
     c = conn.cursor()
     ph = get_placeholder(engine)
@@ -299,8 +290,6 @@ def login_student(username, password):
 
 def reset_student_password(username, secret_word, new_password):
     """Öğrenci şifresini sıfırlar."""
-    init_db()
-
     conn, engine = get_connection()
     c = conn.cursor()
     ph = get_placeholder(engine)
@@ -535,6 +524,7 @@ def reset_database():
     PostgreSQL: Tabloları DROP eder ve yeniden oluşturur.
     SQLite: Dosyayı siler ve yeniden oluşturur.
     """
+    global _db_initialized
     conn, engine = get_connection()
     c = conn.cursor()
 
@@ -550,6 +540,7 @@ def reset_database():
             if os.path.exists(SQLITE_DB_NAME):
                 os.remove(SQLITE_DB_NAME)
 
+        _db_initialized = False
         init_db()
         return True
 
@@ -575,7 +566,9 @@ def repair_database():
     Veritabanını onarmaya çalışır.
     Eksik tabloları yeniden oluşturur (varsa dokunmaz).
     """
+    global _db_initialized
     try:
+        _db_initialized = False
         init_db()
         return True
     except Exception:
