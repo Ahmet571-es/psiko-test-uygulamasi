@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import json
 import time
 import random
-from db_utils import check_test_completed, save_test_result_to_db
+from db_utils import check_test_completed, save_test_result_to_db, get_completed_tests
 from d2_engine import (
     D2_CONFIG, generate_d2_test, generate_practice_row,
     render_symbol_html, render_row_legend_html, render_timer_js,
@@ -116,6 +116,553 @@ TEST_META = {
 # ============================================================
 # 🏠 ANA APP FONKSİYONU
 # ============================================================
+
+# ============================================================
+# 🚀 PERFORMANS: Test soru bölümü @st.fragment ile izole
+#    Butona basınca sadece bu kısım yenilenir, tüm sayfa değil
+# ============================================================
+@st.fragment
+def _render_test_questions():
+    """Test soru arayüzü — fragment olarak sadece kendi kendini yeniler."""
+    t_name = st.session_state.selected_test
+
+    data = st.session_state.current_test_data
+    q_type = data.get("type")
+
+    # ========================================
+    # TİP: ENNEAGRAM — KARISIK SAYFALANMIŞ
+    # ========================================
+    if q_type == "enneagram_fixed":
+        PER_PAGE  = 20
+        all_qs    = st.session_state.enneagram_shuffled
+        total_qs  = len(all_qs)
+        curr_page = st.session_state.enneagram_page
+        total_pages = (total_qs + PER_PAGE - 1) // PER_PAGE
+
+        page_qs  = all_qs[curr_page * PER_PAGE : (curr_page + 1) * PER_PAGE]
+        answered = sum(1 for q in all_qs
+                       if st.session_state.enneagram_answers.get(q["key"]) is not None)
+
+        st.progress(answered / total_qs)
+        st.caption(f"📖 Bölüm {curr_page + 1} / {total_pages}  •  "
+                   f"✍️ {answered}/{total_qs} soru cevaplandı")
+        st.divider()
+
+        ennea_map = {
+            1: "Kesinlikle Katılmıyorum",
+            2: "Katılmıyorum",
+            3: "Kararsızım",
+            4: "Katılıyorum",
+            5: "Kesinlikle Katılıyorum",
+        }
+        opts = [1, 2, 3, 4, 5]
+
+        all_answered = True
+        for i, q in enumerate(page_qs):
+            global_num = curr_page * PER_PAGE + i + 1
+            st.write(f"**{global_num}. {q['text']}**")
+            prev = st.session_state.enneagram_answers.get(q["key"])
+            val  = st.radio(
+                f"Soru {global_num}",
+                opts,
+                key=f"rad_{q['key']}",
+                index=opts.index(prev) if prev is not None else None,
+                horizontal=True,
+                format_func=lambda x: ennea_map[x],
+                label_visibility="collapsed",
+            )
+            if val is not None:
+                st.session_state.enneagram_answers[q["key"]] = val
+            else:
+                all_answered = False
+            st.divider()
+
+        c1, c2 = st.columns(2)
+        if curr_page > 0:
+            if c1.button("⬅️ Önceki Bölüm"):
+                st.session_state.enneagram_page -= 1
+                st.session_state._scroll_top = True
+                st.rerun()
+
+        is_last = curr_page == total_pages - 1
+        if not is_last:
+            if c2.button("Sonraki Bölüm ➡️"):
+                if not all_answered:
+                    st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevapla.")
+                else:
+                    st.session_state.enneagram_page += 1
+                    st.session_state._scroll_top = True
+                    st.rerun()
+        else:
+            if c2.button("Bitir ve Gönder ✅", type="primary"):
+                total_answered = sum(
+                    1 for q in all_qs
+                    if st.session_state.enneagram_answers.get(q["key"]) is not None
+                )
+                if total_answered < total_qs:
+                    st.error(f"⚠️ Henüz {total_qs - total_answered} soru cevaplanmadı. "
+                             "Önceki bölümlere dönerek eksikleri tamamla.")
+                else:
+                    with st.spinner("🧬 Kişilik haritan çıkarılıyor..."):
+                        scores, rep = calculate_enneagram_report(
+                            st.session_state.enneagram_answers
+                        )
+                        save_test_result_to_db(
+                            st.session_state.student_id,
+                            t_name,
+                            st.session_state.enneagram_answers,
+                            scores,
+                            rep,
+                        )
+                        st.session_state.last_report = rep
+                        st.session_state.page = "success_screen"
+                        st.session_state._scroll_top = True
+                        st.rerun()
+
+    # ========================================
+    # TİP: A/B SEÇİMLİ (Sağ-Sol Beyin)
+    # ========================================
+    elif q_type == "ab_choice":
+        qs = data["questions"]
+        PER_PAGE = 10
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
+        page_q_ids = []
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid)
+            options = [f"a) {q['a']}", f"b) {q['b']}"]
+            idx = 0 if prev == "a" else (1 if prev == "b" else None)
+            val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+            if val:
+                st.session_state.cevaplar[qid] = "a" if val.startswith("a)") else "b"
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: DOĞRU/YANLIŞ (Çalışma Davranışı, Sınav Kaygısı)
+    # ========================================
+    elif q_type == "true_false":
+        qs = data["questions"]
+        PER_PAGE = 10
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
+        page_q_ids = []
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid)
+            options = ["Doğru", "Yanlış"]
+            idx = 0 if prev == "D" else (1 if prev == "Y" else None)
+            val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+            if val:
+                st.session_state.cevaplar[qid] = "D" if val == "Doğru" else "Y"
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: ÇOKLU ZEKA LİSE (0-4 Likert)
+    # ========================================
+    elif q_type == "coklu_zeka_lise":
+        qs = data["questions"]
+        PER_PAGE = 10
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
+        page_q_ids = []
+
+        likert_labels = {0: "0 - Asla", 1: "1 - Çok Az", 2: "2 - Bazen", 3: "3 - Çoğu Kez", 4: "4 - Daima"}
+        likert_opts = [0, 1, 2, 3, 4]
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid)
+            idx = likert_opts.index(prev) if prev is not None else None
+            val = st.radio(f"Soru {qid}", likert_opts, key=f"q_{qid}", index=idx, horizontal=True, format_func=lambda x: likert_labels[x], label_visibility="collapsed")
+            if val is not None:
+                st.session_state.cevaplar[qid] = val
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: ÇOKLU ZEKA İLKÖĞRETİM (Evet/Hayır)
+    # ========================================
+    elif q_type == "coklu_zeka_ilk":
+        qs = data["questions"]
+        PER_PAGE = 10
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
+        page_q_ids = []
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid)
+            options = ["Evet", "Hayır"]
+            idx = 0 if prev == "E" else (1 if prev == "H" else None)
+            val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
+            if val:
+                st.session_state.cevaplar[qid] = "E" if val == "Evet" else "H"
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: VARK (Çoklu Seçim)
+    # ========================================
+    elif q_type == "vark_multi":
+        qs = data["questions"]
+        PER_PAGE = 8
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}  •  💡 Her soruda birden fazla seçenek işaretleyebilirsin.")
+        page_q_ids = []
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid, [])
+            selected = []
+            for opt_key, opt_text in q["options"].items():
+                checked = opt_key in prev
+                if st.checkbox(f"{opt_key}) {opt_text}", value=checked, key=f"q_{qid}_{opt_key}"):
+                    selected.append(opt_key)
+            st.session_state.cevaplar[qid] = selected
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: HOLLAND (5'li Likert)
+    # ========================================
+    elif q_type == "holland_5":
+        qs = data["questions"]
+        PER_PAGE = 10
+        tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
+        start = st.session_state.sayfa * PER_PAGE
+        curr_qs = qs[start:start + PER_PAGE]
+
+        st.progress((st.session_state.sayfa + 1) / tot_p)
+        st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
+        page_q_ids = []
+
+        holland_opts = [0, 1, 2, 3, 4]
+        holland_labels = {
+            0: "😣 Hiç Hoşlanmam",
+            1: "😕 Hoşlanmam",
+            2: "😐 Kararsızım",
+            3: "😊 Hoşlanırım",
+            4: "😍 Çok Hoşlanırım"
+        }
+
+        for q in curr_qs:
+            qid = q["id"]
+            page_q_ids.append(qid)
+            st.write(f"**{qid}. {q['text']}**")
+            prev = st.session_state.cevaplar.get(qid)
+            idx = holland_opts.index(prev) if prev is not None else None
+            val = st.radio(
+                f"Soru {qid}", holland_opts, key=f"q_{qid}",
+                index=idx, horizontal=True,
+                format_func=lambda x: holland_labels[x],
+                label_visibility="collapsed"
+            )
+            if val is not None:
+                st.session_state.cevaplar[qid] = val
+            st.divider()
+
+        _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
+
+    # ========================================
+    # TİP: D2 DİKKAT TESTİ (Tıklanabilir Kart)
+    # ========================================
+    elif q_type == "d2_timed":
+        current_row = st.session_state.d2_current_row
+        time_per_row = st.session_state.get("d2_time_per_row", D2_CONFIG["time_per_row"])
+
+        # Kart CSS'ini enjekte et
+        st.markdown(D2_CARD_CSS, unsafe_allow_html=True)
+
+        # ---- ALIŞTIRMA TURU ----
+        if current_row == -1 and not st.session_state.d2_practice_done:
+            st.markdown("### 🎯 Alıştırma Turu")
+            st.info(
+                f"Aşağıdaki sembollere **tıklayarak** hedefleri işaretle. "
+                f"Ana testte her satır için **{time_per_row} saniye** süren olacak. "
+                f"Bu tur puanlanmaz."
+            )
+            st.markdown(
+                '<div class="d2-legend">🎯 Hedef: <b>d</b> harfi + toplam <b>2 çizgi</b> '
+                '(üstte ve/veya altta) → tıkla!</div>',
+                unsafe_allow_html=True,
+            )
+
+            practice = generate_practice_row()
+
+            with st.form("d2_practice"):
+                D2_COLS = 5
+                for sub_r in range((len(practice) + D2_COLS - 1) // D2_COLS):
+                    cols = st.columns(D2_COLS)
+                    for c in range(D2_COLS):
+                        idx = sub_r * D2_COLS + c
+                        if idx < len(practice):
+                            with cols[c]:
+                                st.markdown(
+                                    render_symbol_html(practice[idx]),
+                                    unsafe_allow_html=True,
+                                )
+                                st.checkbox(
+                                    "✓ Seç", key=f"d2p_{idx}",
+                                )
+
+                if st.form_submit_button("Alıştırmayı Tamamla ✅", type="primary"):
+                    st.session_state.d2_practice_done = True
+                    st.session_state.d2_current_row = 0
+                    st.session_state.d2_row_start = time.time()
+                    st.session_state._scroll_top = True
+                    st.rerun()
+
+        # ---- ANA TEST SATIRLARI ----
+        elif 0 <= current_row < D2_CONFIG["rows"]:
+            row_symbols = st.session_state.d2_rows[current_row]
+
+            st.markdown(
+                f"### 🎯 Satır {current_row + 1} / {D2_CONFIG['rows']}"
+            )
+            st.progress((current_row + 1) / D2_CONFIG["rows"])
+
+            if st.session_state.d2_row_start is None:
+                st.session_state.d2_row_start = time.time()
+
+            components.html(
+                render_timer_js(time_per_row, current_row),
+                height=55,
+            )
+
+            st.markdown(
+                '<div class="d2-legend">🎯 Hedef: <b>d</b> harfi + toplam <b>2 çizgi</b> '
+                '(üstte ve/veya altta) → tıkla!</div>',
+                unsafe_allow_html=True,
+            )
+
+            with st.form(f"d2_row_{current_row}"):
+                D2_COLS = 5
+                for sub_r in range(
+                    (len(row_symbols) + D2_COLS - 1) // D2_COLS
+                ):
+                    cols = st.columns(D2_COLS)
+                    for c in range(D2_COLS):
+                        idx = sub_r * D2_COLS + c
+                        if idx < len(row_symbols):
+                            with cols[c]:
+                                st.markdown(
+                                    render_symbol_html(row_symbols[idx]),
+                                    unsafe_allow_html=True,
+                                )
+                                st.checkbox(
+                                    "✓ Seç",
+                                    key=f"d2r{current_row}_s{idx}",
+                                )
+
+                submitted = st.form_submit_button(
+                    "Satırı Gönder ➡️", type="primary"
+                )
+
+            if submitted:
+                elapsed = time.time() - (
+                    st.session_state.d2_row_start or time.time()
+                )
+                selected = [
+                    st.session_state.get(
+                        f"d2r{current_row}_s{i}", False
+                    )
+                    for i in range(len(row_symbols))
+                ]
+
+                st.session_state.d2_row_results.append(
+                    {
+                        "symbols": row_symbols,
+                        "selected": selected,
+                        "elapsed_time": elapsed,
+                    }
+                )
+
+                next_row = current_row + 1
+                if next_row >= D2_CONFIG["rows"]:
+                    _finish_d2_test(t_name)
+                else:
+                    st.session_state.d2_current_row = next_row
+                    st.session_state.d2_row_start = time.time()
+                    st.session_state._scroll_top = True
+                    st.rerun()
+
+            if st.session_state.d2_row_start:
+                if time.time() - st.session_state.d2_row_start > time_per_row:
+                    st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
+
+    # ========================================
+    # TİP: AKADEMİK ANALİZ (Bölümlü Performans)
+    # ========================================
+    elif q_type == "akademik_perf":
+        akd_grade = st.session_state.get("akd_grade")
+        akd_version = st.session_state.get("akd_version")
+        sections = get_akademik_sections(grade=akd_grade, version=akd_version)
+        sec_idx = st.session_state.akd_section_idx
+        total_secs = len(sections)
+
+        if sec_idx < total_secs:
+            sec = sections[sec_idx]
+            # Kademe etiketi
+            KADEME_LABELS = {5: "5-6. Sınıf", 6: "5-6. Sınıf", 7: "7-8. Sınıf", 8: "7-8. Sınıf",
+                             9: "9-10. Sınıf", 10: "9-10. Sınıf", 11: "11-12. Sınıf", 12: "11-12. Sınıf"}
+            if akd_grade:
+                ver_label = KADEME_LABELS.get(akd_grade, f"{akd_grade}. Sınıf")
+            else:
+                ver_label = "İlköğretim" if akd_version == "ilkogretim" else "Lise"
+
+            st.markdown(
+                f"### {sec['icon']} Bölüm {sec_idx + 1}/{total_secs}: "
+                f"{sec['name']}"
+            )
+            st.progress((sec_idx + 1) / total_secs)
+            st.caption(f"📎 Versiyon: {ver_label}")
+
+            with st.form(f"akd_sec_{sec_idx}"):
+
+                # ---- Okuma Anlama (metin + sorular) ----
+                if sec["type"] == "passage_mc":
+                    for p_idx, passage in enumerate(sec["data"]):
+                        st.markdown(
+                            f"<div style='background:#f8f9fa;border-left:4px solid "
+                            f"#9B59B6;padding:15px;border-radius:8px;margin:10px 0;'>"
+                            f"<b>📄 Metin {p_idx + 1}</b><br><br>"
+                            f"{passage['passage']}</div>",
+                            unsafe_allow_html=True,
+                        )
+                        for q in passage["questions"]:
+                            prev = st.session_state.akd_answers.get(q["id"])
+                            opts = list(q["options"].values())
+                            keys = list(q["options"].keys())
+                            idx_prev = (
+                                keys.index(prev) if prev in keys else None
+                            )
+                            val = st.radio(
+                                f"**{q['text']}**",
+                                keys,
+                                index=idx_prev,
+                                format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
+                                key=f"akd_{q['id']}",
+                            )
+                            if val:
+                                st.session_state.akd_answers[q["id"]] = val
+                            st.divider()
+
+                # ---- Çoktan Seçmeli (matematik, mantık) ----
+                elif sec["type"] == "mc":
+                    for q in sec["data"]:
+                        prev = st.session_state.akd_answers.get(q["id"])
+                        keys = list(q["options"].keys())
+                        idx_prev = (
+                            keys.index(prev) if prev in keys else None
+                        )
+                        val = st.radio(
+                            f"**{q['text']}**",
+                            keys,
+                            index=idx_prev,
+                            format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
+                            key=f"akd_{q['id']}",
+                        )
+                        if val:
+                            st.session_state.akd_answers[q["id"]] = val
+                        st.divider()
+
+                # ---- Likert (öz-değerlendirme) ----
+                elif sec["type"] == "likert":
+                    likert_labels = {
+                        1: "Hiç Katılmıyorum",
+                        2: "Katılmıyorum",
+                        3: "Kararsızım",
+                        4: "Katılıyorum",
+                        5: "Tamamen Katılıyorum",
+                    }
+                    for q in sec["data"]:
+                        prev = st.session_state.akd_answers.get(q["id"])
+                        idx_prev = (
+                            prev - 1 if isinstance(prev, int) and 1 <= prev <= 5
+                            else None
+                        )
+                        val = st.radio(
+                            f"**{q['text']}**",
+                            [1, 2, 3, 4, 5],
+                            index=idx_prev,
+                            format_func=lambda x: f"{x} — {likert_labels[x]}",
+                            key=f"akd_{q['id']}",
+                            horizontal=True,
+                        )
+                        if val:
+                            st.session_state.akd_answers[q["id"]] = val
+                        st.divider()
+
+                # ---- Navigasyon butonları ----
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if sec_idx > 0:
+                        back = st.form_submit_button("⬅️ Önceki Bölüm")
+                    else:
+                        back = False
+                with col_b:
+                    if sec_idx < total_secs - 1:
+                        nxt = st.form_submit_button(
+                            "Sonraki Bölüm ➡️", type="primary"
+                        )
+                    else:
+                        nxt = st.form_submit_button(
+                            "Testi Bitir ✅", type="primary"
+                        )
+
+            if back:
+                st.session_state.akd_section_idx = max(0, sec_idx - 1)
+                st.session_state._scroll_top = True
+                st.rerun()
+            if nxt:
+                if sec_idx < total_secs - 1:
+                    st.session_state.akd_section_idx = sec_idx + 1
+                    st.session_state._scroll_top = True
+                    st.rerun()
+                else:
+                    _finish_akademik_test(t_name)
+
+
 def app():
     # --- GENEL CSS ---
     st.markdown("""
@@ -292,7 +839,9 @@ def app():
     if st.session_state.page == "home":
         
         # --- İSTATİSTİK KUTUSU ---
-        completed_count = sum(1 for t in ALL_TESTS if check_test_completed(st.session_state.student_id, t))
+        # PERFORMANS: Tek sorgu ile tüm test durumlarını al (9 ayrı DB bağlantısı yerine 1)
+        completed_tests = get_completed_tests(st.session_state.student_id)
+        completed_count = sum(1 for t in ALL_TESTS if t in completed_tests)
         total_count = len(ALL_TESTS)
         pct = round(completed_count / total_count * 100)
         
@@ -351,7 +900,7 @@ def app():
         col1, col2 = st.columns(2)
         
         for idx, test in enumerate(ALL_TESTS):
-            is_done = check_test_completed(st.session_state.student_id, test)
+            is_done = test in completed_tests
             target_col = col1 if idx % 2 == 0 else col2
             meta = TEST_META.get(test, {})
             
@@ -540,541 +1089,8 @@ def app():
 
         # --- SORULAR ---
         else:
-            data = st.session_state.current_test_data
-            q_type = data.get("type")
+            _render_test_questions()
 
-            # ========================================
-            # TİP: ENNEAGRAM — KARISIK SAYFALANMIŞ
-            # ========================================
-            if q_type == "enneagram_fixed":
-                PER_PAGE  = 20
-                all_qs    = st.session_state.enneagram_shuffled
-                total_qs  = len(all_qs)
-                curr_page = st.session_state.enneagram_page
-                total_pages = (total_qs + PER_PAGE - 1) // PER_PAGE
-
-                page_qs  = all_qs[curr_page * PER_PAGE : (curr_page + 1) * PER_PAGE]
-                answered = sum(1 for q in all_qs
-                               if st.session_state.enneagram_answers.get(q["key"]) is not None)
-
-                st.progress(answered / total_qs)
-                st.caption(f"📖 Bölüm {curr_page + 1} / {total_pages}  •  "
-                           f"✍️ {answered}/{total_qs} soru cevaplandı")
-                st.divider()
-
-                ennea_map = {
-                    1: "Kesinlikle Katılmıyorum",
-                    2: "Katılmıyorum",
-                    3: "Kararsızım",
-                    4: "Katılıyorum",
-                    5: "Kesinlikle Katılıyorum",
-                }
-                opts = [1, 2, 3, 4, 5]
-
-                all_answered = True
-                for i, q in enumerate(page_qs):
-                    global_num = curr_page * PER_PAGE + i + 1
-                    st.write(f"**{global_num}. {q['text']}**")
-                    prev = st.session_state.enneagram_answers.get(q["key"])
-                    val  = st.radio(
-                        f"Soru {global_num}",
-                        opts,
-                        key=f"rad_{q['key']}",
-                        index=opts.index(prev) if prev is not None else None,
-                        horizontal=True,
-                        format_func=lambda x: ennea_map[x],
-                        label_visibility="collapsed",
-                    )
-                    if val is not None:
-                        st.session_state.enneagram_answers[q["key"]] = val
-                    else:
-                        all_answered = False
-                    st.divider()
-
-                c1, c2 = st.columns(2)
-                if curr_page > 0:
-                    if c1.button("⬅️ Önceki Bölüm"):
-                        st.session_state.enneagram_page -= 1
-                        st.session_state._scroll_top = True
-                        st.rerun()
-
-                is_last = curr_page == total_pages - 1
-                if not is_last:
-                    if c2.button("Sonraki Bölüm ➡️"):
-                        if not all_answered:
-                            st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevapla.")
-                        else:
-                            st.session_state.enneagram_page += 1
-                            st.session_state._scroll_top = True
-                            st.rerun()
-                else:
-                    if c2.button("Bitir ve Gönder ✅", type="primary"):
-                        total_answered = sum(
-                            1 for q in all_qs
-                            if st.session_state.enneagram_answers.get(q["key"]) is not None
-                        )
-                        if total_answered < total_qs:
-                            st.error(f"⚠️ Henüz {total_qs - total_answered} soru cevaplanmadı. "
-                                     "Önceki bölümlere dönerek eksikleri tamamla.")
-                        else:
-                            with st.spinner("🧬 Kişilik haritan çıkarılıyor..."):
-                                scores, rep = calculate_enneagram_report(
-                                    st.session_state.enneagram_answers
-                                )
-                                save_test_result_to_db(
-                                    st.session_state.student_id,
-                                    t_name,
-                                    st.session_state.enneagram_answers,
-                                    scores,
-                                    rep,
-                                )
-                                st.session_state.last_report = rep
-                                st.session_state.page = "success_screen"
-                                st.session_state._scroll_top = True
-                                st.rerun()
-
-            # ========================================
-            # TİP: A/B SEÇİMLİ (Sağ-Sol Beyin)
-            # ========================================
-            elif q_type == "ab_choice":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
-                page_q_ids = []
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid)
-                    options = [f"a) {q['a']}", f"b) {q['b']}"]
-                    idx = 0 if prev == "a" else (1 if prev == "b" else None)
-                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
-                    if val:
-                        st.session_state.cevaplar[qid] = "a" if val.startswith("a)") else "b"
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: DOĞRU/YANLIŞ (Çalışma Davranışı, Sınav Kaygısı)
-            # ========================================
-            elif q_type == "true_false":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
-                page_q_ids = []
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid)
-                    options = ["Doğru", "Yanlış"]
-                    idx = 0 if prev == "D" else (1 if prev == "Y" else None)
-                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
-                    if val:
-                        st.session_state.cevaplar[qid] = "D" if val == "Doğru" else "Y"
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: ÇOKLU ZEKA LİSE (0-4 Likert)
-            # ========================================
-            elif q_type == "coklu_zeka_lise":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
-                page_q_ids = []
-
-                likert_labels = {0: "0 - Asla", 1: "1 - Çok Az", 2: "2 - Bazen", 3: "3 - Çoğu Kez", 4: "4 - Daima"}
-                likert_opts = [0, 1, 2, 3, 4]
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid)
-                    idx = likert_opts.index(prev) if prev is not None else None
-                    val = st.radio(f"Soru {qid}", likert_opts, key=f"q_{qid}", index=idx, horizontal=True, format_func=lambda x: likert_labels[x], label_visibility="collapsed")
-                    if val is not None:
-                        st.session_state.cevaplar[qid] = val
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: ÇOKLU ZEKA İLKÖĞRETİM (Evet/Hayır)
-            # ========================================
-            elif q_type == "coklu_zeka_ilk":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
-                page_q_ids = []
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid)
-                    options = ["Evet", "Hayır"]
-                    idx = 0 if prev == "E" else (1 if prev == "H" else None)
-                    val = st.radio(f"Soru {qid}", options, key=f"q_{qid}", index=idx, horizontal=True, label_visibility="collapsed")
-                    if val:
-                        st.session_state.cevaplar[qid] = "E" if val == "Evet" else "H"
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: VARK (Çoklu Seçim)
-            # ========================================
-            elif q_type == "vark_multi":
-                qs = data["questions"]
-                PER_PAGE = 8
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}  •  💡 Her soruda birden fazla seçenek işaretleyebilirsin.")
-                page_q_ids = []
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid, [])
-                    selected = []
-                    for opt_key, opt_text in q["options"].items():
-                        checked = opt_key in prev
-                        if st.checkbox(f"{opt_key}) {opt_text}", value=checked, key=f"q_{qid}_{opt_key}"):
-                            selected.append(opt_key)
-                    st.session_state.cevaplar[qid] = selected
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: HOLLAND (5'li Likert)
-            # ========================================
-            elif q_type == "holland_5":
-                qs = data["questions"]
-                PER_PAGE = 10
-                tot_p = (len(qs) + PER_PAGE - 1) // PER_PAGE
-                start = st.session_state.sayfa * PER_PAGE
-                curr_qs = qs[start:start + PER_PAGE]
-
-                st.progress((st.session_state.sayfa + 1) / tot_p)
-                st.caption(f"📖 Sayfa {st.session_state.sayfa + 1} / {tot_p}")
-                page_q_ids = []
-
-                holland_opts = [0, 1, 2, 3, 4]
-                holland_labels = {
-                    0: "😣 Hiç Hoşlanmam",
-                    1: "😕 Hoşlanmam",
-                    2: "😐 Kararsızım",
-                    3: "😊 Hoşlanırım",
-                    4: "😍 Çok Hoşlanırım"
-                }
-
-                for q in curr_qs:
-                    qid = q["id"]
-                    page_q_ids.append(qid)
-                    st.write(f"**{qid}. {q['text']}**")
-                    prev = st.session_state.cevaplar.get(qid)
-                    idx = holland_opts.index(prev) if prev is not None else None
-                    val = st.radio(
-                        f"Soru {qid}", holland_opts, key=f"q_{qid}",
-                        index=idx, horizontal=True,
-                        format_func=lambda x: holland_labels[x],
-                        label_visibility="collapsed"
-                    )
-                    if val is not None:
-                        st.session_state.cevaplar[qid] = val
-                    st.divider()
-
-                _navigate_pages(qs, page_q_ids, PER_PAGE, tot_p, t_name, q_type)
-
-            # ========================================
-            # TİP: D2 DİKKAT TESTİ (Tıklanabilir Kart)
-            # ========================================
-            elif q_type == "d2_timed":
-                current_row = st.session_state.d2_current_row
-                time_per_row = st.session_state.get("d2_time_per_row", D2_CONFIG["time_per_row"])
-
-                # Kart CSS'ini enjekte et
-                st.markdown(D2_CARD_CSS, unsafe_allow_html=True)
-
-                # ---- ALIŞTIRMA TURU ----
-                if current_row == -1 and not st.session_state.d2_practice_done:
-                    st.markdown("### 🎯 Alıştırma Turu")
-                    st.info(
-                        f"Aşağıdaki sembollere **tıklayarak** hedefleri işaretle. "
-                        f"Ana testte her satır için **{time_per_row} saniye** süren olacak. "
-                        f"Bu tur puanlanmaz."
-                    )
-                    st.markdown(
-                        '<div class="d2-legend">🎯 Hedef: <b>d</b> harfi + toplam <b>2 çizgi</b> '
-                        '(üstte ve/veya altta) → tıkla!</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                    practice = generate_practice_row()
-
-                    with st.form("d2_practice"):
-                        D2_COLS = 5
-                        for sub_r in range((len(practice) + D2_COLS - 1) // D2_COLS):
-                            cols = st.columns(D2_COLS)
-                            for c in range(D2_COLS):
-                                idx = sub_r * D2_COLS + c
-                                if idx < len(practice):
-                                    with cols[c]:
-                                        st.markdown(
-                                            render_symbol_html(practice[idx]),
-                                            unsafe_allow_html=True,
-                                        )
-                                        st.checkbox(
-                                            "✓ Seç", key=f"d2p_{idx}",
-                                        )
-
-                        if st.form_submit_button("Alıştırmayı Tamamla ✅", type="primary"):
-                            st.session_state.d2_practice_done = True
-                            st.session_state.d2_current_row = 0
-                            st.session_state.d2_row_start = time.time()
-                            st.session_state._scroll_top = True
-                            st.rerun()
-
-                # ---- ANA TEST SATIRLARI ----
-                elif 0 <= current_row < D2_CONFIG["rows"]:
-                    row_symbols = st.session_state.d2_rows[current_row]
-
-                    st.markdown(
-                        f"### 🎯 Satır {current_row + 1} / {D2_CONFIG['rows']}"
-                    )
-                    st.progress((current_row + 1) / D2_CONFIG["rows"])
-
-                    if st.session_state.d2_row_start is None:
-                        st.session_state.d2_row_start = time.time()
-
-                    components.html(
-                        render_timer_js(time_per_row, current_row),
-                        height=55,
-                    )
-
-                    st.markdown(
-                        '<div class="d2-legend">🎯 Hedef: <b>d</b> harfi + toplam <b>2 çizgi</b> '
-                        '(üstte ve/veya altta) → tıkla!</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                    with st.form(f"d2_row_{current_row}"):
-                        D2_COLS = 5
-                        for sub_r in range(
-                            (len(row_symbols) + D2_COLS - 1) // D2_COLS
-                        ):
-                            cols = st.columns(D2_COLS)
-                            for c in range(D2_COLS):
-                                idx = sub_r * D2_COLS + c
-                                if idx < len(row_symbols):
-                                    with cols[c]:
-                                        st.markdown(
-                                            render_symbol_html(row_symbols[idx]),
-                                            unsafe_allow_html=True,
-                                        )
-                                        st.checkbox(
-                                            "✓ Seç",
-                                            key=f"d2r{current_row}_s{idx}",
-                                        )
-
-                        submitted = st.form_submit_button(
-                            "Satırı Gönder ➡️", type="primary"
-                        )
-
-                    if submitted:
-                        elapsed = time.time() - (
-                            st.session_state.d2_row_start or time.time()
-                        )
-                        selected = [
-                            st.session_state.get(
-                                f"d2r{current_row}_s{i}", False
-                            )
-                            for i in range(len(row_symbols))
-                        ]
-
-                        st.session_state.d2_row_results.append(
-                            {
-                                "symbols": row_symbols,
-                                "selected": selected,
-                                "elapsed_time": elapsed,
-                            }
-                        )
-
-                        next_row = current_row + 1
-                        if next_row >= D2_CONFIG["rows"]:
-                            _finish_d2_test(t_name)
-                        else:
-                            st.session_state.d2_current_row = next_row
-                            st.session_state.d2_row_start = time.time()
-                            st.session_state._scroll_top = True
-                            st.rerun()
-
-                    if st.session_state.d2_row_start:
-                        if time.time() - st.session_state.d2_row_start > time_per_row:
-                            st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
-
-            # ========================================
-            # TİP: AKADEMİK ANALİZ (Bölümlü Performans)
-            # ========================================
-            elif q_type == "akademik_perf":
-                akd_grade = st.session_state.get("akd_grade")
-                akd_version = st.session_state.get("akd_version")
-                sections = get_akademik_sections(grade=akd_grade, version=akd_version)
-                sec_idx = st.session_state.akd_section_idx
-                total_secs = len(sections)
-
-                if sec_idx < total_secs:
-                    sec = sections[sec_idx]
-                    # Kademe etiketi
-                    KADEME_LABELS = {5: "5-6. Sınıf", 6: "5-6. Sınıf", 7: "7-8. Sınıf", 8: "7-8. Sınıf",
-                                     9: "9-10. Sınıf", 10: "9-10. Sınıf", 11: "11-12. Sınıf", 12: "11-12. Sınıf"}
-                    if akd_grade:
-                        ver_label = KADEME_LABELS.get(akd_grade, f"{akd_grade}. Sınıf")
-                    else:
-                        ver_label = "İlköğretim" if akd_version == "ilkogretim" else "Lise"
-
-                    st.markdown(
-                        f"### {sec['icon']} Bölüm {sec_idx + 1}/{total_secs}: "
-                        f"{sec['name']}"
-                    )
-                    st.progress((sec_idx + 1) / total_secs)
-                    st.caption(f"📎 Versiyon: {ver_label}")
-
-                    with st.form(f"akd_sec_{sec_idx}"):
-
-                        # ---- Okuma Anlama (metin + sorular) ----
-                        if sec["type"] == "passage_mc":
-                            for p_idx, passage in enumerate(sec["data"]):
-                                st.markdown(
-                                    f"<div style='background:#f8f9fa;border-left:4px solid "
-                                    f"#9B59B6;padding:15px;border-radius:8px;margin:10px 0;'>"
-                                    f"<b>📄 Metin {p_idx + 1}</b><br><br>"
-                                    f"{passage['passage']}</div>",
-                                    unsafe_allow_html=True,
-                                )
-                                for q in passage["questions"]:
-                                    prev = st.session_state.akd_answers.get(q["id"])
-                                    opts = list(q["options"].values())
-                                    keys = list(q["options"].keys())
-                                    idx_prev = (
-                                        keys.index(prev) if prev in keys else None
-                                    )
-                                    val = st.radio(
-                                        f"**{q['text']}**",
-                                        keys,
-                                        index=idx_prev,
-                                        format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
-                                        key=f"akd_{q['id']}",
-                                    )
-                                    if val:
-                                        st.session_state.akd_answers[q["id"]] = val
-                                    st.divider()
-
-                        # ---- Çoktan Seçmeli (matematik, mantık) ----
-                        elif sec["type"] == "mc":
-                            for q in sec["data"]:
-                                prev = st.session_state.akd_answers.get(q["id"])
-                                keys = list(q["options"].keys())
-                                idx_prev = (
-                                    keys.index(prev) if prev in keys else None
-                                )
-                                val = st.radio(
-                                    f"**{q['text']}**",
-                                    keys,
-                                    index=idx_prev,
-                                    format_func=lambda k, o=q["options"]: f"{k}) {o[k]}",
-                                    key=f"akd_{q['id']}",
-                                )
-                                if val:
-                                    st.session_state.akd_answers[q["id"]] = val
-                                st.divider()
-
-                        # ---- Likert (öz-değerlendirme) ----
-                        elif sec["type"] == "likert":
-                            likert_labels = {
-                                1: "Hiç Katılmıyorum",
-                                2: "Katılmıyorum",
-                                3: "Kararsızım",
-                                4: "Katılıyorum",
-                                5: "Tamamen Katılıyorum",
-                            }
-                            for q in sec["data"]:
-                                prev = st.session_state.akd_answers.get(q["id"])
-                                idx_prev = (
-                                    prev - 1 if isinstance(prev, int) and 1 <= prev <= 5
-                                    else None
-                                )
-                                val = st.radio(
-                                    f"**{q['text']}**",
-                                    [1, 2, 3, 4, 5],
-                                    index=idx_prev,
-                                    format_func=lambda x: f"{x} — {likert_labels[x]}",
-                                    key=f"akd_{q['id']}",
-                                    horizontal=True,
-                                )
-                                if val:
-                                    st.session_state.akd_answers[q["id"]] = val
-                                st.divider()
-
-                        # ---- Navigasyon butonları ----
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            if sec_idx > 0:
-                                back = st.form_submit_button("⬅️ Önceki Bölüm")
-                            else:
-                                back = False
-                        with col_b:
-                            if sec_idx < total_secs - 1:
-                                nxt = st.form_submit_button(
-                                    "Sonraki Bölüm ➡️", type="primary"
-                                )
-                            else:
-                                nxt = st.form_submit_button(
-                                    "Testi Bitir ✅", type="primary"
-                                )
-
-                    if back:
-                        st.session_state.akd_section_idx = max(0, sec_idx - 1)
-                        st.session_state._scroll_top = True
-                        st.rerun()
-                    if nxt:
-                        if sec_idx < total_secs - 1:
-                            st.session_state.akd_section_idx = sec_idx + 1
-                            st.session_state._scroll_top = True
-                            st.rerun()
-                        else:
-                            _finish_akademik_test(t_name)
 
 
 # ============================================================
@@ -1120,7 +1136,7 @@ def _finish_d2_test(t_name):
         st.session_state.last_report = report
         st.session_state.page = "success_screen"
         st.session_state._scroll_top = True
-        st.rerun()
+        st.rerun(scope="app")  # Fragment'tan çık, tam sayfa geçişi
 
 
 # ============================================================
@@ -1158,7 +1174,7 @@ def _finish_akademik_test(t_name):
         st.session_state.last_report = report
         st.session_state.page = "success_screen"
         st.session_state._scroll_top = True
-        st.rerun()
+        st.rerun(scope="app")  # Fragment'tan çık, tam sayfa geçişi
 
 
 # ============================================================
@@ -1260,4 +1276,4 @@ def _finish_and_save(t_name, q_type):
         st.session_state.last_report = report
         st.session_state.page = "success_screen"
         st.session_state._scroll_top = True
-        st.rerun()
+        st.rerun(scope="app")  # Fragment'tan çık, tam sayfa geçişi
