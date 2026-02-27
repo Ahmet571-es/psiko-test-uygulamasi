@@ -171,13 +171,16 @@ def generate_full_system_excel(all_data):
             row_idx += 1
             scores_text = ""
             if t["scores"]:
-                scores_text = "\n".join(f"{k}: {v}" for k, v in t["scores"].items())
+                if isinstance(t["scores"], dict):
+                    scores_text = "\n".join(f"{k}: {v}" for k, v in t["scores"].items())
+                else:
+                    scores_text = str(t["scores"])
             report_text = t.get("report", "") or ""
             if len(report_text) > 32000:
                 report_text = report_text[:32000] + "\n... (kesildi)"
             ws2.append([
                 row_idx, d["info"].name, t["test_name"],
-                t["date"], scores_text, report_text
+                str(t["date"]), scores_text, report_text
             ])
     _style_data_rows(ws2, 2, row_idx + 1, len(headers2))
     _auto_width(ws2, len(headers2))
@@ -199,7 +202,7 @@ def generate_full_system_excel(all_data):
                 report_content = report_content[:32000] + "\n... (kesildi)"
             ws3.append([
                 ai_row, d["info"].name, h["combination"],
-                h["date"], report_content
+                str(h["date"]), report_content
             ])
     if ai_row == 0:
         ws3.append(["", "Henüz AI raporu oluşturulmamış.", "", "", ""])
@@ -226,9 +229,18 @@ def generate_full_system_excel(all_data):
         for t in d["tests"]:
             if t["scores"]:
                 matrix_row += 1
-                row_data = [d["info"].name, t["test_name"], t["date"]]
+                row_data = [d["info"].name, t["test_name"], str(t["date"])]
                 for key in all_score_keys:
-                    row_data.append(t["scores"].get(key, ""))
+                    val = t["scores"].get(key, "")
+                    if isinstance(val, (dict, list)):
+                        val = str(val)
+                    elif isinstance(val, bool):
+                        val = str(val)
+                    elif val is None:
+                        val = ""
+                    elif not isinstance(val, (int, float, str)):
+                        val = str(val)
+                    row_data.append(val)
                 ws4.append(row_data)
     if matrix_row == 0:
         ws4.append(["Henüz puan verisi yok"] + [""] * (len(headers4) - 1))
