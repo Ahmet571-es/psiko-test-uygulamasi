@@ -1,22 +1,18 @@
 import streamlit as st
-import pandas as pd
+# PERFORMANS: pandas, matplotlib, seaborn, openpyxl, pdf_engine
+# sadece kullanıldıkları fonksiyonların içinde import edilir.
+# Bu sayede öğretmen paneli açılırken 5-10 sn tasarruf sağlanır.
 import json
-import matplotlib.pyplot as plt
-import seaborn as sns
 import time
 import os
 import io
 from datetime import datetime
 from dotenv import load_dotenv
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from db_utils import (
     get_all_students_with_results, reset_database,
     delete_specific_students, save_holistic_analysis,
     get_student_analysis_history, is_using_sqlite
 )
-from pdf_engine import generate_student_pdf, generate_student_pdf_filename
 
 # --- API AYARLARI ---
 load_dotenv()
@@ -90,6 +86,7 @@ def get_ai_analysis(prompt):
 
 def _style_header(ws, row, max_col):
     """Başlık satırını biçimlendir."""
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     header_font = Font(name='Arial', bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill('solid', fgColor='1B2A4A')
     header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
@@ -107,6 +104,7 @@ def _style_header(ws, row, max_col):
 
 def _style_data_rows(ws, start_row, end_row, max_col):
     """Veri satırlarını biçimlendir."""
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     data_font = Font(name='Arial', size=10)
     data_align = Alignment(vertical='top', wrap_text=True)
     thin_border = Border(
@@ -126,6 +124,7 @@ def _style_data_rows(ws, start_row, end_row, max_col):
 
 def _auto_width(ws, max_col, max_width=60):
     """Sütun genişliklerini otomatik ayarla."""
+    from openpyxl.utils import get_column_letter
     for col in range(1, max_col + 1):
         max_len = 0
         for row in ws.iter_rows(min_col=col, max_col=col, values_only=False):
@@ -139,6 +138,7 @@ def _auto_width(ws, max_col, max_width=60):
 
 def generate_full_system_excel(all_data):
     """Tüm sistem verisini çok sayfalı Excel dosyasına dönüştürür."""
+    from openpyxl import Workbook
     wb = Workbook()
 
     # ── SAYFA 1: ÖĞRENCİ LİSTESİ ──
@@ -258,6 +258,8 @@ def generate_full_system_excel(all_data):
 
 def generate_student_excel(student_data, analysis_history):
     """Tek öğrenci verisini Excel dosyasına dönüştürür."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     info = student_data["info"]
     tests = student_data["tests"]
     wb = Workbook()
@@ -341,6 +343,9 @@ def generate_student_excel(student_data, analysis_history):
 
 def plot_scores(data_dict, title):
     """Test sonuçlarını görselleştirmek için Bar Grafiği oluşturur."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     if not data_dict or not isinstance(data_dict, dict):
         return None
 
@@ -421,7 +426,7 @@ def plot_scores(data_dict, title):
 
     # Renk paleti — logo uyumlu
     colors = sns.color_palette("coolwarm", len(labels))
-    sns.barplot(x=values, y=labels, ax=ax, palette=colors, orient='h')
+    sns.barplot(x=values, y=labels, hue=labels, ax=ax, palette=colors, orient='h', legend=False)
 
     ax.set_title(f"{title}", fontsize=12, fontweight='bold', color='#1B2A4A')
     ax.set_xlabel("Puan / Yüzde", fontsize=10)
@@ -2219,6 +2224,7 @@ def app():
         with col_dl2:
             student_history = get_student_analysis_history(info.id)
             # PDF İndirme Butonu
+            from pdf_engine import generate_student_pdf, generate_student_pdf_filename
             pdf_buffer = generate_student_pdf(student_data, student_history)
             pdf_filename = generate_student_pdf_filename(info.name)
             st.download_button(
@@ -2468,6 +2474,7 @@ def app():
     st.divider()
     with st.expander("🗂️ Ham Veri Listesi"):
         if tests:
+            import pandas as pd
             df_tests = pd.DataFrame(tests)
             df_tests['date'] = pd.to_datetime(df_tests['date'], errors='coerce').dt.strftime('%d.%m.%Y')
             st.dataframe(df_tests[["test_name", "date"]], use_container_width=True)
