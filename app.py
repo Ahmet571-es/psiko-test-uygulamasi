@@ -22,6 +22,7 @@ init_db()
 # =========================================================
 # 🎨 LOGO YÜKLEME FONKSİYONU
 # =========================================================
+@st.cache_data
 def get_logo_base64():
     """
     Logo dosyasını base64 formatında döndürür.
