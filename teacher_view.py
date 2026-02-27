@@ -2139,6 +2139,48 @@ def app():
             else:
                 st.warning("Sistemde henüz veri yok.")
 
+        with st.expander("📄 Tüm PDF Raporları İndir", expanded=False):
+            st.info("Her öğrencinin bireysel PDF raporunu tek bir ZIP dosyası olarak indirin.")
+            if data:
+                if st.button("📄 PDF'leri Oluştur", type="primary", key="btn_bulk_pdf"):
+                    import zipfile
+                    import io as _io
+                    from pdf_engine import generate_student_pdf, generate_student_pdf_filename
+
+                    zip_buffer = _io.BytesIO()
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    success_count = 0
+
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                        for i, student in enumerate(data):
+                            name = student["info"].name
+                            status_text.text(f"📄 {name} raporu oluşturuluyor...")
+                            try:
+                                history = get_student_analysis_history(student["info"].id)
+                                pdf_buf = generate_student_pdf(student, history)
+                                fname = generate_student_pdf_filename(name)
+                                zf.writestr(fname, pdf_buf.getvalue())
+                                success_count += 1
+                            except Exception as e:
+                                st.warning(f"⚠️ {name}: PDF oluşturulamadı — {e}")
+                            progress_bar.progress((i + 1) / len(data))
+
+                    zip_buffer.seek(0)
+                    status_text.text(f"✅ {success_count}/{len(data)} rapor hazır!")
+                    progress_bar.empty()
+
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    st.download_button(
+                        label=f"📥 {success_count} PDF İNDİR (ZIP)",
+                        data=zip_buffer,
+                        file_name=f"Egitim_CheckUp_PDF_Raporlar_{timestamp}.zip",
+                        mime="application/zip",
+                        key="dl_bulk_pdf"
+                    )
+            else:
+                st.warning("Sistemde henüz veri yok.")
+
         with st.expander("🗑️ Öğrenci Dosyası Sil"):
             if not student_names_all:
                 st.info("Sistemde kayıtlı öğrenci yok.")
