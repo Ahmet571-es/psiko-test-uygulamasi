@@ -16,6 +16,7 @@ from db_utils import (
     delete_specific_students, save_holistic_analysis,
     get_student_analysis_history, is_using_sqlite
 )
+from pdf_engine import generate_student_pdf, generate_student_pdf_filename
 
 # --- API AYARLARI ---
 load_dotenv()
@@ -2200,16 +2201,28 @@ def app():
         "🤖 AI Analiz Raporları"
     ])
 
-    # Öğrenci dosyası indirme butonu (tab'ların üstünde)
+    # Öğrenci dosyası indirme butonları (tab'ların üstünde)
     with st.container():
         col_dl1, col_dl2, col_dl3 = st.columns([2, 1, 1])
-        with col_dl3:
+        with col_dl2:
             student_history = get_student_analysis_history(info.id)
+            # PDF İndirme Butonu
+            pdf_buffer = generate_student_pdf(student_data, student_history)
+            pdf_filename = generate_student_pdf_filename(info.name)
+            st.download_button(
+                label="📄 PDF Rapor İndir",
+                data=pdf_buffer,
+                file_name=pdf_filename,
+                mime="application/pdf",
+                key="dl_student_pdf",
+                type="primary"
+            )
+        with col_dl3:
             student_excel = generate_student_excel(student_data, student_history)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M")
             safe_name = info.name.replace(" ", "_")
             st.download_button(
-                label="📥 Öğrenci Dosyasını İndir",
+                label="📥 Excel Dosya İndir",
                 data=student_excel,
                 file_name=f"{safe_name}_Dosya_{timestamp}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
