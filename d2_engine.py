@@ -26,10 +26,40 @@ import random
 D2_CONFIG = {
     "rows": 14,
     "symbols_per_row": 20,
-    "time_per_row": 15,          # saniye
+    "time_per_row": 15,          # varsayılan saniye (yaşa göre değişir)
     "target_ratio": 0.40,        # her satırda ~%40 hedef
     "practice_symbols": 10,      # alıştırma satırı
 }
+
+# ============================================================
+# YAŞA GÖRE SÜRE TABLOSU
+# ============================================================
+# Brickenkamp normlarına uygun dijital uyarlama:
+#   7-9 yaş  : Motor beceri ve dikkat gelişimi erken → geniş süre
+#   10-12 yaş: İlköğretim geçiş dönemi → orta süre
+#   13-15 yaş: Ergenlik, ortalama dikkat kapasitesi → standart süre
+#   16+ yaş  : Tam kapasite → kısa süre
+# ============================================================
+
+AGE_TIME_TABLE = [
+    (9,  25),   # 7-9 yaş  → 25 saniye
+    (12, 20),   # 10-12 yaş → 20 saniye
+    (15, 15),   # 13-15 yaş → 15 saniye (standart)
+    (999, 12),  # 16+ yaş   → 12 saniye
+]
+
+
+def get_time_per_row(age=None):
+    """
+    Öğrenci yaşına göre satır başına süreyi (saniye) döndürür.
+    age=None ise varsayılan 15 saniye kullanılır.
+    """
+    if age is None:
+        return D2_CONFIG["time_per_row"]
+    for max_age, seconds in AGE_TIME_TABLE:
+        if age <= max_age:
+            return seconds
+    return D2_CONFIG["time_per_row"]
 
 # ============================================================
 # SEMBOL TİPLERİ
@@ -185,7 +215,7 @@ def render_timer_js(seconds, row_num):
 # ============================================================
 # SKORLAMA
 # ============================================================
-def calculate_d2(row_results):
+def calculate_d2(row_results, time_per_row=None):
     """
     D2 test skorlarını hesaplar.
 
@@ -193,6 +223,8 @@ def calculate_d2(row_results):
     ---------
     row_results : list[dict]
         Her eleman: {symbols, selected (list[bool]), elapsed_time}
+    time_per_row : int | None
+        Yaşa göre satır süresi (raporlama için)
 
     Döndürür
     --------
@@ -287,6 +319,7 @@ def calculate_d2(row_results):
         "row_performances": row_cps, "row_speeds": row_tns,
         "row_times": row_times,
         "total_targets": total_targets, "total_correct": total_correct,
+        "time_per_row": time_per_row,
     }
 
 
@@ -319,9 +352,13 @@ def generate_d2_report(scores):
 | ⚡ Toplam Performans (TN-E) | **{scores['TN_E']}** | Toplam işaretleme − Toplam hata |
 | 📊 Toplam İşaretleme (TN) | {scores['TN']} | Tüm satırlarda işaretlenen sembol sayısı |
 | ❌ Toplam Hata (E) | {scores['E']} | Atlama ({scores['E1']}) + Yanlış ({scores['E2']}) |
-| 📈 Dalgalanma (FR) | {scores['FR']} | En yüksek − en düşük satır performansı |
+| 📈 Dalgalanma (FR) | {scores['FR']} | En yüksek − en düşük satır performansı |"""
 
----
+    if scores.get("time_per_row"):
+        report += f"""
+| ⏱️ Satır Süresi | {scores['time_per_row']} sn | Yaşa göre belirlenen süre |"""
+
+    report += """---
 
 ## 🧠 Dikkat Seviyesi: **{scores['level']}**
 
@@ -426,3 +463,49 @@ def generate_d2_report(scores):
 | Genel Hata | **{scores['E']}** (Atlama: {scores['E1']}, Yanlış: {scores['E2']}) |
 """
     return report.strip()
+
+
+# ============================================================
+# İNTERAKTİF STREAMLIT BİLEŞENİ
+# ============================================================
+import os as _os
+import streamlit.components.v1 as _components
+
+_COMPONENT_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "d2_component")
+_d2_grid_component = _components.declare_component("d2_grid", path=_COMPONENT_DIR)
+
+
+def d2_interactive_row(symbols, time_seconds=15, row_num=0, is_practice=False, key=None):
+    """
+    Tıklanabilir D2 sembol kartları bileşeni.
+
+    Parametreler
+    ------------
+    symbols      : list[dict]  — generate_d2_row / generate_practice_row çıktısı
+    time_seconds : int         — satır süresi (saniye)
+    row_num      : int         — satır numarası (timer id için)
+    is_practice  : bool        — alıştırma turu mu
+    key          : str         — Streamlit widget key
+
+    Döndürür
+    --------
+    dict | None
+        Kullanıcı göndermediyse None.
+        Gönderdiyse: {"selected": [bool, ...], "elapsed": float}
+    """
+    # Sembol verilerini serialize et (sadece gerekli alanlar)
+    sym_data = [
+        {"letter": s["letter"], "above": s["above"], "below": s["below"],
+         "is_target": s["is_target"], "index": s.get("index", i)}
+        for i, s in enumerate(symbols)
+    ]
+
+    result = _d2_grid_component(
+        symbols=sym_data,
+        time_seconds=time_seconds,
+        row_num=row_num,
+        is_practice=is_practice,
+        key=key,
+        default=None,
+    )
+    return result
