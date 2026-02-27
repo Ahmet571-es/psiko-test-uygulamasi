@@ -5,7 +5,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 import os
+import io
+from datetime import datetime
 from dotenv import load_dotenv
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 from db_utils import (
     get_all_students_with_results, reset_database,
     delete_specific_students, save_holistic_analysis,
@@ -76,7 +81,251 @@ def get_ai_analysis(prompt):
             return f"⚠️ Analiz sırasında bir hata oluştu: {err}"
 
 
-# --- GRAFİK FONKSİYONU ---
+# --- GRAFİK FONKSİYONU (aşağıda tanımlı) ---
+
+# ============================================================
+# EXCEL VERİ DIŞA AKTARMA FONKSİYONLARI
+# ============================================================
+
+def _style_header(ws, row, max_col):
+    """Başlık satırını biçimlendir."""
+    header_font = Font(name='Arial', bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill('solid', fgColor='1B2A4A')
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    for col in range(1, max_col + 1):
+        cell = ws.cell(row=row, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+
+
+def _style_data_rows(ws, start_row, end_row, max_col):
+    """Veri satırlarını biçimlendir."""
+    data_font = Font(name='Arial', size=10)
+    data_align = Alignment(vertical='top', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    zebra_fill = PatternFill('solid', fgColor='F2F4F8')
+    for row in range(start_row, end_row + 1):
+        for col in range(1, max_col + 1):
+            cell = ws.cell(row=row, column=col)
+            cell.font = data_font
+            cell.alignment = data_align
+            cell.border = thin_border
+            if row % 2 == 0:
+                cell.fill = zebra_fill
+
+
+def _auto_width(ws, max_col, max_width=60):
+    """Sütun genişliklerini otomatik ayarla."""
+    for col in range(1, max_col + 1):
+        max_len = 0
+        for row in ws.iter_rows(min_col=col, max_col=col, values_only=False):
+            for cell in row:
+                if cell.value:
+                    lines = str(cell.value).split('\n')
+                    max_len = max(max_len, max(len(l) for l in lines))
+        adjusted = min(max(max_len + 2, 12), max_width)
+        ws.column_dimensions[get_column_letter(col)].width = adjusted
+
+
+def generate_full_system_excel(all_data):
+    """Tüm sistem verisini çok sayfalı Excel dosyasına dönüştürür."""
+    wb = Workbook()
+
+    # ── SAYFA 1: ÖĞRENCİ LİSTESİ ──
+    ws1 = wb.active
+    ws1.title = "Öğrenci Listesi"
+    headers1 = ["No", "Ad Soyad", "E-posta", "Yaş", "Cinsiyet", "Sınıf", "Giriş Sayısı", "Çözülen Test"]
+    ws1.append(headers1)
+    _style_header(ws1, 1, len(headers1))
+
+    for i, d in enumerate(all_data, 1):
+        info = d["info"]
+        grade_text = f"{info.grade}. Sınıf" if info.grade else "—"
+        ws1.append([
+            i, info.name, info.username, info.age, info.gender,
+            grade_text, info.login_count, len(d["tests"])
+        ])
+    _style_data_rows(ws1, 2, len(all_data) + 1, len(headers1))
+    _auto_width(ws1, len(headers1))
+    ws1.freeze_panes = 'A2'
+
+    # ── SAYFA 2: TEST SONUÇLARI ──
+    ws2 = wb.create_sheet("Test Sonuçları")
+    headers2 = ["No", "Öğrenci Adı", "Test Adı", "Tarih", "Puan Detayları", "Sistem Raporu"]
+    ws2.append(headers2)
+    _style_header(ws2, 1, len(headers2))
+
+    row_idx = 0
+    for d in all_data:
+        for t in d["tests"]:
+            row_idx += 1
+            scores_text = ""
+            if t["scores"]:
+                scores_text = "\n".join(f"{k}: {v}" for k, v in t["scores"].items())
+            report_text = t.get("report", "") or ""
+            if len(report_text) > 32000:
+                report_text = report_text[:32000] + "\n... (kesildi)"
+            ws2.append([
+                row_idx, d["info"].name, t["test_name"],
+                t["date"], scores_text, report_text
+            ])
+    _style_data_rows(ws2, 2, row_idx + 1, len(headers2))
+    _auto_width(ws2, len(headers2))
+    ws2.freeze_panes = 'A2'
+
+    # ── SAYFA 3: AI ANALİZ RAPORLARI ──
+    ws3 = wb.create_sheet("AI Analiz Raporları")
+    headers3 = ["No", "Öğrenci Adı", "Test Kombinasyonu", "Rapor Tarihi", "AI Rapor İçeriği"]
+    ws3.append(headers3)
+    _style_header(ws3, 1, len(headers3))
+
+    ai_row = 0
+    for d in all_data:
+        history = get_student_analysis_history(d["info"].id)
+        for h in history:
+            ai_row += 1
+            report_content = h.get("report", "") or ""
+            if len(report_content) > 32000:
+                report_content = report_content[:32000] + "\n... (kesildi)"
+            ws3.append([
+                ai_row, d["info"].name, h["combination"],
+                h["date"], report_content
+            ])
+    if ai_row == 0:
+        ws3.append(["", "Henüz AI raporu oluşturulmamış.", "", "", ""])
+        ai_row = 1
+    _style_data_rows(ws3, 2, ai_row + 1, len(headers3))
+    _auto_width(ws3, len(headers3))
+    ws3.freeze_panes = 'A2'
+
+    # ── SAYFA 4: DETAYLI PUAN MATRİSİ ──
+    ws4 = wb.create_sheet("Puan Matrisi")
+    all_score_keys = set()
+    for d in all_data:
+        for t in d["tests"]:
+            if t["scores"]:
+                all_score_keys.update(t["scores"].keys())
+    all_score_keys = sorted(all_score_keys)
+
+    headers4 = ["Öğrenci Adı", "Test Adı", "Tarih"] + all_score_keys
+    ws4.append(headers4)
+    _style_header(ws4, 1, len(headers4))
+
+    matrix_row = 0
+    for d in all_data:
+        for t in d["tests"]:
+            if t["scores"]:
+                matrix_row += 1
+                row_data = [d["info"].name, t["test_name"], t["date"]]
+                for key in all_score_keys:
+                    row_data.append(t["scores"].get(key, ""))
+                ws4.append(row_data)
+    if matrix_row == 0:
+        ws4.append(["Henüz puan verisi yok"] + [""] * (len(headers4) - 1))
+        matrix_row = 1
+    _style_data_rows(ws4, 2, matrix_row + 1, len(headers4))
+    _auto_width(ws4, len(headers4))
+    ws4.freeze_panes = 'A2'
+
+    # Buffer'a yaz
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def generate_student_excel(student_data, analysis_history):
+    """Tek öğrenci verisini Excel dosyasına dönüştürür."""
+    info = student_data["info"]
+    tests = student_data["tests"]
+    wb = Workbook()
+
+    # ── SAYFA 1: ÖĞRENCİ PROFİLİ ──
+    ws1 = wb.active
+    ws1.title = "Öğrenci Profili"
+    title_font = Font(name='Arial', bold=True, size=14, color='1B2A4A')
+    label_font = Font(name='Arial', bold=True, size=11)
+    value_font = Font(name='Arial', size=11)
+
+    ws1.merge_cells('A1:B1')
+    ws1['A1'] = f"📁 {info.name} — Öğrenci Dosyası"
+    ws1['A1'].font = title_font
+
+    profile_data = [
+        ("Ad Soyad", info.name),
+        ("E-posta", info.username),
+        ("Yaş", info.age),
+        ("Cinsiyet", info.gender),
+        ("Sınıf", f"{info.grade}. Sınıf" if info.grade else "Belirtilmemiş"),
+        ("Toplam Giriş", info.login_count),
+        ("Çözülen Test", len(tests)),
+        ("Rapor Tarihi", datetime.now().strftime("%d.%m.%Y %H:%M")),
+    ]
+    for i, (label, value) in enumerate(profile_data, 3):
+        ws1.cell(row=i, column=1, value=label).font = label_font
+        ws1.cell(row=i, column=2, value=value).font = value_font
+
+    ws1.column_dimensions['A'].width = 20
+    ws1.column_dimensions['B'].width = 40
+
+    # ── SAYFA 2: TEST SONUÇLARI ──
+    ws2 = wb.create_sheet("Test Sonuçları")
+    headers2 = ["No", "Test Adı", "Tarih", "Puan Detayları", "Sistem Raporu"]
+    ws2.append(headers2)
+    _style_header(ws2, 1, len(headers2))
+
+    for i, t in enumerate(tests, 1):
+        scores_text = ""
+        if t["scores"]:
+            scores_text = "\n".join(f"{k}: {v}" for k, v in t["scores"].items())
+        report_text = t.get("report", "") or ""
+        if len(report_text) > 32000:
+            report_text = report_text[:32000] + "\n... (kesildi)"
+        ws2.append([i, t["test_name"], t["date"], scores_text, report_text])
+
+    _style_data_rows(ws2, 2, len(tests) + 1, len(headers2))
+    _auto_width(ws2, len(headers2))
+    ws2.freeze_panes = 'A2'
+
+    # ── SAYFA 3: AI RAPORLARI ──
+    ws3 = wb.create_sheet("AI Raporları")
+    headers3 = ["No", "Test Kombinasyonu", "Rapor Tarihi", "AI Rapor İçeriği"]
+    ws3.append(headers3)
+    _style_header(ws3, 1, len(headers3))
+
+    for i, h in enumerate(analysis_history, 1):
+        report_content = h.get("report", "") or ""
+        if len(report_content) > 32000:
+            report_content = report_content[:32000] + "\n... (kesildi)"
+        ws3.append([i, h["combination"], h["date"], report_content])
+
+    ai_count = len(analysis_history) if analysis_history else 0
+    if ai_count == 0:
+        ws3.append(["", "Henüz AI raporu oluşturulmamış.", "", ""])
+        ai_count = 1
+    _style_data_rows(ws3, 2, ai_count + 1, len(headers3))
+    _auto_width(ws3, len(headers3))
+    ws3.freeze_panes = 'A2'
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+# ============================================================
+# GRAFİK FONKSİYONU
+# ============================================================
+
 def plot_scores(data_dict, title):
     """Test sonuçlarını görselleştirmek için Bar Grafiği oluşturur."""
     if not data_dict or not isinstance(data_dict, dict):
@@ -1854,6 +2103,24 @@ def app():
     with st.sidebar:
         st.markdown("### ⚙️ Yönetim Araçları")
 
+        # ── VERİ DIŞA AKTARMA ──
+        with st.expander("📊 Veri Dışa Aktar (Excel)", expanded=False):
+            st.info("Tüm öğrenci bilgilerini, test sonuçlarını ve AI raporlarını tek bir Excel dosyası olarak indirin.")
+            if data:
+                excel_buffer = generate_full_system_excel(data)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                st.download_button(
+                    label="📥 TÜM SİSTEM VERİSİNİ İNDİR",
+                    data=excel_buffer,
+                    file_name=f"Egitim_CheckUp_TumVeri_{timestamp}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary",
+                    key="dl_full_export"
+                )
+                st.caption(f"📊 {len(data)} öğrenci · 4 sayfalı Excel dosyası")
+            else:
+                st.warning("Sistemde henüz veri yok.")
+
         with st.expander("🗑️ Öğrenci Dosyası Sil"):
             if not student_names_all:
                 st.info("Sistemde kayıtlı öğrenci yok.")
@@ -1933,6 +2200,22 @@ def app():
         "🤖 AI Analiz Raporları"
     ])
 
+    # Öğrenci dosyası indirme butonu (tab'ların üstünde)
+    with st.container():
+        col_dl1, col_dl2, col_dl3 = st.columns([2, 1, 1])
+        with col_dl3:
+            student_history = get_student_analysis_history(info.id)
+            student_excel = generate_student_excel(student_data, student_history)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            safe_name = info.name.replace(" ", "_")
+            st.download_button(
+                label="📥 Öğrenci Dosyasını İndir",
+                data=student_excel,
+                file_name=f"{safe_name}_Dosya_{timestamp}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_student_export"
+            )
+
     # ============================================================
     # TAB 1: KİŞİSEL BİLGİLER
     # ============================================================
@@ -1994,7 +2277,7 @@ def app():
         st.markdown("#### 📂 Kayıtlı AI Rapor Arşivi")
         st.caption("Daha önce Claude ile oluşturduğunuz detaylı analizler.")
 
-        history = get_student_analysis_history(info.id)
+        history = student_history  # Zaten yukarıda çekildi
 
         if not history:
             st.info("Bu öğrenci için henüz AI destekli analiz raporu oluşturulmamış.")
