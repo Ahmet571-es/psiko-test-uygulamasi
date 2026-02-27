@@ -166,20 +166,68 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1B2A4A 0%, #2C3E6B 100%);
     }
-    [data-testid="stSidebar"] .stMarkdown, 
-    [data-testid="stSidebar"] .stMarkdown p,
-    [data-testid="stSidebar"] .stMarkdown h1,
-    [data-testid="stSidebar"] .stMarkdown h2,
-    [data-testid="stSidebar"] .stMarkdown h3 {
+    /* Tüm metin beyaz */
+    [data-testid="stSidebar"] * {
         color: #FFFFFF !important;
     }
-    [data-testid="stSidebar"] .stButton > button {
-        background: rgba(255,255,255,0.15);
-        color: #FFFFFF;
-        border: 1px solid rgba(255,255,255,0.3);
+    /* Expander başlıkları */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 8px;
+        margin-bottom: 8px;
     }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(255,255,255,0.25);
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+        color: #FFFFFF !important;
+        font-weight: 600;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] svg {
+        fill: #FFFFFF !important;
+        stroke: #FFFFFF !important;
+    }
+    /* Butonlar */
+    [data-testid="stSidebar"] .stButton > button,
+    [data-testid="stSidebar"] .stDownloadButton > button {
+        background: rgba(255,255,255,0.15) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover,
+    [data-testid="stSidebar"] .stDownloadButton > button:hover {
+        background: rgba(255,255,255,0.25) !important;
+    }
+    /* Bilgi/uyarı kutuları */
+    [data-testid="stSidebar"] [data-testid="stAlert"] {
+        background: rgba(255,255,255,0.10) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stAlert"] p,
+    [data-testid="stSidebar"] [data-testid="stAlert"] span {
+        color: #FFFFFF !important;
+    }
+    /* Checkbox */
+    [data-testid="stSidebar"] [data-testid="stCheckbox"] label span {
+        color: #FFFFFF !important;
+    }
+    /* Multiselect */
+    [data-testid="stSidebar"] [data-testid="stMultiSelect"] label,
+    [data-testid="stSidebar"] [data-testid="stMultiSelect"] span {
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMultiSelect"] > div > div {
+        background: rgba(255,255,255,0.1) !important;
+        border-color: rgba(255,255,255,0.3) !important;
+    }
+    /* Caption */
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+        color: rgba(255,255,255,0.7) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {
+        color: rgba(255,255,255,0.7) !important;
+    }
+    /* Ayırıcı çizgi */
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(255,255,255,0.2) !important;
     }
     
     /* ========== ANİMASYONLAR ========== */
