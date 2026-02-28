@@ -1078,7 +1078,6 @@ def app():
             # --- D2 TESTİ İÇİN YAŞA GÖRE SÜRE BİLGİSİ ---
             if "D2 Dikkat" in t_name:
                 student_age = st.session_state.get("student_age", 15)
-                from d2_engine import get_time_per_row
                 my_time = get_time_per_row(student_age)
                 
                 st.markdown(f"""
