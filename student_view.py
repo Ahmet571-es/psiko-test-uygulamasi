@@ -1318,6 +1318,30 @@ def app():
 
         # --- SORULAR ---
         else:
+            # --- ÜST BAR: Test adı + Ana Menüye Dön butonu ---
+            bar_col1, bar_col2 = st.columns([3, 1])
+            with bar_col1:
+                st.markdown(f"#### {meta.get('icon', '📝')} {t_name}")
+            with bar_col2:
+                if st.button("🏠 Testlere Dön", key="btn_back_to_home"):
+                    st.session_state.show_exit_confirm = True
+
+            # Onay diyaloğu
+            if st.session_state.get("show_exit_confirm", False):
+                st.warning("⚠️ Testten çıkmak istediğine emin misin? Cevapların **kaydedilmeyecek**.")
+                conf_c1, conf_c2 = st.columns(2)
+                with conf_c1:
+                    if st.button("✅ Evet, çıkmak istiyorum", key="confirm_exit_yes"):
+                        st.session_state.show_exit_confirm = False
+                        st.session_state.page = "home"
+                        st.session_state._scroll_top = True
+                        st.rerun()
+                with conf_c2:
+                    if st.button("❌ Hayır, teste devam et", key="confirm_exit_no", type="primary"):
+                        st.session_state.show_exit_confirm = False
+                        st.rerun()
+
+            st.markdown("---")
             _render_test_questions()
 
 
