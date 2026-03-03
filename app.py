@@ -294,7 +294,64 @@ def get_teacher_password():
 def render_brand_header():
     """Logo + başlık + alt başlık alanını oluşturur."""
     logo_b64 = get_logo_base64()
-    
+
+    # Inline Anka Kuşu SVG — harici dosya gerektirmez
+    phoenix_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="90" height="90">
+      <defs>
+        <linearGradient id="wing_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#C0392B"/>
+          <stop offset="50%" stop-color="#E74C3C"/>
+          <stop offset="100%" stop-color="#F39C12"/>
+        </linearGradient>
+        <linearGradient id="body_grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#1B2A4A"/>
+          <stop offset="100%" stop-color="#2E86C1"/>
+        </linearGradient>
+        <linearGradient id="tail_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#E74C3C"/>
+          <stop offset="40%" stop-color="#F39C12"/>
+          <stop offset="100%" stop-color="#F1C40F"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- Alev halesi -->
+      <ellipse cx="100" cy="95" rx="55" ry="60" fill="none" stroke="#F39C12" stroke-width="1.5" opacity="0.2"/>
+      <!-- Sol kanat -->
+      <path d="M100,85 Q60,40 30,55 Q45,30 65,25 Q50,15 70,10 Q80,25 85,45 Q90,60 100,85Z"
+            fill="url(#wing_grad)" opacity="0.9" filter="url(#glow)"/>
+      <!-- Sağ kanat -->
+      <path d="M100,85 Q140,40 170,55 Q155,30 135,25 Q150,15 130,10 Q120,25 115,45 Q110,60 100,85Z"
+            fill="url(#wing_grad)" opacity="0.9" filter="url(#glow)"/>
+      <!-- Gövde -->
+      <path d="M100,60 Q90,80 88,110 Q90,135 100,155 Q110,135 112,110 Q110,80 100,60Z"
+            fill="url(#body_grad)"/>
+      <!-- Baş -->
+      <circle cx="100" cy="58" r="14" fill="url(#body_grad)"/>
+      <!-- Gaga -->
+      <path d="M100,68 L96,75 L100,73 L104,75Z" fill="#F39C12"/>
+      <!-- Gözler -->
+      <circle cx="93" cy="55" r="2.5" fill="#F1C40F"/>
+      <circle cx="107" cy="55" r="2.5" fill="#F1C40F"/>
+      <circle cx="93.5" cy="55" r="1" fill="#1B2A4A"/>
+      <circle cx="107.5" cy="55" r="1" fill="#1B2A4A"/>
+      <!-- Tepe tüyü / alev -->
+      <path d="M100,44 Q97,32 100,22 Q103,32 100,44Z" fill="#E74C3C" opacity="0.9"/>
+      <path d="M100,44 Q93,35 91,26 Q96,33 100,44Z" fill="#F39C12" opacity="0.7"/>
+      <path d="M100,44 Q107,35 109,26 Q104,33 100,44Z" fill="#F39C12" opacity="0.7"/>
+      <!-- Kuyruk tüyleri -->
+      <path d="M100,155 Q90,165 80,185 Q92,175 100,165Z" fill="url(#tail_grad)" opacity="0.8"/>
+      <path d="M100,155 Q100,170 100,190 Q100,175 100,165Z" fill="url(#tail_grad)" opacity="0.9"/>
+      <path d="M100,155 Q110,165 120,185 Q108,175 100,165Z" fill="url(#tail_grad)" opacity="0.8"/>
+      <!-- Kanat ucu kıvılcımları -->
+      <circle cx="32" cy="53" r="2" fill="#F39C12" opacity="0.6"/>
+      <circle cx="168" cy="53" r="2" fill="#F39C12" opacity="0.6"/>
+      <circle cx="70" cy="12" r="1.5" fill="#E74C3C" opacity="0.5"/>
+      <circle cx="130" cy="12" r="1.5" fill="#E74C3C" opacity="0.5"/>
+    </svg>'''
+
     if logo_b64:
         st.markdown(f"""
             <div class="brand-area animate-in">
@@ -302,13 +359,14 @@ def render_brand_header():
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.markdown("""
+        st.markdown(f"""
             <div class="brand-area animate-in">
-                <div class="brand-title">🎓 EĞİTİM CHECK UP</div>
+                <div style="margin-bottom: 6px;">{phoenix_svg}</div>
+                <div class="brand-title">EĞİTİM CHECK UP</div>
                 <div class="brand-subtitle">Kişisel Eğitim & Kariyer Analiz Merkezi</div>
             </div>
         """, unsafe_allow_html=True)
-    
+
     st.markdown('<div class="brand-divider"></div>', unsafe_allow_html=True)
 
 
