@@ -1699,6 +1699,50 @@ Bu öğrencinin dikkat profiline özel, yaşa uygun gelişim programı:
 **⚠️ ÖNEMLİ NOT:** Bu test klinik bir tanı aracı DEĞİLDİR. Sonuçlar dikkat eğilimlerini gösterir. Ciddi dikkat sorunları gözlemleniyorsa, uzman değerlendirmesi (çocuk-ergen psikiyatristi/psikoloğu) önerilir.
 """
 
+    elif "B2 Dikkat" in test_name:
+        return """
+## 🔬 B2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
+
+Bu test, seçici dikkat ve konsantrasyon ölçen dijital bir testtir (15 satır × 30 sembol, "p" harfi hedefli, nokta bazlı). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
+
+### KATMAN 1: TEMEL METRİKLER DERİN ANALİZİ
+Her metriği ayrı ayrı, bu öğrencinin spesifik değerlerine dayalı olarak yorumla:
+
+**CP (Konsantrasyon Performansı) — En Kritik Gösterge:**
+- Doğru hedef isabetleri − Yanlış işaretlemeler
+- Yüzdelik değerlendirme ve yaş grubuna göre yorumlama
+
+**TN-E (Toplam Performans):** Hız ve doğruluğu birlikte değerlendiren bileşik gösterge
+
+**E1 (Atlama Hatası):** Kaçırılan hedef sayısı — dikkat dağılması göstergesi
+- Hangi satırlarda yoğunlaştığını analiz et
+
+**E2 (Yanlış İşaretleme):** Dürtüsellik göstergesi — kontrolsüz tepki
+
+**E1/E2 Oranı:** Hata profili tespiti (dikkat eksikliği mi, dürtüsellik mi)
+
+**FR (Dalgalanma):** Dikkat sürdürülebilirliği
+
+### KATMAN 2: SATIR BAZLI PERFORMANS EĞRİSİ
+15 satırlık performans eğrisini detaylı analiz et:
+- İlk 5 satır (ısınma): Performans nasıl başlıyor?
+- Orta 5 satır (sürdürme): Stabil mi, dalgalı mı?
+- Son 5 satır (yorulma): Düşüş var mı?
+- Satır bazlı hata dağılımı — kaçırma ve yanlış işaretleme hangi satırlarda artıyor?
+
+### KATMAN 3: HIZ-DOĞRULUK DENGESİ
+Profil tiplemesi: Dengeli / Dürtüsel / Temkinli / Gelişen
+
+### KATMAN 4: AKADEMİK YANSIMA VE ÖNERİLER
+- Sınıf içi dikkat performansı tahmini
+- Sınav stratejisi önerileri
+- Dikkat geliştirme programı
+- Aile ve öğretmen için spesifik tavsiyeler
+- Günlük yaşamda dikkat yönetimi stratejileri
+
+**⚠️ ÖNEMLİ NOT:** Bu test klinik bir tanı aracı DEĞİLDİR. Sonuçlar dikkat eğilimlerini gösterir.
+"""
+
     elif "Akademik Analiz" in test_name:
         return """
 ## 🔬 AKADEMİK ANALİZ TESTİ — UZMAN ANALİZ PROTOKOLÜ
