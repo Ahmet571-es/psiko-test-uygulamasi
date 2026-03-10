@@ -140,7 +140,7 @@ def _render_test_questions():
     """Test soru arayüzü — fragment olarak sadece kendi kendini yeniler."""
     t_name = st.session_state.selected_test
 
-    # ── Fragment içi scroll (fragment rerun'larında app() başına ulaşılmaz) ──
+    # ── Fragment içi scroll (fragment rerun'larında app() sonu çalışmaz)
     if st.session_state.get("_scroll_top"):
         st.session_state._scroll_top = False
         components.html(
@@ -156,8 +156,9 @@ def _render_test_questions():
                     }catch(e){}
                 }
                 doScroll();
-                setTimeout(doScroll, 100);
-                setTimeout(doScroll, 300);
+                setTimeout(doScroll, 150);
+                setTimeout(doScroll, 400);
+                setTimeout(doScroll, 800);
             })();
             </script>""", height=0,
         )
@@ -1038,30 +1039,6 @@ def app():
     """, unsafe_allow_html=True)
 
     # --- BAŞLIK ---
-    # ── SCROLL TO TOP — tüm içerikten ÖNCE çalışır ──
-    if st.session_state.get("_scroll_top"):
-        st.session_state._scroll_top = False
-        components.html(
-            """<script>
-            (function(){
-                function doScroll(){
-                    try{
-                        var m = window.parent.document.querySelector('section.main');
-                        if(m) m.scrollTo({top:0, behavior:'instant'});
-                        var c = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-                        if(c) c.scrollTo({top:0, behavior:'instant'});
-                        var s = window.parent.document.querySelector('[data-testid="stMain"]');
-                        if(s) s.scrollTo({top:0, behavior:'instant'});
-                        window.parent.scrollTo(0,0);
-                    }catch(e){}
-                }
-                doScroll();
-                setTimeout(doScroll, 50);
-                setTimeout(doScroll, 200);
-                setTimeout(doScroll, 500);
-            })();
-            </script>""", height=0,
-        )
 
     st.markdown("<h1 class='main-header'>🎓 EĞİTİM CHECK UP</h1>", unsafe_allow_html=True)
     st.markdown(f"<div class='sub-header'>Hoşgeldin <b>{st.session_state.student_name}</b> — Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
@@ -1492,6 +1469,34 @@ def app():
 
             st.markdown("---")
             _render_test_questions()
+
+    # ============================================================
+    # 📌 SCROLL TO TOP — TÜM İÇERİK RENDER EDİLDİKTEN SONRA
+    # ============================================================
+    if st.session_state.get("_scroll_top"):
+        st.session_state._scroll_top = False
+        components.html(
+            """<script>
+            (function(){
+                function doScroll(){
+                    try{
+                        var m = window.parent.document.querySelector('section.main');
+                        if(m) m.scrollTo({top:0, behavior:'instant'});
+                        var c = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+                        if(c) c.scrollTo({top:0, behavior:'instant'});
+                        var s = window.parent.document.querySelector('[data-testid="stMain"]');
+                        if(s) s.scrollTo({top:0, behavior:'instant'});
+                        window.parent.scrollTo(0,0);
+                    }catch(e){}
+                }
+                doScroll();
+                setTimeout(doScroll, 100);
+                setTimeout(doScroll, 300);
+                setTimeout(doScroll, 600);
+                setTimeout(doScroll, 1200);
+            })();
+            </script>""", height=0,
+        )
 
 
 # ============================================================
