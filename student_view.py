@@ -578,14 +578,14 @@ def _render_test_questions():
 
             # ── JS GERI SAYIM — sadece görsel uyarı, otomatik geçiş YOK ──
             components.html(f"""
-            <div id="p2timer" style="text-align:center;font-size:2.2rem;font-weight:800;
+            <div id="p2timer_{current_row}" style="text-align:center;font-size:2.2rem;font-weight:800;
                  color:#1B2A4A;padding:8px 0;font-family:monospace;">
               ⏱️ {time_per_row}
             </div>
             <script>
             (function(){{
               var left = {time_per_row};
-              var el = document.getElementById('p2timer');
+              var el = document.getElementById('p2timer_{current_row}');
               if(!el) return;
               var iv = setInterval(function(){{
                 left--;
@@ -602,7 +602,7 @@ def _render_test_questions():
               }}, 1000);
             }})();
             </script>
-            """, height=65)
+            """, height=65, key=f"p2_timer_{current_row}")
 
             with st.form(f"p2_row_{current_row}"):
                 P2_COLS = 10
