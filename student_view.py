@@ -585,6 +585,21 @@ def _render_test_questions():
             </div>
             <script>
             (function(){{
+              // Önceki satırdan kalan kilidi temizle
+              try{{
+                var doc = window.parent.document;
+                var forms = doc.querySelectorAll('[data-testid="stForm"]');
+                forms.forEach(function(f){{
+                  f.style.opacity = '';
+                  f.style.pointerEvents = '';
+                }});
+                var cbs = doc.querySelectorAll('[data-testid="stForm"] input[type="checkbox"]');
+                cbs.forEach(function(cb){{
+                  cb.disabled = false;
+                  cb.style.pointerEvents = '';
+                }});
+              }}catch(e){{}}
+
               var left = {time_per_row};
               var el = document.getElementById('p2timer_{current_row}');
               if(!el) return;
@@ -595,7 +610,6 @@ def _render_test_questions():
                   el.innerHTML = '⏰ Süre doldu! Otomatik gönderiliyor...';
                   el.style.color = '#E74C3C';
                   el.style.fontSize = '1.4rem';
-                  // Checkboxları kilitle
                   try{{
                     var doc = window.parent.document;
                     var cbs = doc.querySelectorAll('[data-testid="stForm"] input[type="checkbox"]');
@@ -603,14 +617,12 @@ def _render_test_questions():
                       cb.disabled = true;
                       cb.style.pointerEvents = 'none';
                     }});
-                    // Tüm form alanını karart
                     var forms = doc.querySelectorAll('[data-testid="stForm"]');
                     forms.forEach(function(f){{
                       f.style.opacity = '0.5';
                       f.style.pointerEvents = 'none';
                     }});
                   }}catch(e){{}}
-                  // Formu otomatik gönder
                   setTimeout(function(){{
                     try{{
                       var btns = window.parent.document.querySelectorAll(
