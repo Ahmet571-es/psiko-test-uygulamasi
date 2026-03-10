@@ -1995,6 +1995,11 @@ def app():
     st.markdown("## 👨‍🏫 Öğretmen Yönetim Paneli")
     st.caption("EĞİTİM CHECK UP — Kişisel Eğitim & Kariyer Analiz Merkezi")
 
+    # Giriş ekranına dön butonu
+    if st.button("🚪 Giriş Ekranına Dön", key="teacher_to_login"):
+        st.session_state.clear()
+        st.rerun()
+
     # Kalıcı veritabanı uyarısı
     if is_using_sqlite():
         st.warning(
