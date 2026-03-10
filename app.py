@@ -653,7 +653,7 @@ def main_auth_flow():
             <div class="feature-chips">
                 <span class="chip">🧬 Enneagram</span>
                 <span class="chip">🧠 Beyin Dominansı</span>
-                <span class="chip">👁️ B2 Dikkat</span>
+                <span class="chip">👁️ P2 Dikkat</span>
                 <span class="chip">📚 Akademik Analiz</span>
                 <span class="chip">🧭 Kariyer Keşfi</span>
                 <span class="chip">📖 Hızlı Okuma</span>

@@ -355,7 +355,7 @@ def plot_scores(data_dict, title):
     if "categories" in data_dict and isinstance(data_dict["categories"], dict):
         plot_data = data_dict["categories"]
 
-    # 1b. Durum: D2 Dikkat Testi
+    # 1b. Durum: P2 Dikkat Testi
     elif "CP" in data_dict and "TN_E" in data_dict:
         d2_labels = {
             "CP": "Konsantrasyon (CP)",
@@ -1545,163 +1545,11 @@ Bu öğrencinin kariyer keşif yolculuğu için somut adımlar:
 **⚠️ YASAL UYARI:** Bu değerlendirme profesyonel kariyer danışmanlığını destekler; tek başına kesin mesleki yönlendirme için yeterli değildir. Nihai kararlar çoklu veri kaynağı ve uzman görüşüyle verilmelidir.
 """
 
-    elif "D2 Dikkat" in test_name:
+
+
+    elif "P2 Dikkat" in test_name:
         return """
-## 🔬 D2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
-
-Bu test, Brickenkamp d2 dikkat testinin dijital adaptasyonudur (14 satır × 20 sembol, satır başı 15sn). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
-
-### KATMAN 1: TEMEL METRİKLER DERİN ANALİZİ
-Her metriği ayrı ayrı, bu öğrencinin spesifik değerlerine dayalı olarak yorumla:
-
-**CP (Konsantrasyon Performansı) — En Kritik Gösterge:**
-- Hesaplama: Doğru hedef isabetleri − Yanlış işaretlemeler (E2)
-- Bu öğrencinin CP değeri ne anlama geliyor? (Mümkün maksimuma oranla yüzdelik)
-- CP'nin %80+ olması: Üstün konsantrasyon, dikkat kapasitesi çok güçlü
-- CP'nin %60-80 olması: İyi düzeyde, ancak gelişim alanı var
-- CP'nin %40-60 olması: Ortalama, yapılandırılmış dikkat çalışması gerekli
-- CP'nin %40 altı: Dikkat sürdürülebilirliğinde belirgin zorluk, detaylı değerlendirme önerilir
-
-**TN-E (Toplam Performans):**
-- Toplam işaretleme − Toplam hata = Net performans
-- Hız ve doğruluğu birlikte değerlendiren bileşik gösterge
-- Bu değerin yaş grubundaki beklentiyle karşılaştırılması
-
-**E1 (Atlama Hatası) — Dikkat Dağılması Göstergesi:**
-- Kaçırılan hedef sayısı: Her atlanan hedef, dikkat kesintisi anlamına gelir
-- E1'in hangi satırlarda yoğunlaştığını analiz et (başlangıç, orta, son satırlar)
-- Yüksek E1: "Bakıyor ama göremiyor" — dikkat dağılması, odak kaybı, seçici dikkat zayıflığı
-- E1'in akademik yansıması: Sınavda soruyu atlama, metinde önemli detayı kaçırma
-
-**E2 (Yanlış İşaretleme) — Dürtüsellik Göstergesi:**
-- Hedef olmayan sembolleri işaretleme: Dürtüsel, kontrolsüz tepki verme eğilimi
-- Yüksek E2: "Düşünmeden yapıyor" — hız uğruna doğruluktan vazgeçme
-- E2'nin akademik yansıması: Sınavda aceleyle yanlış şıkkı işaretleme, okuduğunu anlamadan geçme
-
-**E1/E2 Oranı — Hata Profili Tespiti:**
-- E1 >> E2: Dikkat eksikliği ağırlıklı profil (odak kayıp, dalgınlık)
-- E2 >> E1: Dürtüsellik ağırlıklı profil (acelecilik, kontrolsüzlük)
-- E1 ≈ E2: Karma profil (hem dikkat hem dürtüsellik sorunu)
-- Bu oranın klinik önemi ve akademik hayattaki somut etkileri
-
-**FR (Dalgalanma Oranı) — Dikkat Sürdürülebilirliği:**
-- En yüksek satır CP − En düşük satır CP
-- FR ≤3: Çok tutarlı — dikkat sürekliliği mükemmel
-- FR 4-5: Tutarlı — normal dalgalanma
-- FR 6-8: Değişken — dikkat dalgalanması belirgin
-- FR >8: Çok değişken — ciddi dikkat sürdürülebilirlik sorunu
-
-### KATMAN 2: SATIR BAZLI PERFORMANS EĞRİSİ ANALİZİ
-14 satırlık performans eğrisini detaylı analiz et:
-
-**Zamana Bağlı Performans Deseni:**
-- İlk 4 satır (ısınma dönemi): Performans nasıl başlıyor? Yavaş başlangıç mı, hızlı dalış mı?
-- Orta 6 satır (sürdürme dönemi): Performans stabil mi, dalgalı mı?
-- Son 4 satır (yorulma dönemi): Performans düşüyor mu, aynı mı kalıyor, yoksa artıyor mu?
-
-**Desen Tipleri:**
-- **Düz çizgi:** Tutarlı performans → Güçlü dikkat sürdürme kapasitesi
-- **Aşağı eğim:** Artan yorulma → Dikkat süresi sınırlı, uzun görevlerde zorluk
-- **Yukarı eğim:** Geç ısınma → Yavaş başlıyor ama momentum kazanıyor
-- **Testere dişi:** Dalgalı performans → Dikkat gelip gidiyor, odak tutarsız
-- **U şekli:** İyi başlıyor, ortada düşüyor, sona doğru toparlanıyor → "Son dakika motivasyonu"
-- Bu öğrencinin eğrisi hangi desene uyuyor ve bunun AKADEMİK ANLAMI ne?
-
-**Satır bazlı hız analizi:**
-- Hangi satırlarda daha hızlı, hangilerinde daha yavaş çalışmış?
-- Hız-doğruluk değiş-tokuşu: Hızlı satırlarda hata artıyor mu?
-- Optimal çalışma hızı tespiti: Bu öğrenci en iyi performansı hangi hızda gösteriyor?
-
-### KATMAN 3: HIZ-DOĞRULUK DENGESİ PROFİLLEME
-Bu öğrencinin dikkat profilini ayrıntılı tipleme:
-
-**Profil Tipleri:**
-- **⚡ Dengeli (Hızlı ve Doğru):** Hit ≥%80 + Error ≤%10 → İdeal performans
-  → Bu öğrenci buradaysa: Güçlü yanları nasıl korunur ve ileri taşınır?
-- **💨 Dürtüsel (Hızlı ama Hatalı):** Hit ≥%60 + Error >%15 → Hız kontrolü gerekli
-  → Bu öğrenci buradaysa: "Yavaşla ve düşün" stratejileri, kendini kontrol etme egzersizleri
-- **🐢 Temkinli (Yavaş ama Doğru):** Hit <%50 + Error ≤%10 → Cesaret ve hız geliştirme
-  → Bu öğrenci buradaysa: Özgüven artırma, zaman baskısı altında çalışma pratiği
-- **🔀 Gelişime Açık:** Karışık profil → Hem dikkat hem hız çalışması
-  → Bu öğrenci buradaysa: Temel dikkat eğitimi ve yapılandırılmış çalışma ortamı
-
-Bu profilin sınav performansına doğrudan etkisi:
-- Dürtüsel profil: Sınavda aceleyle bitirip hata yapar, "biliyordum ama yanlış işaretledim"
-- Temkinli profil: Sınavda vakit yetmez, son soruları boş bırakır
-- Her profil için sınav stratejisi önerisi
-
-### KATMAN 4: AKADEMİK ETKİ ANALİZİ
-Dikkat profilinin her akademik alanda etkisi:
-
-**Ders Dinleme:**
-- Bu dikkat seviyesinde bir öğrenci 40 dakikalık bir derste kaç dakika gerçekten odaklı kalabilir?
-- Dikkat kaybı anları: Dersin başında mı, ortasında mı, sonunda mı daha çok kopuyor?
-- Not tutma stratejisi: Bu dikkat profiliyle en etkili not alma yöntemi hangisi?
-
-**Ödev Yapma:**
-- Kesintisiz çalışma süresi tahmini (satır performans eğrisinden çıkarım)
-- Ödev tamamlama stratejileri: Parçalama, mola zamanlaması, ödül sistemi
-
-**Sınav Çözme:**
-- Bu dikkat profiliyle sınavda beklenen davranış kalıpları
-- Soru atlama riski, zaman yönetimi sorunu, dikkatsizlik hataları
-- Sınav anı dikkat stratejileri (her 10 dakikada durak, son 5 dakika kontrol rutini)
-
-**Proje ve Uzun Vadeli Görevler:**
-- Dikkat sürdürülebilirliğinin uzun projeler üzerindeki etkisi
-- "Parçala ve zamanla" stratejisi: Büyük görevi küçük parçalara bölme
-
-### KATMAN 5: DİKKAT GELİŞTİRME PROGRAMI
-Bu öğrencinin dikkat profiline özel, yaşa uygun gelişim programı:
-
-**Günlük Dikkat Egzersizleri (15-20 dk):**
-| Egzersiz | Süre | Nasıl Yapılır | Hedeflenen Beceri | Zorluk Artışı |
-|----------|------|--------------|------------------|--------------|
-| Mindfulness nefes | 5dk | ... | Odaklanma başlatma | Her hafta +1dk |
-| Kelime-renk çelişki (Stroop) | 3dk | ... | Seçici dikkat | Hız artırma |
-| Geri sayma (7'şerli) | 3dk | ... | Çalışma belleği | 6'şardan başla |
-| Şekil arama (visual search) | 5dk | ... | Görsel tarama | Daha karmaşık |
-| Dikkat sürdürme okuma | 5dk | ... | Sürdürülebilir dikkat | Süre uzatma |
-
-**Haftalık Program:**
-- Haftada 5 gün, her gün 15-20 dakika
-- 1. hafta: Temel seviye → 2. hafta: Orta → 3. hafta: İleri → 4. hafta: Zorlayıcı
-- Her haftanın sonunda kendini test etme (basit zamanlı görev)
-
-**Çalışma Ortamı Reçetesi:**
-- Masa düzeni: Masada SADECE çalışılan materyal olmalı
-- Telefon: Başka odada veya Forest/AppBlock uygulaması ile kapalı
-- Ses ortamı: Bu profil için ideal ses düzeyi (sessiz mi, beyaz gürültü mü, hafif müzik mi?)
-- Işık: Doğal ışık tercihi, mavi ışık filtresi, masa lambası açısı
-- Mola ritmi: Bu öğrenci için optimal çalışma/mola oranı (Pomodoro varyasyonu)
-
-**Dijital Dikkat Araçları:**
-- Forest (telefon engelleme), Brain Focus (Pomodoro), Peak/Lumosity (bilişsel egzersiz)
-- Her aracı neden ve nasıl kullanacağını açıkla
-
-### KATMAN 6: AİLE ve ÖĞRETMEN REHBERİ
-**Aileye:**
-- Bu çocuğun dikkat profili ne söylüyor? (Jargonsuz, aile dilinde açıklama)
-- "Bu çocuk neden yerinde duramıyor / neden dalgın?" sorusuna test verisiyle cevap
-- Evde dikkat destekleyici ortam nasıl oluşturulur? (8 maddelik kontrol listesi)
-- Ders çalıştırırken dikkat yönetimi: Ne kadar süre çalıştır, ne kadar mola ver?
-- Ekran süresi ile dikkat ilişkisi ve yönetim önerileri
-- Yapılması ve YAPILMAMASI gerekenler: "Dikkat et!" demek NEDEN işe yaramaz ve bunun yerine ne yapılmalı?
-- Beslenme önerileri: Dikkat destekleyici besinler (omega-3, demir, kompleks karbonhidrat)
-- Uyku düzeni: Dikkat performansı ile uyku kalitesi arasındaki ilişki ve öneriler
-
-**Öğretmene:**
-- Bu öğrenciyi sınıf içinde nasıl desteklemeli? (oturma düzeni, görev verme şekli, mola zamanlaması)
-- Dikkat kaybı anında yeniden odaklanma stratejileri (göz teması, isimle hitap, fiziksel yakınlık)
-- Sınav sırasında bu öğrenciye uygulanabilecek destekler
-- Uzun etkinliklerde dikkat yönetimi (45 dk'lık dersi parçalama stratejisi)
-
-**⚠️ ÖNEMLİ NOT:** Bu test klinik bir tanı aracı DEĞİLDİR. Sonuçlar dikkat eğilimlerini gösterir. Ciddi dikkat sorunları gözlemleniyorsa, uzman değerlendirmesi (çocuk-ergen psikiyatristi/psikoloğu) önerilir.
-"""
-
-    elif "B2 Dikkat" in test_name:
-        return """
-## 🔬 B2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
+## 🔬 P2 DİKKAT TESTİ — UZMAN ANALİZ PROTOKOLÜ
 
 Bu test, seçici dikkat ve konsantrasyon ölçen dijital bir testtir (15 satır × 30 sembol, "p" harfi hedefli, nokta bazlı). Raporda aşağıdaki ANALİZ KATMANLARININ HER BİRİNİ eksiksiz ve derinlikli şekilde ele al:
 

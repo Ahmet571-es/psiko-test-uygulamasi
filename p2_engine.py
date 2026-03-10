@@ -1,7 +1,7 @@
 """
-B2 Dikkat Testi — Dijital Motor
+P2 Dikkat Testi — Dijital Motor
 ================================
-b2dikkat.com formatında, "p" harfi hedefli dikkat testi.
+p2dikkat.com formatında, "p" harfi hedefli dikkat testi.
 
 Semboller : "d" ve "p" harfleri, üst/altlarında 0-2 arası nokta (•)
 Hedef     : Toplam 2 noktası olan "p" harfleri
@@ -28,12 +28,12 @@ import random
 # ============================================================
 # KONFİGÜRASYON
 # ============================================================
-B2_CONFIG = {
+P2_CONFIG = {
     "rows": 15,
     "symbols_per_row": 30,
     "time_per_row": 20,           # varsayılan saniye
     "target_ratio": 0.38,         # her satırda ~%38 hedef (~11-12 hedef)
-    "practice_symbols": 30,       # alıştırma satırı (b2dikkat gibi tam satır)
+    "practice_symbols": 30,       # alıştırma satırı (p2dikkat gibi tam satır)
 }
 
 # ============================================================
@@ -57,11 +57,11 @@ AGE_TIME_LABELS = [
 def get_time_per_row(age=None):
     """Öğrenci yaşına göre satır başına süreyi (saniye) döndürür."""
     if age is None:
-        return B2_CONFIG["time_per_row"]
+        return P2_CONFIG["time_per_row"]
     for max_age, seconds in AGE_TIME_TABLE:
         if age <= max_age:
             return seconds
-    return B2_CONFIG["time_per_row"]
+    return P2_CONFIG["time_per_row"]
 
 
 def get_age_group_index(age):
@@ -99,8 +99,8 @@ DISTRACTOR_TYPES = [s for s in ALL_SYMBOL_TYPES if not s["is_target"]]
 # ============================================================
 # SATIR / TEST ÜRETİCİ
 # ============================================================
-def generate_b2_row(n=30, target_ratio=0.38, rng=None):
-    """Bir satır B2 sembolü üretir."""
+def generate_p2_row(n=30, target_ratio=0.38, rng=None):
+    """Bir satır P2 sembolü üretir."""
     if rng is None:
         rng = random.Random()
 
@@ -119,24 +119,24 @@ def generate_b2_row(n=30, target_ratio=0.38, rng=None):
     return row
 
 
-def generate_b2_test(seed=None):
-    """15 satırlık tam B2 testi üretir."""
+def generate_p2_test(seed=None):
+    """15 satırlık tam P2 testi üretir."""
     rng = random.Random(seed)
     return [
-        generate_b2_row(B2_CONFIG["symbols_per_row"],
-                        B2_CONFIG["target_ratio"], rng)
-        for _ in range(B2_CONFIG["rows"])
+        generate_p2_row(P2_CONFIG["symbols_per_row"],
+                        P2_CONFIG["target_ratio"], rng)
+        for _ in range(P2_CONFIG["rows"])
     ]
 
 
 def generate_practice_row(seed=42):
-    """Alıştırma satırı (30 sembol, b2dikkat gibi tam satır)."""
+    """Alıştırma satırı (30 sembol, p2dikkat gibi tam satır)."""
     rng = random.Random(seed)
-    return generate_b2_row(B2_CONFIG["practice_symbols"], 0.40, rng)
+    return generate_p2_row(P2_CONFIG["practice_symbols"], 0.40, rng)
 
 
 # ============================================================
-# HTML RENDER — Nokta stili (b2dikkat formatı)
+# HTML RENDER — Nokta stili (p2dikkat formatı)
 # ============================================================
 def _dots_html(count, position="above"):
     """Noktaları render eder (üst veya alt)."""
@@ -156,8 +156,8 @@ def _dots_html(count, position="above"):
 def render_symbol_inline(symbol, selected=False, show_result=False,
                          is_missed=False, is_wrong=False):
     """
-    B2 sembolünü tek satır inline formatında render eder.
-    b2dikkat tarzı: sadece harf + noktalar, minimalist.
+    P2 sembolünü tek satır inline formatında render eder.
+    p2dikkat tarzı: sadece harf + noktalar, minimalist.
 
     show_result=True ise test sonrası renklendirme:
       - is_missed (E1): kırmızı çerçeve (kaçırılan hedef)
@@ -174,7 +174,7 @@ def render_symbol_inline(symbol, selected=False, show_result=False,
     letter_color = "#333"
 
     if selected and not show_result:
-        # Test sırasında seçim: kırmızı (b2dikkat tarzı)
+        # Test sırasında seçim: kırmızı (p2dikkat tarzı)
         border = "2px solid #E74C3C"
         bg = "rgba(231,76,60,0.08)"
         letter_color = "#E74C3C"
@@ -213,7 +213,7 @@ def render_symbol_inline(symbol, selected=False, show_result=False,
 # HEDEF SEMBOL GÖSTERİMİ (Yönerge & Alıştırma)
 # ============================================================
 def render_target_examples():
-    """Hedef 3 sembolü büyük boyutta gösterir (b2dikkat tarzı)."""
+    """Hedef 3 sembolü büyük boyutta gösterir (p2dikkat tarzı)."""
     targets = [
         {"letter": "p", "above": 2, "below": 0, "index": 0, "is_target": True, "total": 2},
         {"letter": "p", "above": 0, "below": 2, "index": 1, "is_target": True, "total": 2},
@@ -234,10 +234,10 @@ def render_target_examples():
 
 
 # ============================================================
-# YÖNERGE SAYFASI HTML (b2dikkat formatı)
+# YÖNERGE SAYFASI HTML (p2dikkat formatı)
 # ============================================================
 def render_instructions_html(time_per_row, age=None):
-    """b2dikkat tarzı yönerge sayfası."""
+    """p2dikkat tarzı yönerge sayfası."""
 
     age_idx = get_age_group_index(age)
     time_table_rows = ""
@@ -308,7 +308,7 @@ def render_instructions_html(time_per_row, age=None):
 
 
 # ============================================================
-# ALIŞTIRMA SAYFASI HTML (b2dikkat formatı)
+# ALIŞTIRMA SAYFASI HTML (p2dikkat formatı)
 # ============================================================
 def render_practice_instructions_html():
     """Alıştırma yönerge HTML'i."""
@@ -334,12 +334,12 @@ def render_practice_instructions_html():
 
 
 # ============================================================
-# TEST EKRANI CSS — b2dikkat minimalist stili
+# TEST EKRANI CSS — p2dikkat minimalist stili
 # ============================================================
-B2_CSS = """
+P2_CSS = """
 <style>
-/* ── B2 Test — minimalist beyaz ekran ── */
-.b2-test-container {
+/* ── P2 Test — minimalist beyaz ekran ── */
+.p2-test-container {
     max-width: 100%;
     margin: 0 auto;
     padding: 40px 20px;
@@ -349,7 +349,7 @@ B2_CSS = """
     justify-content: center;
 }
 
-.b2-row-symbols {
+.p2-row-symbols {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -358,7 +358,7 @@ B2_CSS = """
 }
 
 /* ── Satır numarası ── */
-.b2-row-num {
+.p2-row-num {
     font-size: 16px;
     font-weight: 700;
     color: #999;
@@ -383,7 +383,7 @@ div[data-testid="stForm"] div[data-testid="stCheckbox"]:hover {
     background: #fafafa;
 }
 
-/* ── Seçili: kırmızı (b2dikkat tarzı) ── */
+/* ── Seçili: kırmızı (p2dikkat tarzı) ── */
 div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) {
     border-color: #E74C3C !important;
     background: rgba(231,76,60,0.06) !important;
@@ -402,14 +402,14 @@ div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-chil
 }
 
 /* ── Progress bar gizle — temiz ekran ── */
-.b2-clean .stProgress { display: none; }
+.p2-clean .stProgress { display: none; }
 </style>
 """
 
 
 def render_symbol_label(symbol):
     """
-    Bir B2 sembolünü checkbox label'ı olarak render eder.
+    Bir P2 sembolünü checkbox label'ı olarak render eder.
     Minimalist: sadece nokta + harf + nokta
     """
     above = symbol["above"]
@@ -442,9 +442,9 @@ def render_symbol_label(symbol):
 # ============================================================
 # SKORLAMA
 # ============================================================
-def calculate_b2(row_results, time_per_row=None):
+def calculate_p2(row_results, time_per_row=None):
     """
-    B2 test skorlarını hesaplar.
+    P2 test skorlarını hesaplar.
 
     Parametre
     ---------
@@ -465,7 +465,7 @@ def calculate_b2(row_results, time_per_row=None):
     for row_idx, row in enumerate(row_results):
         symbols  = row["symbols"]
         selected = row["selected"]
-        elapsed  = row.get("elapsed_time", B2_CONFIG["time_per_row"])
+        elapsed  = row.get("elapsed_time", P2_CONFIG["time_per_row"])
 
         tn = sum(1 for s in selected if s)
         e1 = e2 = correct = targets = 0
@@ -689,7 +689,7 @@ def render_full_analysis_html(scores):
 # ============================================================
 # RAPOR ÜRETİCİ (metin bazlı — AI analiz ve PDF için)
 # ============================================================
-def generate_b2_report(scores):
+def generate_p2_report(scores):
     """Şablon tabanlı metin rapor üretir."""
 
     def bar(pct):
@@ -704,7 +704,7 @@ def generate_b2_report(scores):
             f"{d['wrong']:3d} | {d['blank']:3d} |\n"
         )
 
-    report = f"""# 🎯 B2 DİKKAT TESTİ RAPORU
+    report = f"""# 🎯 P2 DİKKAT TESTİ RAPORU
 
 ---
 
@@ -829,3 +829,35 @@ def generate_b2_report(scores):
 | Genel Hata | **{scores['E']}** (Atlama: {scores['E1']}, Yanlış: {scores['E2']}) |
 """
     return report.strip()
+
+
+# ============================================================
+# ZAMANLAYICI JS (önceki sürümden taşındı)
+# ============================================================
+def render_timer_js(seconds, row_num):
+    """JavaScript geri sayım zamanlayıcısı."""
+    return f"""
+<div id="p2timer_{row_num}"
+     style="text-align:center;font-size:2rem;font-weight:800;
+            color:#1B2A4A;padding:6px 0;">
+  ⏱️ {seconds}
+</div>
+<script>
+(function() {{
+  var timeLeft = {seconds};
+  var el = document.getElementById('p2timer_{row_num}');
+  if (!el) return;
+  var iv = setInterval(function() {{
+    timeLeft--;
+    if (timeLeft <= 0) {{
+      clearInterval(iv);
+      el.textContent = '⏰ Süre doldu!';
+      el.style.color = '#E74C3C';
+    }} else {{
+      el.textContent = '⏱️ ' + timeLeft;
+      if (timeLeft <= 5) el.style.color = '#E74C3C';
+      else if (timeLeft <= 10) el.style.color = '#F39C12';
+    }}
+  }}, 1000);
+}})();
+</script>"""
