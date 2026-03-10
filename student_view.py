@@ -949,15 +949,7 @@ def app():
     st.markdown("<h1 class='main-header'>🎓 EĞİTİM CHECK UP</h1>", unsafe_allow_html=True)
     st.markdown(f"<div class='sub-header'>Hoşgeldin <b>{st.session_state.student_name}</b> — Kendini keşfetmeye hazır mısın?</div>", unsafe_allow_html=True)
 
-    # --- SAYFA GEÇİŞİNDE OTOMATİK SCROLL TO TOP ---
-    if st.session_state.get("_scroll_top"):
-        components.html(
-            """<script>
-                window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'instant'});
-            </script>""",
-            height=0
-        )
-        st.session_state._scroll_top = False
+    # scroll_top flag — sayfa sonunda işlenecek
 
     if "page" not in st.session_state:
         st.session_state.page = "home"
@@ -1384,6 +1376,21 @@ def app():
 
             st.markdown("---")
             _render_test_questions()
+
+    # ============================================================
+    # 📌 SCROLL TO TOP — tüm içerik render edildikten SONRA çalışır
+    # ============================================================
+    if st.session_state.get("_scroll_top"):
+        st.session_state._scroll_top = False
+        components.html(
+            """<script>
+            setTimeout(function(){
+                var main = window.parent.document.querySelector('section.main');
+                if(main) main.scrollTo({top: 0, behavior: 'instant'});
+            }, 100);
+            </script>""",
+            height=0,
+        )
 
 
 # ============================================================
