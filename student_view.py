@@ -455,30 +455,113 @@ def _render_test_questions():
 
         # ---- ALIŞTIRMA SAYFASI ----
         if not st.session_state.p2_practice_done:
-            st.markdown(
-                p2_render_practice_instructions_html(),
-                unsafe_allow_html=True,
-            )
-
             practice = p2_generate_practice_row()
 
-            with st.form("p2_practice"):
+            # ADIM 2: Alıştırma sonuçları gösteriliyor
+            if st.session_state.get("p2_practice_checked"):
+                st.markdown("### ✅ Alıştırma Sonuçların")
+
+                # Kayıtlı seçimleri al
+                p_selected = st.session_state.get("p2_practice_selections", [])
+
+                # İstatistikler
+                total_targets = sum(1 for s in practice if s["is_target"])
+                correct = 0
+                missed = 0
+                wrong = 0
+                for i, sym in enumerate(practice):
+                    sel = p_selected[i] if i < len(p_selected) else False
+                    if sym["is_target"] and sel:
+                        correct += 1
+                    elif sym["is_target"] and not sel:
+                        missed += 1
+                    elif not sym["is_target"] and sel:
+                        wrong += 1
+
+                # Özet kutu
+                if correct == total_targets and wrong == 0:
+                    st.success(f"🎯 Mükemmel! Tüm hedefleri ({total_targets}/{total_targets}) doğru buldun, yanlış işaretleme yok.")
+                else:
+                    st.info(
+                        f"🎯 **Doğru:** {correct}/{total_targets} hedef bulundu\n\n"
+                        f"❌ **Kaçırılan:** {missed} hedef atlandı\n\n"
+                        f"⚠️ **Yanlış:** {wrong} hedef olmayan işaretlendi"
+                    )
+
+                # Sembol bazlı sonuç gösterimi (renkli)
+                result_parts = []
+                for i, sym in enumerate(practice):
+                    sel = p_selected[i] if i < len(p_selected) else False
+                    is_missed = sym["is_target"] and not sel
+                    is_wrong = not sym["is_target"] and sel
+                    is_correct = sym["is_target"] and sel
+
+                    if is_correct:
+                        emoji = "✅"
+                    elif is_missed:
+                        emoji = "❌"
+                    elif is_wrong:
+                        emoji = "⚠️"
+                    else:
+                        emoji = "⬜"
+                    above_str = "•" * sym["above"] if sym["above"] > 0 else " "
+                    below_str = "•" * sym["below"] if sym["below"] > 0 else " "
+                    result_parts.append(f"{emoji} {above_str} **{sym['letter']}** {below_str}")
+
+                # 10'lu satırlar halinde göster
                 P2_COLS = 10
-                for sub_r in range((len(practice) + P2_COLS - 1) // P2_COLS):
+                for sub_r in range((len(result_parts) + P2_COLS - 1) // P2_COLS):
                     cols = st.columns(P2_COLS)
                     for c in range(P2_COLS):
                         idx = sub_r * P2_COLS + c
-                        if idx < len(practice):
+                        if idx < len(result_parts):
                             with cols[c]:
-                                lbl = p2_render_symbol_label(practice[idx])
-                                st.checkbox(lbl, key=f"p2p_{idx}")
+                                st.markdown(result_parts[idx])
 
-                if st.form_submit_button("ALIŞTIRMAYI KONTROL ET", type="primary"):
+                st.markdown("---")
+                st.markdown(
+                    "**Renk Açıklaması:** ✅ Doğru seçim &nbsp;|&nbsp; "
+                    "❌ Kaçırılan hedef &nbsp;|&nbsp; "
+                    "⚠️ Yanlış işaretleme &nbsp;|&nbsp; "
+                    "⬜ Doğru bırakılan"
+                )
+                st.markdown("---")
+
+                if st.button("🚀 TESTE BAŞLA", type="primary", use_container_width=True):
                     st.session_state.p2_practice_done = True
                     st.session_state.p2_current_row = 0
                     st.session_state.p2_row_start = time.time()
                     st.session_state._scroll_top = True
                     st.rerun()
+
+            # ADIM 1: Alıştırma formu
+            else:
+                st.markdown(
+                    p2_render_practice_instructions_html(),
+                    unsafe_allow_html=True,
+                )
+
+                with st.form("p2_practice"):
+                    P2_COLS = 10
+                    for sub_r in range((len(practice) + P2_COLS - 1) // P2_COLS):
+                        cols = st.columns(P2_COLS)
+                        for c in range(P2_COLS):
+                            idx = sub_r * P2_COLS + c
+                            if idx < len(practice):
+                                with cols[c]:
+                                    lbl = p2_render_symbol_label(practice[idx])
+                                    st.checkbox(lbl, key=f"p2p_{idx}")
+
+                    if st.form_submit_button("ALIŞTIRMAYI KONTROL ET", type="primary"):
+                        # Seçimleri kaydet
+                        selections = [
+                            st.session_state.get(f"p2p_{i}", False)
+                            for i in range(len(practice))
+                        ]
+                        st.session_state.p2_practice_selections = selections
+                        st.session_state.p2_practice_checked = True
+                        st.session_state._scroll_top = True
+                        st.rerun()
 
         # ---- ANA TEST SATIRLARI ----
         elif 0 <= current_row < P2_CONFIG["rows"]:
@@ -1137,6 +1220,7 @@ def app():
                             st.session_state.p2_current_row = -1   # -1 = yönerge, -2 = alıştırma
                             st.session_state.p2_row_results = []
                             st.session_state.p2_practice_done = False
+                            st.session_state.p2_practice_checked = False
                             st.session_state.p2_instructions_done = False
                             st.session_state.p2_row_start = None
                             st.session_state.p2_time_per_row = p2_get_time_per_row(student_age)
