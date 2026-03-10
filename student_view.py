@@ -556,8 +556,30 @@ def _render_test_questions():
                     st.rerun()
 
             if st.session_state.p2_row_start:
-                if time.time() - st.session_state.p2_row_start > time_per_row:
-                    st.warning("⏰ Süre doldu! Lütfen satırı gönderin.")
+                if time.time() - st.session_state.p2_row_start > time_per_row + 2:
+                    # Süre doldu — otomatik olarak mevcut seçimleri kaydet ve geç
+                    elapsed = time.time() - st.session_state.p2_row_start
+                    selected = [
+                        st.session_state.get(
+                            f"p2r{current_row}_s{i}", False
+                        )
+                        for i in range(len(row_symbols))
+                    ]
+                    st.session_state.p2_row_results.append(
+                        {
+                            "symbols": row_symbols,
+                            "selected": selected,
+                            "elapsed_time": elapsed,
+                        }
+                    )
+                    next_row = current_row + 1
+                    if next_row >= P2_CONFIG["rows"]:
+                        _finish_p2_test(t_name)
+                    else:
+                        st.session_state.p2_current_row = next_row
+                        st.session_state.p2_row_start = time.time()
+                        st.session_state._scroll_top = True
+                        st.rerun()
 
     # ========================================
     # TİP: HIZLI OKUMA TESTİ (3 Fazlı)
@@ -1209,10 +1231,7 @@ def app():
         # P2 Dikkat Testi — Satır Bazlı Hata Analizi
         if st.session_state.get("p2_analysis_html"):
             with st.expander("🔍 Satır Bazlı Hata Analizi", expanded=True):
-                st.markdown(
-                    st.session_state.p2_analysis_html,
-                    unsafe_allow_html=True,
-                )
+                st.markdown(st.session_state.p2_analysis_html)
 
         st.markdown("---")
         c1, c2 = st.columns(2)

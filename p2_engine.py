@@ -349,50 +349,44 @@ P2_CSS = """
     justify-content: center;
 }
 
-.p2-row-symbols {
+/* ── Her sütunu tam tıklanabilir kart yap ── */
+div[data-testid="stForm"] [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+    cursor: pointer;
+}
+
+/* ── Sembol + Checkbox tek birim — büyük tıklama alanı ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] {
+    background: #f8f9fc;
+    border: 2px solid #e8eaef;
+    border-radius: 10px;
+    padding: 8px 4px 10px;
+    text-align: center;
+    transition: all 0.12s ease;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 70px;
     display: flex;
-    flex-wrap: nowrap;
     align-items: center;
-    gap: 2px;
     justify-content: center;
 }
-
-/* ── Satır numarası ── */
-.p2-row-num {
-    font-size: 16px;
-    font-weight: 700;
-    color: #999;
-    margin-right: 12px;
-    min-width: 24px;
-    text-align: right;
-}
-
-/* ── Checkbox kartları ── */
-div[data-testid="stForm"] div[data-testid="stCheckbox"] {
-    background: transparent;
-    border: 2px solid transparent;
-    border-radius: 6px;
-    padding: 2px;
-    text-align: center;
-    transition: all 0.1s ease;
-    cursor: pointer;
-    min-width: 32px;
-}
 div[data-testid="stForm"] div[data-testid="stCheckbox"]:hover {
-    border-color: #ccc;
-    background: #fafafa;
+    border-color: #a0b4d0;
+    background: #eef3fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* ── Seçili: kırmızı (p2dikkat tarzı) ── */
+/* ── Seçili: kırmızı vurgulu kart ── */
 div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) {
     border-color: #E74C3C !important;
-    background: rgba(231,76,60,0.06) !important;
+    background: rgba(231,76,60,0.08) !important;
+    box-shadow: 0 0 0 2px rgba(231,76,60,0.2), 0 2px 8px rgba(231,76,60,0.15) !important;
 }
 div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) div[style*="font-size"] {
     color: #E74C3C !important;
 }
 
-/* ── Checkbox native gizle ── */
+/* ── Checkbox native kutusu gizle — tüm alan tıklanabilir ── */
 div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-child {
     position: absolute;
     opacity: 0;
@@ -401,8 +395,20 @@ div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-chil
     overflow: hidden;
 }
 
-/* ── Progress bar gizle — temiz ekran ── */
-.p2-clean .stProgress { display: none; }
+/* ── Label markdown'ı tam genişlik ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label {
+    width: 100%;
+    cursor: pointer;
+}
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div[data-testid="stMarkdownContainer"] {
+    width: 100%;
+}
+
+/* ── Süre dolunca kartları pasif yap ── */
+div[data-testid="stForm"].time-expired div[data-testid="stCheckbox"] {
+    pointer-events: none !important;
+    opacity: 0.5 !important;
+}
 </style>
 """
 
@@ -410,7 +416,7 @@ div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-chil
 def render_symbol_label(symbol):
     """
     Bir P2 sembolünü checkbox label'ı olarak render eder.
-    Minimalist: sadece nokta + harf + nokta
+    Büyük tıklama alanı: nokta + harf + nokta
     """
     above = symbol["above"]
     below = symbol["below"]
@@ -418,22 +424,22 @@ def render_symbol_label(symbol):
 
     def dots(count):
         if count == 0:
-            return '<div style="height:10px;">&nbsp;</div>'
+            return '<div style="height:12px;">&nbsp;</div>'
         d = "".join(
-            '<span style="display:inline-block;width:5px;height:5px;'
-            'background:#333;border-radius:50%;margin:0 1px;"></span>'
+            '<span style="display:inline-block;width:6px;height:6px;'
+            'background:#333;border-radius:50%;margin:0 2px;"></span>'
             for _ in range(count)
         )
         return (
-            f'<div style="height:10px;display:flex;'
+            f'<div style="height:12px;display:flex;'
             f'justify-content:center;align-items:center;">{d}</div>'
         )
 
     return (
-        f'<div style="text-align:center;min-width:28px;padding:1px 0;">'
+        f'<div style="text-align:center;min-width:36px;padding:4px 0;cursor:pointer;">'
         f'{dots(above)}'
-        f'<div style="font-size:22px;font-weight:700;color:#333;'
-        f'line-height:24px;font-family:\'Segoe UI\',Arial,sans-serif;">{letter}</div>'
+        f'<div style="font-size:26px;font-weight:700;color:#333;'
+        f'line-height:28px;font-family:\'Segoe UI\',Arial,sans-serif;">{letter}</div>'
         f'{dots(below)}'
         f'</div>'
     )
@@ -659,31 +665,28 @@ def render_row_analysis_html(row_detail):
 
 
 def render_full_analysis_html(scores):
-    """Tüm satırların hata analizini HTML olarak render eder."""
-    legend = """
-    <div style="display:flex;gap:16px;margin-bottom:16px;padding:10px;
-                background:#f0f7ff;border:1px solid #b0d4f1;border-radius:8px;
-                font-size:0.85rem;flex-wrap:wrap;">
-        <span><span style="display:inline-block;width:12px;height:12px;
-            background:rgba(39,174,96,0.15);border:2px solid #27AE60;
-            border-radius:3px;margin-right:4px;"></span> Doğru Seçim</span>
-        <span><span style="display:inline-block;width:12px;height:12px;
-            background:rgba(231,76,60,0.15);border:2px solid #E74C3C;
-            border-radius:3px;margin-right:4px;"></span> Kaçırılan Hedef (E1)</span>
-        <span><span style="display:inline-block;width:12px;height:12px;
-            background:rgba(243,156,18,0.15);border:2px solid #F39C12;
-            border-radius:3px;margin-right:4px;"></span> Yanlış İşaretleme (E2)</span>
-        <span><span style="display:inline-block;width:12px;height:12px;
-            background:#f8f8f8;border:2px solid transparent;
-            border-radius:3px;margin-right:4px;"></span> Normal</span>
-    </div>
-    """
+    """Tüm satırların hata analizini temiz markdown tablo olarak üretir."""
+    rows_md = ""
+    for d in scores["row_details"]:
+        rows_md += (
+            f"| {d['row_num']} | {d['targets_in_row']} | "
+            f"✅ {d['correct']} | ❌ {d['missed']} | "
+            f"⚠️ {d['wrong']} | {d['blank']} | {d['cp']} | {d['elapsed']}sn |\n"
+        )
 
-    rows_html = ""
-    for detail in scores["row_details"]:
-        rows_html += render_row_analysis_html(detail)
+    return f"""### 📊 Satır Bazlı Detay Analizi
 
-    return legend + rows_html
+| Satır | Hedef | Doğru | Kaçırılan | Yanlış | Boş | CP | Süre |
+|:-----:|:-----:|:-----:|:---------:|:------:|:---:|:--:|:----:|
+{rows_md}
+
+**Açıklamalar:**
+- **Doğru (✅):** Hedef "p" sembollerini doğru işaretledin
+- **Kaçırılan (❌):** İşaretlemen gereken hedefleri atladın (E1 — dikkat dağılması)
+- **Yanlış (⚠️):** Hedef olmayan sembolleri işaretledin (E2 — dürtüsellik)
+- **Boş:** Satırda ulaşamadığın kısım
+- **CP:** Konsantrasyon puanı (Doğru − Yanlış)
+"""
 
 
 # ============================================================
@@ -835,7 +838,7 @@ def generate_p2_report(scores):
 # ZAMANLAYICI JS (önceki sürümden taşındı)
 # ============================================================
 def render_timer_js(seconds, row_num):
-    """JavaScript geri sayım zamanlayıcısı."""
+    """JavaScript geri sayım zamanlayıcısı — süre dolunca formu otomatik gönderir."""
     return f"""
 <div id="p2timer_{row_num}"
      style="text-align:center;font-size:2rem;font-weight:800;
@@ -851,11 +854,30 @@ def render_timer_js(seconds, row_num):
     timeLeft--;
     if (timeLeft <= 0) {{
       clearInterval(iv);
-      el.textContent = '⏰ Süre doldu!';
+      el.textContent = '⏰ Süre doldu! Otomatik gönderiliyor...';
       el.style.color = '#E74C3C';
+      // Checkbox'ları kilitle
+      try {{
+        var forms = window.parent.document.querySelectorAll('[data-testid="stForm"]');
+        forms.forEach(function(f) {{
+          f.classList.add('time-expired');
+        }});
+      }} catch(e) {{}}
+      // Formu otomatik gönder (1 saniye gecikmeyle)
+      setTimeout(function() {{
+        try {{
+          var btns = window.parent.document.querySelectorAll('[data-testid="stFormSubmitButton"] button');
+          if (btns.length > 0) {{
+            btns[btns.length - 1].click();
+          }}
+        }} catch(e) {{}}
+      }}, 800);
     }} else {{
       el.textContent = '⏱️ ' + timeLeft;
-      if (timeLeft <= 5) el.style.color = '#E74C3C';
+      if (timeLeft <= 5) {{
+        el.style.color = '#E74C3C';
+        el.style.fontSize = '2.2rem';
+      }}
       else if (timeLeft <= 10) el.style.color = '#F39C12';
     }}
   }}, 1000);
