@@ -13,7 +13,6 @@ from p2_engine import (
     render_practice_instructions_html as p2_render_practice_instructions_html,
     render_full_analysis_html as p2_render_full_analysis_html,
     render_target_examples as p2_render_target_examples,
-    render_timer_js,
 )
 from akademik_engine import (
     get_akademik_sections, get_total_questions,
@@ -429,12 +428,11 @@ def _render_test_questions():
         time_per_row = st.session_state.get("p2_time_per_row", P2_CONFIG["time_per_row"])
         student_age = st.session_state.get("student_age", 15)
 
-        # P2 minimalist CSS
+        # P2 CSS
         st.markdown(P2_CSS, unsafe_allow_html=True)
 
         # ---- ALIŞTIRMA SAYFASI ----
         if not st.session_state.p2_practice_done:
-            # Alıştırma yönergeleri 
             st.markdown(
                 p2_render_practice_instructions_html(),
                 unsafe_allow_html=True,
@@ -450,20 +448,11 @@ def _render_test_questions():
                         idx = sub_r * P2_COLS + c
                         if idx < len(practice):
                             with cols[c]:
-                                st.markdown(
-                                    p2_render_symbol_label(practice[idx]),
-                                    unsafe_allow_html=True,
-                                )
-                                st.checkbox(
-                                    "✓", key=f"p2p_{idx}",
-                                    label_visibility="collapsed",
-                                )
+                                lbl = p2_render_symbol_label(practice[idx])
+                                st.checkbox(lbl, key=f"p2p_{idx}")
 
                 if st.form_submit_button("ALIŞTIRMAYI KONTROL ET", type="primary"):
-                    # Alıştırma kontrolü — doğru/yanlış göster
-                    correct = 0
-                    wrong = 0
-                    missed = 0
+                    correct = wrong = missed = 0
                     for i, sym in enumerate(practice):
                         sel = st.session_state.get(f"p2p_{i}", False)
                         if sym["is_target"] and sel:
@@ -483,69 +472,23 @@ def _render_test_questions():
         elif 0 <= current_row < P2_CONFIG["rows"]:
             row_symbols = st.session_state.p2_rows[current_row]
 
-            # Satır numarası (minimal üst bar)
-            st.progress((current_row + 1) / P2_CONFIG["rows"])
-
             if st.session_state.p2_row_start is None:
                 st.session_state.p2_row_start = time.time()
 
-            # Zamanlayıcı (gizli değil ama minimal)
-            components.html(
-                render_timer_js(time_per_row, f"p2_{current_row}"),
-                height=55,
-            )
+            elapsed = time.time() - st.session_state.p2_row_start
+            remaining = max(0, time_per_row - elapsed)
 
-            # Sembol satırı — 10'lu sütunlar halinde (b2dikkat tarzı inline)
-            with st.form(f"p2_row_{current_row}"):
-                # Satır numarası göster
-                st.markdown(
-                    f'<div style="color:#999;font-size:14px;font-weight:700;'
-                    f'margin-bottom:4px;">{current_row + 1}</div>',
-                    unsafe_allow_html=True,
-                )
-
-                P2_COLS = 10
-                for sub_r in range(
-                    (len(row_symbols) + P2_COLS - 1) // P2_COLS
-                ):
-                    cols = st.columns(P2_COLS)
-                    for c in range(P2_COLS):
-                        idx = sub_r * P2_COLS + c
-                        if idx < len(row_symbols):
-                            with cols[c]:
-                                st.markdown(
-                                    p2_render_symbol_label(row_symbols[idx]),
-                                    unsafe_allow_html=True,
-                                )
-                                st.checkbox(
-                                    "✓",
-                                    key=f"p2r{current_row}_s{idx}",
-                                    label_visibility="collapsed",
-                                )
-
-                submitted = st.form_submit_button(
-                    "Satırı Gönder ➡️", type="primary"
-                )
-
-            if submitted:
-                elapsed = time.time() - (
-                    st.session_state.p2_row_start or time.time()
-                )
+            # ── SÜRE DOLDU — OTOMATİK GEÇİŞ ──
+            if remaining <= 0:
                 selected = [
-                    st.session_state.get(
-                        f"p2r{current_row}_s{i}", False
-                    )
+                    st.session_state.get(f"p2r{current_row}_s{i}", False)
                     for i in range(len(row_symbols))
                 ]
-
-                st.session_state.p2_row_results.append(
-                    {
-                        "symbols": row_symbols,
-                        "selected": selected,
-                        "elapsed_time": elapsed,
-                    }
-                )
-
+                st.session_state.p2_row_results.append({
+                    "symbols": row_symbols,
+                    "selected": selected,
+                    "elapsed_time": elapsed,
+                })
                 next_row = current_row + 1
                 if next_row >= P2_CONFIG["rows"]:
                     _finish_p2_test(t_name)
@@ -555,31 +498,70 @@ def _render_test_questions():
                     st.session_state._scroll_top = True
                     st.rerun()
 
-            if st.session_state.p2_row_start:
-                if time.time() - st.session_state.p2_row_start > time_per_row + 2:
-                    # Süre doldu — otomatik olarak mevcut seçimleri kaydet ve geç
-                    elapsed = time.time() - st.session_state.p2_row_start
-                    selected = [
-                        st.session_state.get(
-                            f"p2r{current_row}_s{i}", False
-                        )
-                        for i in range(len(row_symbols))
-                    ]
-                    st.session_state.p2_row_results.append(
-                        {
-                            "symbols": row_symbols,
-                            "selected": selected,
-                            "elapsed_time": elapsed,
-                        }
+            # ── TEST EKRANI ──
+            st.progress((current_row + 1) / P2_CONFIG["rows"])
+
+            # Süre göstergesi (Streamlit native)
+            time_col1, time_col2 = st.columns([3, 1])
+            with time_col1:
+                st.markdown(
+                    f"### Satır {current_row + 1} / {P2_CONFIG['rows']}"
+                )
+            with time_col2:
+                rem_int = int(remaining)
+                color = "🔴" if rem_int <= 5 else ("🟡" if rem_int <= 10 else "🟢")
+                st.markdown(f"### {color} {rem_int} sn")
+
+            # Sayfayı süre dolduğunda otomatik yenile
+            refresh_ms = int(remaining * 1000) + 500
+            st.markdown(
+                f'<meta http-equiv="refresh" content="{int(remaining) + 1}">',
+                unsafe_allow_html=True,
+            )
+
+            with st.form(f"p2_row_{current_row}"):
+                P2_COLS = 10
+                for sub_r in range(
+                    (len(row_symbols) + P2_COLS - 1) // P2_COLS
+                ):
+                    cols = st.columns(P2_COLS)
+                    for c in range(P2_COLS):
+                        idx = sub_r * P2_COLS + c
+                        if idx < len(row_symbols):
+                            with cols[c]:
+                                lbl = p2_render_symbol_label(row_symbols[idx])
+                                st.checkbox(
+                                    lbl,
+                                    key=f"p2r{current_row}_s{idx}",
+                                )
+
+                submitted = st.form_submit_button(
+                    "Satırı Gönder ➡️", type="primary"
+                )
+
+            if submitted:
+                elapsed_final = time.time() - (
+                    st.session_state.p2_row_start or time.time()
+                )
+                selected = [
+                    st.session_state.get(
+                        f"p2r{current_row}_s{i}", False
                     )
-                    next_row = current_row + 1
-                    if next_row >= P2_CONFIG["rows"]:
-                        _finish_p2_test(t_name)
-                    else:
-                        st.session_state.p2_current_row = next_row
-                        st.session_state.p2_row_start = time.time()
-                        st.session_state._scroll_top = True
-                        st.rerun()
+                    for i in range(len(row_symbols))
+                ]
+                st.session_state.p2_row_results.append({
+                    "symbols": row_symbols,
+                    "selected": selected,
+                    "elapsed_time": elapsed_final,
+                })
+                next_row = current_row + 1
+                if next_row >= P2_CONFIG["rows"]:
+                    _finish_p2_test(t_name)
+                else:
+                    st.session_state.p2_current_row = next_row
+                    st.session_state.p2_row_start = time.time()
+                    st.session_state._scroll_top = True
+                    st.rerun()
 
     # ========================================
     # TİP: HIZLI OKUMA TESTİ (3 Fazlı)

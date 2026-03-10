@@ -338,76 +338,43 @@ def render_practice_instructions_html():
 # ============================================================
 P2_CSS = """
 <style>
-/* ── P2 Test — minimalist beyaz ekran ── */
-.p2-test-container {
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 40px 20px;
-    min-height: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ── Her sütunu tam tıklanabilir kart yap ── */
-div[data-testid="stForm"] [data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-    cursor: pointer;
-}
-
-/* ── Sembol + Checkbox tek birim — büyük tıklama alanı ── */
-div[data-testid="stForm"] div[data-testid="stCheckbox"] {
-    background: #f8f9fc;
-    border: 2px solid #e8eaef;
+/* ── P2 Checkbox kartları — tüm alan tıklanabilir ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label {
+    background: #f5f7fa;
+    border: 2px solid #e0e4ea;
     border-radius: 10px;
-    padding: 8px 4px 10px;
-    text-align: center;
-    transition: all 0.12s ease;
+    padding: 8px 6px;
     cursor: pointer;
-    min-width: 44px;
-    min-height: 70px;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    min-height: 72px;
+    width: 100%;
 }
-div[data-testid="stForm"] div[data-testid="stCheckbox"]:hover {
-    border-color: #a0b4d0;
-    background: #eef3fa;
-    transform: translateY(-1px);
+div[data-testid="stForm"] div[data-testid="stCheckbox"] > label:hover {
+    border-color: #93b5e0;
+    background: #eaf1fa;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* ── Seçili: kırmızı vurgulu kart ── */
-div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) {
+/* ── Seçili kart: kırmızı vurgu ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) > label {
     border-color: #E74C3C !important;
-    background: rgba(231,76,60,0.08) !important;
-    box-shadow: 0 0 0 2px rgba(231,76,60,0.2), 0 2px 8px rgba(231,76,60,0.15) !important;
-}
-div[data-testid="stForm"] div[data-testid="stCheckbox"]:has(input:checked) div[style*="font-size"] {
-    color: #E74C3C !important;
+    background: #fef0ef !important;
+    box-shadow: 0 0 0 2px rgba(231,76,60,0.25) !important;
 }
 
-/* ── Checkbox native kutusu gizle — tüm alan tıklanabilir ── */
-div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div:first-child {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    overflow: hidden;
+/* ── Sembol metni büyük ve ortalı ── */
+div[data-testid="stForm"] div[data-testid="stCheckbox"] p {
+    font-size: 1.05rem;
+    text-align: center;
+    line-height: 1.3;
+    margin: 0;
 }
-
-/* ── Label markdown'ı tam genişlik ── */
-div[data-testid="stForm"] div[data-testid="stCheckbox"] > label {
-    width: 100%;
-    cursor: pointer;
-}
-div[data-testid="stForm"] div[data-testid="stCheckbox"] > label > div[data-testid="stMarkdownContainer"] {
-    width: 100%;
-}
-
-/* ── Süre dolunca kartları pasif yap ── */
-div[data-testid="stForm"].time-expired div[data-testid="stCheckbox"] {
-    pointer-events: none !important;
-    opacity: 0.5 !important;
+div[data-testid="stForm"] div[data-testid="stCheckbox"] p strong {
+    font-size: 1.5rem;
+    display: block;
 }
 </style>
 """
@@ -416,33 +383,17 @@ div[data-testid="stForm"].time-expired div[data-testid="stCheckbox"] {
 def render_symbol_label(symbol):
     """
     Bir P2 sembolünü checkbox label'ı olarak render eder.
-    Büyük tıklama alanı: nokta + harf + nokta
+    Düz metin — Streamlit checkbox label'ı olarak kullanılır, 
+    tüm metin alanı tıklanabilir olur.
     """
     above = symbol["above"]
     below = symbol["below"]
     letter = symbol["letter"]
 
-    def dots(count):
-        if count == 0:
-            return '<div style="height:12px;">&nbsp;</div>'
-        d = "".join(
-            '<span style="display:inline-block;width:6px;height:6px;'
-            'background:#333;border-radius:50%;margin:0 2px;"></span>'
-            for _ in range(count)
-        )
-        return (
-            f'<div style="height:12px;display:flex;'
-            f'justify-content:center;align-items:center;">{d}</div>'
-        )
+    above_str = "•" * above if above > 0 else "⠀"  # braille boşluk (yükseklik korur)
+    below_str = "•" * below if below > 0 else "⠀"
 
-    return (
-        f'<div style="text-align:center;min-width:36px;padding:4px 0;cursor:pointer;">'
-        f'{dots(above)}'
-        f'<div style="font-size:26px;font-weight:700;color:#333;'
-        f'line-height:28px;font-family:\'Segoe UI\',Arial,sans-serif;">{letter}</div>'
-        f'{dots(below)}'
-        f'</div>'
-    )
+    return f"{above_str}  \n**{letter}**  \n{below_str}"
 
 
 # ============================================================
