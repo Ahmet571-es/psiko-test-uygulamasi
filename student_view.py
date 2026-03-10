@@ -576,7 +576,7 @@ def _render_test_questions():
             st.progress((current_row + 1) / P2_CONFIG["rows"])
             st.markdown(f"### Satır {current_row + 1} / {P2_CONFIG['rows']}")
 
-            # ── JS GERI SAYIM — sadece görsel uyarı, otomatik geçiş YOK ──
+            # ── JS GERI SAYIM — süre dolunca checkboxları kilitle ──
             components.html(f"""
             <!-- row:{current_row} ts:{int(time.time())} -->
             <div id="p2timer_{current_row}" style="text-align:center;font-size:2.2rem;font-weight:800;
@@ -592,9 +592,33 @@ def _render_test_questions():
                 left--;
                 if(left <= 0){{
                   clearInterval(iv);
-                  el.innerHTML = '⏰ Süre doldu! Satırı gönderin.';
+                  el.innerHTML = '⏰ Süre doldu! Otomatik gönderiliyor...';
                   el.style.color = '#E74C3C';
                   el.style.fontSize = '1.4rem';
+                  // Checkboxları kilitle
+                  try{{
+                    var doc = window.parent.document;
+                    var cbs = doc.querySelectorAll('[data-testid="stForm"] input[type="checkbox"]');
+                    cbs.forEach(function(cb){{
+                      cb.disabled = true;
+                      cb.style.pointerEvents = 'none';
+                    }});
+                    // Tüm form alanını karart
+                    var forms = doc.querySelectorAll('[data-testid="stForm"]');
+                    forms.forEach(function(f){{
+                      f.style.opacity = '0.5';
+                      f.style.pointerEvents = 'none';
+                    }});
+                  }}catch(e){{}}
+                  // Formu otomatik gönder
+                  setTimeout(function(){{
+                    try{{
+                      var btns = window.parent.document.querySelectorAll(
+                        '[data-testid="stFormSubmitButton"] button'
+                      );
+                      if(btns.length > 0) btns[btns.length-1].click();
+                    }}catch(e){{}}
+                  }}, 1000);
                 }} else {{
                   el.innerHTML = '⏱️ ' + left;
                   if(left <= 3){{ el.style.color='#E74C3C'; el.style.fontSize='2.6rem'; }}
