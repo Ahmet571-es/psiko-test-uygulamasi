@@ -430,6 +430,53 @@ st.markdown("""
         padding-bottom: 6px;
         border-bottom: 1px solid var(--border);
     }
+
+    /* ===== DARK MODE KORUMA — Tüm native Streamlit elemanları ===== */
+    .stApp, .stApp * {
+        color-scheme: light !important;
+    }
+    .stApp [data-testid="stMarkdownContainer"],
+    .stApp [data-testid="stMarkdownContainer"] p,
+    .stApp [data-testid="stMarkdownContainer"] li,
+    .stApp [data-testid="stMarkdownContainer"] span,
+    .stApp label,
+    .stApp .stRadio label,
+    .stApp .stCheckbox label,
+    .stApp .stSelectbox label,
+    .stApp .stTextInput label,
+    .stApp .stNumberInput label,
+    .stApp .stTextArea label,
+    .stApp [data-testid="stWidgetLabel"],
+    .stApp [data-testid="stWidgetLabel"] p {
+        color: #0F172A !important;
+    }
+    .stApp [data-testid="stForm"] {
+        background: #FFFFFF !important;
+        border-color: #E2E8F0 !important;
+    }
+    .stApp .stSelectbox [data-baseweb="select"] span,
+    .stApp .stTextInput input,
+    .stApp .stNumberInput input,
+    .stApp .stTextArea textarea {
+        color: #0F172A !important;
+        background-color: #FFFFFF !important;
+    }
+    .stApp .stRadio [role="radiogroup"] label span,
+    .stApp .stCheckbox label span {
+        color: #0F172A !important;
+    }
+    .stApp .stAlert p,
+    .stApp [data-testid="stNotification"] p {
+        color: inherit !important;
+    }
+    /* Sidebar istisna — sidebar dark kalacak */
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: #FFFFFF !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
