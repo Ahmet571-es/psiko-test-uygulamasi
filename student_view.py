@@ -195,9 +195,19 @@ def _render_test_questions():
         opts = [1, 2, 3, 4, 5]
 
         all_answered = True
+        unanswered_nums = []
         for i, q in enumerate(page_qs):
             global_num = curr_page * PER_PAGE + i + 1
-            st.write(f"**{global_num}. {q['text']}**")
+            is_missing = st.session_state.enneagram_answers.get(q["key"]) is None
+            # Cevaplanmamış soruyu kırmızı çerçeveyle vurgula
+            if is_missing and st.session_state.get("_ennea_show_missing", False):
+                st.markdown(
+                    f'<div style="border-left:4px solid #e74c3c; padding-left:10px;">'
+                    f'<b style="color:#e74c3c;">❌ {global_num}. {q["text"]}</b></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.write(f"**{global_num}. {q['text']}**")
             prev = st.session_state.enneagram_answers.get(q["key"])
             val  = st.radio(
                 f"Soru {global_num}",
@@ -212,11 +222,18 @@ def _render_test_questions():
                 st.session_state.enneagram_answers[q["key"]] = val
             else:
                 all_answered = False
+                unanswered_nums.append(global_num)
             st.divider()
+
+        # Üstte de uyarı göster (scroll sorunu olmasın)
+        if st.session_state.get("_ennea_show_missing", False) and unanswered_nums:
+            nums_str = ", ".join(str(n) for n in unanswered_nums)
+            st.error(f"⚠️ Cevaplanmamış sorular: **{nums_str}**  —  Lütfen yukarı kaydırarak eksikleri tamamla.")
 
         c1, c2 = st.columns(2)
         if curr_page > 0:
             if c1.button("⬅️ Önceki Bölüm"):
+                st.session_state._ennea_show_missing = False
                 st.session_state.enneagram_page -= 1
                 st.session_state._scroll_top = True
                 st.rerun()
@@ -225,8 +242,12 @@ def _render_test_questions():
         if not is_last:
             if c2.button("Sonraki Bölüm ➡️"):
                 if not all_answered:
-                    st.error("⚠️ Lütfen bu bölümdeki tüm soruları cevapla.")
+                    st.session_state._ennea_show_missing = True
+                    nums_str = ", ".join(str(n) for n in unanswered_nums)
+                    st.error(f"⚠️ Cevaplanmamış sorular: **{nums_str}**  —  Yukarı kaydırarak eksikleri tamamla.")
+                    st.rerun()
                 else:
+                    st.session_state._ennea_show_missing = False
                     st.session_state.enneagram_page += 1
                     st.session_state._scroll_top = True
                     st.rerun()
