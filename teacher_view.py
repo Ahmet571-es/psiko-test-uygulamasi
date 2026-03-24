@@ -2,6 +2,7 @@ import streamlit as st
 # PERFORMANS: pandas, matplotlib, seaborn, openpyxl, pdf_engine
 # sadece kullanıldıkları fonksiyonların içinde import edilir.
 # Bu sayede öğretmen paneli açılırken 5-10 sn tasarruf sağlanır.
+import html
 import json
 import time
 import os
@@ -11,7 +12,8 @@ from dotenv import load_dotenv
 from db_utils import (
     get_all_students_with_results, reset_database,
     delete_specific_students, save_holistic_analysis,
-    get_student_analysis_history, is_using_sqlite
+    get_student_analysis_history, is_using_sqlite,
+    save_family_summary, get_family_summary_history
 )
 
 # --- API AYARLARI ---
@@ -1947,6 +1949,142 @@ Minimum 5-6 paragraf, akıcı ve profesyonel anlatım.)*
 *Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı, güçlendirici. Öğrenciyi asla yargılama — potansiyelini ortaya çıkarmaya odaklan.*"""
 
 # ============================================================
+# AİLE BİLGİLENDİRME ÖZETİ UI FONKSİYONU
+# ============================================================
+
+def _render_family_summary_ui(idx, record, info, archived_test_names):
+    """Arşivdeki bir AI raporunun expander'ı içinde aile özeti UI'ını render eder."""
+    from aile_bilgilendirme import get_available_topics, build_family_summary_prompt
+    from aile_rapor_pdf import (
+        generate_family_summary_pdf, generate_family_summary_docx,
+        generate_family_pdf_filename, generate_family_docx_filename
+    )
+
+    st.markdown("---")
+    st.markdown("#### 👨‍👩‍👧 Aile Bilgilendirme Özeti")
+
+    # Konu başlıkları — teste göre dinamik aktiflik
+    available_topics = get_available_topics(archived_test_names)
+    active_topics = [t for t, active in available_topics if active]
+    inactive_topics = [t for t, active in available_topics if not active]
+
+    selected_topics = st.multiselect(
+        "Konu Başlıkları Seçin:",
+        options=active_topics,
+        default=active_topics[:3] if len(active_topics) >= 3 else active_topics,
+        key=f"fam_topics_{idx}"
+    )
+
+    if inactive_topics:
+        st.caption(f"⚠️ Yapılan testlere göre devre dışı başlıklar: {', '.join(inactive_topics)}")
+
+    teacher_note = st.text_area(
+        "Eklemek istediğiniz özel not veya konu başlığı...",
+        value="",
+        key=f"fam_note_{idx}",
+        height=80
+    )
+
+    # Özet oluştur butonu
+    if st.button("📝 Aile Özeti Oluştur", key=f"fam_generate_{idx}", type="primary"):
+        if not selected_topics:
+            st.warning("Lütfen en az bir konu başlığı seçin.")
+        else:
+            with st.spinner("👨‍👩‍👧 Aile bilgilendirme özeti hazırlanıyor..."):
+                prompt = build_family_summary_prompt(
+                    student_name=info.name,
+                    student_age=info.age,
+                    student_gender=info.gender,
+                    selected_topics=selected_topics,
+                    teacher_note=teacher_note,
+                    analysis_report=record['report'],
+                    test_names=archived_test_names,
+                    student_grade=getattr(info, 'grade', None)
+                )
+                summary = get_ai_analysis(prompt)
+
+                if summary.startswith("⚠️"):
+                    st.error(summary)
+                    if st.button("🔄 Yeniden Dene", key=f"fam_retry_{idx}"):
+                        st.rerun()
+                else:
+                    st.session_state[f"fam_summary_{idx}"] = summary
+                    # DB'ye kaydet
+                    test_types_str = " + ".join(archived_test_names)
+                    save_family_summary(
+                        student_id=info.id,
+                        selected_topics=selected_topics,
+                        teacher_note=teacher_note,
+                        summary_text=summary,
+                        source_analysis_id=record.get('id'),
+                        test_types=test_types_str
+                    )
+
+    # Oluşturulmuş özeti göster
+    summary_text = st.session_state.get(f"fam_summary_{idx}", "")
+    if summary_text:
+        st.markdown("---")
+        st.markdown("#### 📋 Oluşturulan Aile Özeti")
+
+        edited_summary = st.text_area(
+            "Özeti düzenleyebilirsiniz:",
+            value=summary_text,
+            height=400,
+            key=f"fam_edit_{idx}"
+        )
+
+        # İndirme butonları
+        btn_c1, btn_c2, btn_c3, btn_c4 = st.columns(4)
+
+        test_types_str = " + ".join(archived_test_names)
+        teacher_name = "Öğretmen"
+
+        with btn_c1:
+            pdf_buf = generate_family_summary_pdf(
+                student_name=info.name,
+                student_age=info.age,
+                student_gender=info.gender,
+                teacher_name=teacher_name,
+                summary_text=edited_summary,
+                test_types=test_types_str,
+                student_grade=getattr(info, 'grade', None)
+            )
+            st.download_button(
+                label="📄 PDF İndir",
+                data=pdf_buf,
+                file_name=generate_family_pdf_filename(info.name),
+                mime="application/pdf",
+                key=f"fam_pdf_{idx}"
+            )
+
+        with btn_c2:
+            docx_buf = generate_family_summary_docx(
+                student_name=info.name,
+                student_age=info.age,
+                student_gender=info.gender,
+                teacher_name=teacher_name,
+                summary_text=edited_summary,
+                test_types=test_types_str,
+                student_grade=getattr(info, 'grade', None)
+            )
+            st.download_button(
+                label="📝 DOCX İndir",
+                data=docx_buf,
+                file_name=generate_family_docx_filename(info.name),
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key=f"fam_docx_{idx}"
+            )
+
+        with btn_c3:
+            st.code(edited_summary, language=None)
+
+        with btn_c4:
+            if st.button("🔄 Yeniden Oluştur", key=f"fam_regen_{idx}"):
+                st.session_state.pop(f"fam_summary_{idx}", None)
+                st.rerun()
+
+
+# ============================================================
 # ANA ÖĞRETMEN UYGULAMASI
 # ============================================================
 def app():
@@ -2199,14 +2337,17 @@ def app():
         return
 
     # Seçilen öğrenci verilerini bul
-    student_data = next(d for d in data if d["info"].name == selected_name)
+    student_data = next((d for d in data if d["info"].name == selected_name), None)
+    if not student_data:
+        st.error("Seçilen öğrenci verisi bulunamadı. Sayfa yenilenmiş olabilir.")
+        return
     info = student_data["info"]
     tests = student_data["tests"]
 
     # 2. ÖĞRENCİ KLASÖRÜ
     st.markdown(f"""
         <div class="id-card">
-            <div class="id-card-name">📁 {info.name} — Öğrenci Klasörü</div>
+            <div class="id-card-name">📁 {html.escape(info.name)} — Öğrenci Klasörü</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -2329,7 +2470,7 @@ def app():
             for idx, record in enumerate(history):
                 btn_label = f"🤖 AI Raporu {idx+1}: {record['combination']} ({record['date']})"
                 with st.expander(btn_label):
-                    st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {record['combination']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {html.escape(record['combination'])}</div>", unsafe_allow_html=True)
 
                     archived_test_names = record['combination'].split(' + ')
                     archived_test_data = [t for t in tests if t["test_name"] in archived_test_names]
@@ -2345,13 +2486,32 @@ def app():
                         st.markdown("---")
 
                     st.markdown(record['report'])
-                    st.download_button(
-                        label=f"📥 Raporu İndir ({idx+1})",
-                        data=record['report'],
-                        file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
-                        mime="text/plain",
-                        key=f"dl_{idx}"
-                    )
+                    dl_col, fam_col = st.columns(2)
+                    with dl_col:
+                        st.download_button(
+                            label=f"📥 Raporu İndir ({idx+1})",
+                            data=record['report'],
+                            file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
+                            mime="text/plain",
+                            key=f"dl_{idx}"
+                        )
+                    with fam_col:
+                        fam_key = f"fam_toggle_{idx}"
+                        if st.button(
+                            "👨‍👩‍👧 Aile Bilgilendirme Özeti Oluştur",
+                            key=fam_key,
+                            type="secondary"
+                        ):
+                            st.session_state[f"fam_open_{idx}"] = True
+
+                    # --- AİLE BİLGİLENDİRME BÖLÜMÜ ---
+                    if st.session_state.get(f"fam_open_{idx}", False):
+                        _render_family_summary_ui(
+                            idx=idx,
+                            record=record,
+                            info=info,
+                            archived_test_names=archived_test_names
+                        )
 
         st.divider()
 
