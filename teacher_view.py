@@ -66,7 +66,9 @@ def get_ai_analysis(prompt):
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response.content[0].text
+        if response.content and len(response.content) > 0:
+            return response.content[0].text
+        return "⚠️ API yanıt verdi ama içerik boş. Lütfen tekrar deneyin."
 
     except Exception as e:
         err = str(e)
@@ -1997,7 +1999,7 @@ def _render_family_summary_ui(idx, record, info, archived_test_names):
                     student_gender=info.gender,
                     selected_topics=selected_topics,
                     teacher_note=teacher_note,
-                    analysis_report=record['report'],
+                    analysis_report=record.get('report', ''),
                     test_names=archived_test_names,
                     student_grade=getattr(info, 'grade', None)
                 )
@@ -2389,8 +2391,9 @@ def app():
             )
         with col_dl4:
             student_excel = generate_student_excel(student_data, student_history)
+            import re as _re
             timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-            safe_name = info.name.replace(" ", "_")
+            safe_name = _re.sub(r'[\\/:*?"<>|]', '_', info.name).replace(" ", "_")
             st.download_button(
                 label="📥 Excel Dosya İndir",
                 data=student_excel,
@@ -2406,18 +2409,21 @@ def app():
         st.markdown("#### 👤 Öğrenci Profili")
 
         grade_val = getattr(info, 'grade', None)
-        grade_text = f"{grade_val}. Sınıf" if grade_val else "Belirtilmemiş"
+        grade_text = f"{grade_val}. Sınıf" if grade_val is not None else "Belirtilmemiş"
 
         col_left, col_right = st.columns(2)
         with col_left:
+            _n = html.escape(str(info.name))
+            _g = html.escape(str(info.gender))
+            _u = html.escape(str(info.username))
             st.markdown(f"""
             | | |
             |---|---|
-            | **👤 Ad Soyad** | {info.name} |
+            | **👤 Ad Soyad** | {_n} |
             | **🎂 Yaş** | {info.age} |
-            | **⚧ Cinsiyet** | {info.gender} |
+            | **⚧ Cinsiyet** | {_g} |
             | **🎓 Sınıf** | {grade_text} |
-            | **📧 E-posta** | {info.username} |
+            | **📧 E-posta** | {_u} |
             """)
 
         with col_right:
@@ -2468,11 +2474,13 @@ def app():
             st.markdown(f"**{len(history)} adet** kayıtlı rapor bulundu.")
 
             for idx, record in enumerate(history):
-                btn_label = f"🤖 AI Raporu {idx+1}: {record['combination']} ({record['date']})"
+                combination = record.get('combination', 'Bilinmiyor')
+                date_str = record.get('date', 'Tarih yok')
+                btn_label = f"🤖 AI Raporu {idx+1}: {combination} ({date_str})"
                 with st.expander(btn_label):
-                    st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {html.escape(record['combination'])}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='report-header'>ANALİZ KAPSAMI: {html.escape(combination)}</div>", unsafe_allow_html=True)
 
-                    archived_test_names = record['combination'].split(' + ')
+                    archived_test_names = combination.split(' + ') if combination else []
                     archived_test_data = [t for t in tests if t["test_name"] in archived_test_names]
 
                     if archived_test_data:
@@ -2485,29 +2493,30 @@ def app():
                                     g_cols[i % 2].pyplot(fig)
                         st.markdown("---")
 
-                    st.markdown(record['report'])
+                    st.markdown(record.get('report', ''))
+                    rec_id = record.get('id', idx)
                     dl_col, fam_col = st.columns(2)
                     with dl_col:
+                        report_text = record.get('report', '') or ''
                         st.download_button(
                             label=f"📥 Raporu İndir ({idx+1})",
-                            data=record['report'],
+                            data=report_text.encode('utf-8'),
                             file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
                             mime="text/plain",
-                            key=f"dl_{idx}"
+                            key=f"dl_{rec_id}"
                         )
                     with fam_col:
-                        fam_key = f"fam_toggle_{idx}"
                         if st.button(
                             "👨‍👩‍👧 Aile Bilgilendirme Özeti Oluştur",
-                            key=fam_key,
+                            key=f"fam_toggle_{rec_id}",
                             type="secondary"
                         ):
-                            st.session_state[f"fam_open_{idx}"] = True
+                            st.session_state[f"fam_open_{rec_id}"] = True
 
                     # --- AİLE BİLGİLENDİRME BÖLÜMÜ ---
-                    if st.session_state.get(f"fam_open_{idx}", False):
+                    if st.session_state.get(f"fam_open_{rec_id}", False):
                         _render_family_summary_ui(
-                            idx=idx,
+                            idx=rec_id,
                             record=record,
                             info=info,
                             archived_test_names=archived_test_names
@@ -2590,11 +2599,13 @@ def app():
                             )
 
                             final_report = get_ai_analysis(prompt)
-                            save_holistic_analysis(info.id, selected_tests, final_report)
-
-                            st.success("✅ Bütüncül analiz tamamlandı ve arşive kaydedildi.")
-                            time.sleep(1.5)
-                            st.rerun()
+                            if final_report.startswith("⚠️"):
+                                st.error(final_report)
+                            else:
+                                save_holistic_analysis(info.id, selected_tests, final_report)
+                                st.success("✅ Bütüncül analiz tamamlandı ve arşive kaydedildi.")
+                                time.sleep(1.5)
+                                st.rerun()
 
                     # ====================================================
                     # MOD 2: AYRI AYRI TEKİL ANALİZLER
@@ -2634,7 +2645,10 @@ def app():
                             )
 
                             single_report = get_ai_analysis(prompt)
-                            save_holistic_analysis(info.id, [test_name], single_report)
+                            if single_report.startswith("⚠️"):
+                                st.warning(f"{test_name}: {single_report}")
+                            else:
+                                save_holistic_analysis(info.id, [test_name], single_report)
 
                         my_bar.empty()
                         st.success(f"✅ {total_ops} test başarıyla analiz edildi ve Arşiv'e eklendi.")

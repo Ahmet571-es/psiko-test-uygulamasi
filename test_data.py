@@ -1034,7 +1034,7 @@ def _detect_zeka_profile(sorted_scores):
             "name": f"🎯 Tek Baskın: {top_name}",
             "description": f"Bir zekâ alanın ('{top_name}') diğerlerinden belirgin şekilde öne çıkıyor. Bu alanda uzmanlaşma potansiyelin yüksek!",
         }
-    elif top_pct - sorted_scores[2][1]["pct"] <= 10 if len(sorted_scores) > 2 else False:
+    elif (top_pct - sorted_scores[2][1]["pct"] <= 10) if len(sorted_scores) > 2 else False:
         names = [COKLU_ZEKA_DATA[s[0]]["name"] for s in sorted_scores[:3]]
         return {
             "type": "coklu_baskin",
@@ -1230,8 +1230,8 @@ def calculate_vark(answers):
     total = sum(vark_counts.values())
     percentages   = {k: round(v/total*100, 1) if total else 0 for k, v in vark_counts.items()}
     sorted_styles = sorted(vark_counts.items(), key=lambda x: x[1], reverse=True)
-    dominant      = sorted_styles[0]
-    second        = sorted_styles[1]
+    dominant      = sorted_styles[0] if sorted_styles else ("V", 0)
+    second        = sorted_styles[1] if len(sorted_styles) > 1 else ("A", 0)
 
     # DÜZELTME: Fleming standardı — fark <= 2 ise multimodal
     is_multimodal = (dominant[1] - second[1]) <= 2 and dominant[1] > 0

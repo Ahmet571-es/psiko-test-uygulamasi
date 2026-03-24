@@ -83,7 +83,8 @@ def _test_name_matches(test_name, required_list):
             return True
         # Anahtar kelime eslesmesi
         req_words = req_lower.split()
-        if all(w in test_lower for w in req_words if len(w) > 3):
+        long_words = [w for w in req_words if len(w) > 3]
+        if long_words and all(w in test_lower for w in long_words):
             return True
     return False
 

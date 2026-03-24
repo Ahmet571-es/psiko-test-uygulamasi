@@ -305,7 +305,7 @@ def generate_student_docx(student_data, analysis_history, include_charts=True):
     doc.add_paragraph()
 
     grade_val = getattr(info, 'grade', None)
-    grade_text = f"{grade_val}. Sınıf" if grade_val else "Belirtilmemiş"
+    grade_text = f"{grade_val}. Sınıf" if grade_val is not None else "Belirtilmemiş"
 
     profile_rows = [
         ("Ad Soyad", str(info.name)),
@@ -442,7 +442,8 @@ def generate_student_docx(student_data, analysis_history, include_charts=True):
         p = doc.add_paragraph(
             "Bu öğrenci için henüz AI destekli analiz raporu oluşturulmamıştır."
         )
-        p.runs[0].font.color.rgb = CLR_GRAY
+        if p.runs:
+            p.runs[0].font.color.rgb = CLR_GRAY
     else:
         p = doc.add_paragraph()
         run = p.add_run(f"Toplam {len(analysis_history)} adet AI analiz raporu bulunmaktadır.")
@@ -533,6 +534,6 @@ def _add_footer(doc):
 
 def generate_student_docx_filename(student_name):
     """DOCX dosya adı üretir."""
-    safe_name = student_name.replace(" ", "_")
+    safe_name = re.sub(r'[\\/:*?"<>|]', '_', student_name).replace(" ", "_")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     return f"{safe_name}_Rapor_{timestamp}.docx"

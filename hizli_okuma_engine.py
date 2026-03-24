@@ -404,6 +404,7 @@ def calculate_speed_reading(answers, passage_data, reading_time_seconds, kademe)
     word_count = count_words(passage_data["text"])
     if reading_time_seconds <= 0:
         wpm = 0
+        reading_time_minutes = 0.0
     else:
         reading_time_minutes = reading_time_seconds / 60.0
         wpm = round(word_count / reading_time_minutes)

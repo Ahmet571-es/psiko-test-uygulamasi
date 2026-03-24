@@ -605,7 +605,7 @@ def generate_student_pdf(student_data, analysis_history, include_charts=True):
     story.append(Spacer(1, 8))
 
     grade_val = getattr(info, 'grade', None)
-    grade_text = f"{grade_val}. S\u0131n\u0131f" if grade_val else "Belirtilmemi\u015f"
+    grade_text = f"{grade_val}. S\u0131n\u0131f" if grade_val is not None else "Belirtilmemi\u015f"
 
     profile_rows = [
         ["Ad Soyad", str(info.name)],
@@ -812,6 +812,6 @@ def generate_student_pdf(student_data, analysis_history, include_charts=True):
 
 
 def generate_student_pdf_filename(student_name):
-    safe_name = student_name.replace(" ", "_")
+    safe_name = re.sub(r'[\\/:*?"<>|]', '_', student_name).replace(" ", "_")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     return f"{safe_name}_Rapor_{timestamp}.pdf"

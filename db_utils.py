@@ -448,8 +448,8 @@ def save_test_result_to_db(student_id, test_name, raw_answers, scores, report_te
             (
                 student_id,
                 test_name,
-                json.dumps(raw_answers, ensure_ascii=False),
-                json.dumps(scores, ensure_ascii=False),
+                json.dumps(raw_answers or {}, ensure_ascii=False),
+                json.dumps(scores or {}, ensure_ascii=False),
                 report_text,
                 datetime.now()
             )
