@@ -288,6 +288,29 @@ def init_db():
                           ai_report TEXT,
                           date TIMESTAMP)''')
 
+        # --- Aile Özetleri Tablosu ---
+        if engine == "postgresql":
+            c.execute('''CREATE TABLE IF NOT EXISTS aile_ozetleri (
+                id SERIAL PRIMARY KEY,
+                student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+                ogretmen_notu TEXT,
+                secilen_basliklar TEXT,
+                kaynak_analiz_id INTEGER,
+                test_tipleri TEXT,
+                ozet_metni TEXT NOT NULL,
+                olusturma_tarihi TIMESTAMP DEFAULT NOW()
+            )''')
+        else:
+            c.execute('''CREATE TABLE IF NOT EXISTS aile_ozetleri
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          student_id INTEGER,
+                          ogretmen_notu TEXT,
+                          secilen_basliklar TEXT,
+                          kaynak_analiz_id INTEGER,
+                          test_tipleri TEXT,
+                          ozet_metni TEXT NOT NULL,
+                          olusturma_tarihi TIMESTAMP)''')
+
         conn.commit()
         _db_initialized = True
     except Exception as e:
@@ -543,7 +566,7 @@ def get_student_analysis_history(student_id):
 
     try:
         c.execute(
-            f"SELECT combination, ai_report, date FROM analysis_history WHERE student_id={ph} ORDER BY date DESC",
+            f"SELECT id, combination, ai_report, date FROM analysis_history WHERE student_id={ph} ORDER BY date DESC",
             (student_id,)
         )
         rows = c.fetchall()
@@ -551,9 +574,10 @@ def get_student_analysis_history(student_id):
         history = []
         for r in rows:
             history.append({
-                "combination": r[0],
-                "report": r[1],
-                "date": str(r[2]) if r[2] else ""
+                "id": r[0],
+                "combination": r[1],
+                "report": r[2],
+                "date": str(r[3]) if r[3] else ""
             })
         return history
 
@@ -597,6 +621,7 @@ def delete_specific_students(names_list):
             c.execute(f"SELECT id FROM students WHERE name={ph}", (name,))
             sid = c.fetchone()
             if sid:
+                c.execute(f"DELETE FROM aile_ozetleri WHERE student_id={ph}", (sid[0],))
                 c.execute(f"DELETE FROM analysis_history WHERE student_id={ph}", (sid[0],))
                 c.execute(f"DELETE FROM results WHERE student_id={ph}", (sid[0],))
                 c.execute(f"DELETE FROM students WHERE id={ph}", (sid[0],))
@@ -624,6 +649,7 @@ def reset_database():
 
     try:
         if engine == "postgresql":
+            c.execute("DROP TABLE IF EXISTS aile_ozetleri CASCADE")
             c.execute("DROP TABLE IF EXISTS analysis_history CASCADE")
             c.execute("DROP TABLE IF EXISTS results CASCADE")
             c.execute("DROP TABLE IF EXISTS students CASCADE")
@@ -667,3 +693,68 @@ def repair_database():
         return True
     except Exception:
         return False
+
+
+# ============================================================
+# AİLE ÖZETİ İŞLEMLERİ
+# ============================================================
+
+def save_family_summary(student_id, selected_topics, teacher_note,
+                        summary_text, source_analysis_id, test_types):
+    """Aile bilgilendirme özetini veritabanına kaydeder."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+
+    try:
+        topics_json = json.dumps(selected_topics, ensure_ascii=False)
+        c.execute(
+            f"""INSERT INTO aile_ozetleri
+                (student_id, ogretmen_notu, secilen_basliklar,
+                 kaynak_analiz_id, test_tipleri, ozet_metni, olusturma_tarihi)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})""",
+            (student_id, teacher_note, topics_json,
+             source_analysis_id, test_types, summary_text, datetime.now())
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Aile özeti kayıt hatası: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_family_summary_history(student_id):
+    """Öğrencinin kayıtlı aile bilgilendirme özetlerini döndürür."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+
+    try:
+        c.execute(
+            f"""SELECT id, secilen_basliklar, test_tipleri, ozet_metni,
+                       olusturma_tarihi, ogretmen_notu
+                FROM aile_ozetleri
+                WHERE student_id={ph}
+                ORDER BY olusturma_tarihi DESC""",
+            (student_id,)
+        )
+        rows = c.fetchall()
+
+        history = []
+        for r in rows:
+            history.append({
+                "id": r[0],
+                "topics": r[1],
+                "test_types": r[2],
+                "summary": r[3],
+                "date": str(r[4]) if r[4] else "",
+                "teacher_note": r[5] or ""
+            })
+        return history
+    except Exception:
+        return []
+    finally:
+        conn.close()

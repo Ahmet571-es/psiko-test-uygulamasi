@@ -1503,7 +1503,9 @@ def calculate_holland(answers):
         if ans is not None:
             type_scores[q["type"]] += ans  # Gelen 0-4 puanını direkt ekle
 
-    sorted_types  = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
+    # Puana gore azalan, esitlikte RIASEC sirasini koruyan stabil siralama
+    riasec_order = {"R": 0, "I": 1, "A": 2, "S": 3, "E": 4, "C": 5}
+    sorted_types  = sorted(type_scores.items(), key=lambda x: (-x[1], riasec_order.get(x[0], 99)))
     top3          = sorted_types[:3]
     holland_code  = "".join(t[0] for t in top3)
 
