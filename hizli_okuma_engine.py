@@ -402,8 +402,11 @@ def calculate_speed_reading(answers, passage_data, reading_time_seconds, kademe)
     """
     # --- Kelime Sayısı & WPM ---
     word_count = count_words(passage_data["text"])
-    reading_time_minutes = reading_time_seconds / 60.0
-    wpm = round(word_count / max(reading_time_minutes, 0.01))
+    if reading_time_seconds <= 0:
+        wpm = 0
+    else:
+        reading_time_minutes = reading_time_seconds / 60.0
+        wpm = round(word_count / reading_time_minutes)
     
     speed_key, speed_label, speed_emoji, speed_comment = classify_wpm(wpm, kademe)
     norms = get_wpm_norms(kademe)
