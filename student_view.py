@@ -468,7 +468,7 @@ def _render_test_questions():
     # TİP: P2 DİKKAT TESTİ
     # ========================================
     elif q_type == "p2_timed":
-        current_row = st.session_state.p2_current_row
+        current_row = st.session_state.get("p2_current_row", -1)
         time_per_row = st.session_state.get("p2_time_per_row", P2_CONFIG["time_per_row"])
         student_age = st.session_state.get("student_age", 15)
 
