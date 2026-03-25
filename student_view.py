@@ -1598,7 +1598,7 @@ def app():
 # ============================================================
 def _finish_p2_test(t_name):
     """P2 testini puanla, rapor üret, hata analizi ekle ve veritabanına kaydet."""
-    row_results = st.session_state.p2_row_results
+    row_results = st.session_state.get("p2_row_results", [])
 
     with st.spinner("📊 P2 sonuçların hesaplanıyor..."):
         scores = calculate_p2(row_results, time_per_row=st.session_state.get("p2_time_per_row"))
@@ -1660,10 +1660,14 @@ def _finish_p2_test(t_name):
 # ============================================================
 def _finish_speed_reading_test(t_name):
     """Hızlı okuma testini puanla, rapor üret ve veritabanına kaydet."""
-    answers = st.session_state.sr_answers
-    passage = st.session_state.sr_passage
-    kademe = st.session_state.sr_kademe
-    reading_time = st.session_state.sr_reading_time
+    answers = st.session_state.get("sr_answers", {})
+    passage = st.session_state.get("sr_passage")
+    kademe = st.session_state.get("sr_kademe")
+    reading_time = st.session_state.get("sr_reading_time")
+
+    if not passage or not kademe or not reading_time:
+        st.error("⚠️ Okuma verisi eksik. Lütfen testi tekrar başlatın.")
+        return
 
     with st.spinner("📊 Hızlı okuma sonuçların hesaplanıyor..."):
         scores = calculate_speed_reading(answers, passage, reading_time, kademe)
@@ -1697,7 +1701,7 @@ def _finish_speed_reading_test(t_name):
 
 def _finish_akademik_test(t_name):
     """Akademik analiz testini puanla, rapor üret ve veritabanına kaydet."""
-    answers = st.session_state.akd_answers
+    answers = st.session_state.get("akd_answers", {})
     akd_grade = st.session_state.get("akd_grade")
     akd_version = st.session_state.get("akd_version")
 

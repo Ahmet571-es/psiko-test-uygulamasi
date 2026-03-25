@@ -64,7 +64,9 @@ def get_ai_analysis(prompt):
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response.content[0].text
+        if response.content:
+            return response.content[0].text
+        return "⚠️ API boş yanıt döndürdü."
 
     except Exception as e:
         err = str(e)
@@ -280,7 +282,7 @@ def generate_student_excel(student_data, analysis_history):
         ("E-posta", info.username),
         ("Yaş", info.age),
         ("Cinsiyet", info.gender),
-        ("Sınıf", f"{info.grade}. Sınıf" if info.grade else "Belirtilmemiş"),
+        ("Sınıf", f"{getattr(info, 'grade', None)}. Sınıf" if getattr(info, 'grade', None) else "Belirtilmemiş"),
         ("Toplam Giriş", info.login_count),
         ("Çözülen Test", len(tests)),
         ("Rapor Tarihi", datetime.now().strftime("%d.%m.%Y %H:%M")),
@@ -2199,7 +2201,10 @@ def app():
         return
 
     # Seçilen öğrenci verilerini bul
-    student_data = next(d for d in data if d["info"].name == selected_name)
+    student_data = next((d for d in data if d["info"].name == selected_name), None)
+    if not student_data:
+        st.error("⚠️ Seçilen öğrenci verisi bulunamadı.")
+        return
     info = student_data["info"]
     tests = student_data["tests"]
 
@@ -2217,46 +2222,55 @@ def app():
     ])
 
     # Öğrenci dosyası indirme butonları (tab'ların üstünde)
+    student_history = get_student_analysis_history(info.id)
     with st.container():
         col_dl1, col_dl2, col_dl3, col_dl4 = st.columns([2, 1, 1, 1])
         with col_dl2:
-            student_history = get_student_analysis_history(info.id)
             # PDF İndirme Butonu
-            from pdf_engine import generate_student_pdf, generate_student_pdf_filename
-            pdf_buffer = generate_student_pdf(student_data, student_history)
-            pdf_filename = generate_student_pdf_filename(info.name)
-            st.download_button(
-                label="📄 PDF Rapor İndir",
-                data=pdf_buffer,
-                file_name=pdf_filename,
-                mime="application/pdf",
-                key="dl_student_pdf",
-                type="primary"
-            )
+            try:
+                from pdf_engine import generate_student_pdf, generate_student_pdf_filename
+                pdf_buffer = generate_student_pdf(student_data, student_history)
+                pdf_filename = generate_student_pdf_filename(info.name)
+                st.download_button(
+                    label="📄 PDF Rapor İndir",
+                    data=pdf_buffer,
+                    file_name=pdf_filename,
+                    mime="application/pdf",
+                    key="dl_student_pdf",
+                    type="primary"
+                )
+            except Exception as e:
+                st.error(f"PDF oluşturma hatası: {e}")
         with col_dl3:
             # Word İndirme Butonu
-            from docx_engine import generate_student_docx, generate_student_docx_filename
-            docx_buffer = generate_student_docx(student_data, student_history)
-            docx_filename = generate_student_docx_filename(info.name)
-            st.download_button(
-                label="📝 Word Rapor İndir",
-                data=docx_buffer,
-                file_name=docx_filename,
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key="dl_student_docx",
-                type="primary"
-            )
+            try:
+                from docx_engine import generate_student_docx, generate_student_docx_filename
+                docx_buffer = generate_student_docx(student_data, student_history)
+                docx_filename = generate_student_docx_filename(info.name)
+                st.download_button(
+                    label="📝 Word Rapor İndir",
+                    data=docx_buffer,
+                    file_name=docx_filename,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key="dl_student_docx",
+                    type="primary"
+                )
+            except Exception as e:
+                st.error(f"Word oluşturma hatası: {e}")
         with col_dl4:
-            student_excel = generate_student_excel(student_data, student_history)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-            safe_name = info.name.replace(" ", "_")
-            st.download_button(
-                label="📥 Excel Dosya İndir",
-                data=student_excel,
-                file_name=f"{safe_name}_Dosya_{timestamp}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="dl_student_export"
-            )
+            try:
+                student_excel = generate_student_excel(student_data, student_history)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                safe_name = info.name.replace(" ", "_")
+                st.download_button(
+                    label="📥 Excel Dosya İndir",
+                    data=student_excel,
+                    file_name=f"{safe_name}_Dosya_{timestamp}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_student_export"
+                )
+            except Exception as e:
+                st.error(f"Excel oluşturma hatası: {e}")
 
     # ============================================================
     # TAB 1: KİŞİSEL BİLGİLER
@@ -2310,7 +2324,7 @@ def app():
                         st.markdown(t['report'])
                     else:
                         st.warning("Bu test için otomatik rapor bulunamadı.")
-                        st.write("Ham Cevaplar:", t['raw_answers'])
+                        st.write("Ham Cevaplar:", t.get('raw_answers', 'N/A'))
 
     # ============================================================
     # TAB 3: KAYITLI AI RAPOR ARŞİVİ
@@ -2344,10 +2358,11 @@ def app():
                                     g_cols[i % 2].pyplot(fig)
                         st.markdown("---")
 
-                    st.markdown(record['report'])
+                    report_text = record.get('report', '') or ''
+                    st.markdown(report_text)
                     st.download_button(
                         label=f"📥 Raporu İndir ({idx+1})",
-                        data=record['report'],
+                        data=report_text,
                         file_name=f"{info.name}_AI_Rapor_{idx+1}.txt",
                         mime="text/plain",
                         key=f"dl_{idx}"
