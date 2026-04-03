@@ -495,6 +495,12 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Ai
 
 7. **UZUNLUK ve DERİNLİK:** Bu rapor minimum 3000 kelime olmalıdır. Her bölüm, ödenen ücrete değecek derinlikte olmalı. Yüzeysel veya şablonik ifadelerden kaçın. Her öğrenci için rapor benzersiz ve kişiselleştirilmiş olmalı.
 
+8. **BİLİMSEL TEMEL ZORUNLULUĞU:** Tüm yorumlar ve tespitler, eğitim psikolojisi ve psikometri alanlarındaki bilimsel araştırmalara dayalı olmalıdır. Her önemli tespit için mümkünse teorik arka planı (ör. Gardner'ın Çoklu Zekâ Kuramı, Holland'ın Mesleki Kişilik Tipleri, Yerkes-Dodson Yasası) kısaca belirt. Ancak her bilimsel terim veya kavram kullanıldığında, hemen ardından parantez içinde lise öğrencisinin bile anlayabileceği yalın bir Türkçe açıklama ekle. Örnek: "Yerkes-Dodson Yasası'na göre (yani belirli bir noktaya kadar kaygı performansı artırır ama bu nokta aşılırsa performans düşmeye başlar)..." veya "Metakognitif farkındalık (kendi düşünme sürecini izleyebilme ve yönetebilme becerisi) düzeyi..."
+
+9. **DENGELİ ve GERÇEKÇİ MOTİVASYON TONU:** Abartılı motivasyon ifadelerinden, aşırı iyimser veya pohpohlayıcı bir dilden kesinlikle kaçın. "Muhteşem", "olağanüstü", "inanılmaz potansiyel", "her şeyi başarabilir" gibi abartılı ifadeler YASAK. Bunun yerine gerçekçi, dengeli ve yapıcı bir ton kullan. Güçlü yönleri belirtirken somut veriye dayan, gelişim alanlarını görmezden gelme. Normal ve samimi bir motivasyon dili kullan: "Bu alanda güçlü bir profil ortaya koyuyor" gibi veriye dayalı, ölçülü ifadeler tercih et. Rapor, bir danışmanın sakin ve profesyonel üslubuyla yazılmalı — ne karamsar ne de abartılı iyimser.
+
+10. **YALIN TÜRKÇE ZORUNLULUĞU:** Raporun tamamı, okuryazar bir lise öğrencisinin rahatlıkla anlayabileceği düzeyde yazılmalıdır. Akademik jargon ve teknik terimler kullanıldığında mutlaka parantez içinde kısa, günlük dile yakın bir açıklama ekle. Uzun ve karmaşık cümlelerden kaçın, kısa ve net cümleler kur. Yabancı kökenli sözcükler yerine mümkünse Türkçe karşılıklarını tercih et.
+
 ---
 
 # TESTE ÖZEL ÇAPRAZ ANALİZ REHBERİ
@@ -762,7 +768,7 @@ Verideki test kombinasyonlarına göre aşağıdaki çapraz analizleri MUTLAKA y
 
 *Bu rapor, EĞİTİM CHECK UP psikometrik değerlendirme sistemi tarafından, yapay zeka destekli derinlikli analiz altyapısıyla üretilmiştir. Raporda yer alan tüm yorumlar, öğrencinin psikometrik test verilerine dayanmaktadır. Bu rapor klinik tanı içermez ve klinik değerlendirme yerine geçmez.*
 
-*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı, güçlendirici. Rapor boyunca öğrenciyi asla yargılama — potansiyelini ortaya çıkarmaya odaklan.*"""
+*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı, dengeli ve gerçekçi. Rapor boyunca öğrenciyi asla yargılama — potansiyelini veriye dayalı olarak ortaya koy. Abartılı övgü veya aşırı iyimser ifadelerden kaçın; samimi ve bilimsel temelli bir dil kullan. Bilimsel terimler kullandığında parantez içinde yalın Türkçe açıklamasını ekle.*"""
 
 
 def _get_test_specific_guidance(test_name):
@@ -1789,6 +1795,12 @@ Bu rapor, ücretli bir profesyonel danışmanlık hizmetinin çıktısıdır. Te
 
 6. **UZUNLUK:** Bu rapor minimum 2500 kelime olmalıdır. Her bölüm ödenen ücrete değecek derinlikte olmalı.
 
+7. **BİLİMSEL TEMEL ZORUNLULUĞU:** Tüm yorumlar bilimsel araştırmalara dayalı olmalıdır. Bilimsel terim veya kavram kullandığında hemen ardından parantez içinde lise öğrencisinin bile anlayabileceği yalın bir Türkçe açıklama ekle. Örnek: "Metakognitif farkındalık (kendi düşünme sürecini izleyebilme ve yönetebilme becerisi)..." veya "Yerkes-Dodson Yasası'na göre (belirli bir noktaya kadar kaygı performansı artırır ama aşılırsa performans düşer)..."
+
+8. **DENGELİ ve GERÇEKÇİ MOTİVASYON TONU:** Abartılı motivasyon ifadelerinden kaçın. "Muhteşem", "olağanüstü", "inanılmaz potansiyel", "her şeyi başarabilir" gibi abartılı ifadeler YASAK. Gerçekçi, dengeli ve yapıcı bir ton kullan. Güçlü yönleri veriye dayalı belirt, gelişim alanlarını görmezden gelme. "Bu alanda güçlü bir profil ortaya koyuyor" gibi ölçülü ifadeler tercih et. Sakin, profesyonel bir danışman üslubu — ne karamsar ne de abartılı iyimser.
+
+9. **YALIN TÜRKÇE ZORUNLULUĞU:** Rapor, okuryazar bir lise öğrencisinin rahatlıkla anlayabileceği düzeyde yazılmalı. Teknik terimler kullanıldığında mutlaka parantez içinde kısa, günlük dile yakın açıklama ekle. Kısa ve net cümleler kur. Yabancı kökenli sözcükler yerine mümkünse Türkçe karşılıklarını tercih et.
+
 ---
 {test_guidance}
 ---
@@ -1944,7 +1956,7 @@ Minimum 5-6 paragraf, akıcı ve profesyonel anlatım.)*
 
 *Bu rapor, EĞİTİM CHECK UP psikometrik değerlendirme sistemi tarafından, yapay zeka destekli derinlikli analiz altyapısıyla üretilmiştir. Raporda yer alan tüm yorumlar, öğrencinin test verilerine dayanmaktadır. Bu rapor klinik tanı içermez.*
 
-*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı, güçlendirici. Öğrenciyi asla yargılama — potansiyelini ortaya çıkarmaya odaklan.*"""
+*Dil: Türkçe. Üslup: Profesyonel, sıcak, yapıcı, dengeli ve gerçekçi. Öğrenciyi asla yargılama — potansiyelini veriye dayalı olarak ortaya koy. Abartılı övgü veya aşırı iyimser ifadelerden kaçın; samimi, bilimsel temelli bir dil kullan. Bilimsel terimler kullandığında parantez içinde yalın Türkçe açıklamasını ekle.*"""
 
 # ============================================================
 # ANA ÖĞRETMEN UYGULAMASI
@@ -2356,6 +2368,139 @@ def app():
         st.divider()
 
         # ============================================================
+        # 4.5 VELİ ÖZETİ OLUŞTURMA
+        # ============================================================
+        st.subheader("👨‍👩‍👦 Veli Özeti Oluştur")
+        st.caption("Kayıtlı AI raporlarından seçtiğiniz başlıkları veliye sunmak üzere kısa ve anlaşılır bir özet haline getirin.")
+
+        if not history:
+            st.info("Veli özeti oluşturabilmek için önce en az bir AI analiz raporu oluşturmanız gerekir.")
+        else:
+            # Rapor seçimi
+            report_options = [f"Rapor {idx+1}: {rec['combination']} ({rec['date']})" for idx, rec in enumerate(history)]
+            selected_report_label = st.selectbox(
+                "📄 Hangi rapordan özet oluşturmak istiyorsunuz?",
+                options=report_options,
+                key="veli_ozet_rapor_sec"
+            )
+
+            if selected_report_label:
+                selected_report_idx = report_options.index(selected_report_label)
+                selected_report_content = history[selected_report_idx]['report']
+
+                # Rapordaki başlıkları otomatik çıkar
+                import re
+                headings = re.findall(r'^#{1,3}\s+(.+)$', selected_report_content, re.MULTILINE)
+                if not headings:
+                    headings = re.findall(r'^\*\*(.+?)\*\*', selected_report_content, re.MULTILINE)
+
+                if headings:
+                    st.write("📌 **Veliye sunmak istediğiniz başlıkları seçiniz:**")
+                    selected_headings = st.multiselect(
+                        "Başlık Listesi:",
+                        options=headings,
+                        default=None,
+                        key="veli_ozet_basliklar",
+                        help="Birden fazla başlık seçebilirsiniz. Seçtiğiniz başlıklar altındaki içerik, veli için yalın ve kısa bir dilde özetlenecektir."
+                    )
+
+                    if selected_headings:
+                        # Ek notlar
+                        teacher_notes = st.text_area(
+                            "📝 Öğretmen Notu (İsteğe bağlı):",
+                            placeholder="Veliye iletmek istediğiniz ek notlarınız varsa buraya yazın...",
+                            key="veli_ozet_not",
+                            height=80
+                        )
+
+                        if st.button("📋 Veli Özeti Oluştur", type="primary", key="btn_veli_ozet"):
+                            # Seçilen başlıkların altındaki içerikleri çıkar
+                            sections_content = []
+                            for heading in selected_headings:
+                                escaped = re.escape(heading)
+                                pattern = rf'#{{{1,3}}}\s+{escaped}\s*\n(.*?)(?=\n#{{{1,3}}}\s|\Z)'
+                                match = re.search(pattern, selected_report_content, re.DOTALL)
+                                if match:
+                                    sections_content.append(f"### {heading}\n{match.group(1).strip()}")
+                                else:
+                                    # Fallback: başlığı ve sonraki birkaç paragrafı al
+                                    idx_pos = selected_report_content.find(heading)
+                                    if idx_pos >= 0:
+                                        snippet = selected_report_content[idx_pos:idx_pos+2000]
+                                        sections_content.append(f"### {heading}\n{snippet}")
+
+                            combined_sections = "\n\n".join(sections_content)
+                            teacher_note_section = f"\n\nÖğretmenin ek notu: {teacher_notes}" if teacher_notes.strip() else ""
+
+                            veli_prompt = f"""Aşağıda bir öğrencinin psikometrik test analiz raporundan seçilmiş bölümler bulunmaktadır. Bu bölümleri, öğrencinin velisine sunulmak üzere kısa ve anlaşılır bir özet haline getir.
+
+# KRİTİK KURALLAR:
+1. Veli, eğitim psikolojisi terminolojisine hakim değildir. Her ifadeyi günlük konuşma Türkçesiyle yaz.
+2. Bilimsel terimler kullanma. Zorunlu olursa parantez içinde çok kısa ve basit açıklama ekle.
+3. Abartılı övgü veya motivasyon ifadelerinden kaçın. Gerçekçi, samimi ve yapıcı ol.
+4. Her başlık için en fazla 3-4 cümlelik bir özet yaz. Tüm özet toplamda 1 sayfa A4'ü geçmesin.
+5. Özeti "Sayın Veli," diye başlat ve profesyonel ama sıcak bir dille yaz.
+6. Sonunda velinin evde yapabileceği en önemli 3 somut adımı kısa maddeler halinde listele.
+7. Öğrencinin adı: {info.name}
+
+# SEÇİLMİŞ RAPOR BÖLÜMLERİ:
+{combined_sections}
+{teacher_note_section}
+
+Şimdi bu bilgileri veliye uygun kısa bir özete dönüştür."""
+
+                            with st.spinner("Veli özeti hazırlanıyor..."):
+                                veli_summary = get_ai_analysis(veli_prompt)
+
+                            st.success("✅ Veli özeti hazır!")
+                            st.markdown("---")
+                            st.markdown("#### 📋 Veli Özeti")
+                            st.markdown(veli_summary)
+
+                            # İndirme butonları
+                            col_vdl1, col_vdl2 = st.columns(2)
+                            with col_vdl1:
+                                st.download_button(
+                                    label="📥 Veli Özetini İndir (TXT)",
+                                    data=veli_summary,
+                                    file_name=f"{info.name}_Veli_Ozeti.txt",
+                                    mime="text/plain",
+                                    key="dl_veli_ozet_txt"
+                                )
+                            with col_vdl2:
+                                # Word formatında da sunalım
+                                try:
+                                    from docx_engine import generate_student_docx
+                                    # Basit bir Word belgesi oluştur
+                                    from docx import Document
+                                    from io import BytesIO
+                                    doc = Document()
+                                    doc.add_heading(f"{info.name} — Veli Bilgilendirme Özeti", level=1)
+                                    doc.add_paragraph(f"Tarih: {datetime.now().strftime('%d.%m.%Y')}")
+                                    doc.add_paragraph("")
+                                    for para in veli_summary.split('\n'):
+                                        if para.strip():
+                                            clean_para = para.replace('**', '').replace('###', '').replace('##', '').replace('#', '').strip()
+                                            if clean_para:
+                                                doc.add_paragraph(clean_para)
+                                    buf = BytesIO()
+                                    doc.save(buf)
+                                    buf.seek(0)
+                                    st.download_button(
+                                        label="📝 Veli Özetini İndir (Word)",
+                                        data=buf,
+                                        file_name=f"{info.name}_Veli_Ozeti.docx",
+                                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        key="dl_veli_ozet_docx"
+                                    )
+                                except ImportError:
+                                    pass
+                else:
+                    st.warning("Seçilen raporda otomatik olarak başlık bulunamadı. Lütfen farklı bir rapor deneyin.")
+
+        st.divider()
+
+        # ============================================================
         # 5. YENİ AI ANALİZİ OLUŞTURMA
         # ============================================================
         st.subheader("⚡ Yeni AI Analizi Oluştur")
@@ -2385,7 +2530,48 @@ def app():
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
-                if st.button("🚀 ANALİZİ BAŞLAT (Claude AI)", type="primary"):
+                # ── RAPOR TEKRAR OLUŞTURMA KORUMASI ──
+                existing_combinations = [rec['combination'] for rec in history] if history else []
+                
+                if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
+                    check_comb = " + ".join(sorted(selected_tests))
+                    already_exists = any(
+                        set(ec.split(" + ")) == set(selected_tests) for ec in existing_combinations
+                    )
+                else:
+                    already_exists = any(
+                        t_name in existing_combinations for t_name in selected_tests
+                    )
+                    existing_singles = [t_name for t_name in selected_tests if t_name in existing_combinations]
+
+                confirm_key = f"confirm_regen_{info.id}_{analysis_mode}"
+                
+                if already_exists:
+                    if analysis_mode == "BÜTÜNCÜL (Harmanlanmış) Rapor":
+                        st.warning(
+                            "⚠️ **Bu test kombinasyonu için daha önce bir bütüncül rapor oluşturulmuş.**\n\n"
+                            "Tekrar oluşturmak, arşive yeni bir kayıt ekleyecektir. Devam etmek istediğinizden emin misiniz?"
+                        )
+                    else:
+                        st.warning(
+                            f"⚠️ **Şu testler için daha önce tekil rapor oluşturulmuş:** "
+                            f"{', '.join(existing_singles)}\n\n"
+                            "Tekrar oluşturmak, arşive yeni kayıtlar ekleyecektir. Devam etmek istediğinizden emin misiniz?"
+                        )
+                    
+                    col_confirm, col_cancel = st.columns(2)
+                    with col_confirm:
+                        proceed = st.button("✅ Evet, Eminim — Yeniden Oluştur", type="primary", key=confirm_key)
+                    with col_cancel:
+                        cancel = st.button("❌ Hayır, Vazgeç", key=f"cancel_{confirm_key}")
+                    
+                    if cancel:
+                        st.info("İşlem iptal edildi.")
+                        proceed = False
+                else:
+                    proceed = st.button("🚀 ANALİZİ BAŞLAT (Claude AI)", type="primary")
+
+                if proceed:
                     analyzed_data = [t for t in tests if t["test_name"] in selected_tests]
 
                     # Grafikleri göster
