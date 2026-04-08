@@ -1961,6 +1961,167 @@ Minimum 5-6 paragraf, akıcı ve profesyonel anlatım.)*
 # ============================================================
 # ANA ÖĞRETMEN UYGULAMASI
 # ============================================================
+###############################################################################
+# ENTEGRE RAPORLAMA SİSTEMİ — 3'LÜ RAPOR (Öğretmen / Öğrenci / Ebeveyn)
+###############################################################################
+
+# Patronun istediği sıralama
+INTEGRATED_TEST_ORDER = [
+    "Öğrenme Stilleri Testi",      # 1 — Potansiyel Analiz
+    "Beyin Yatkınlıkları Testi",   # 2
+    "Çoklu Zeka Testi",            # 3
+    "Enneagram Kişilik Testi",     # 4
+    "Holland Mesleki İlgi Testi",  # 5
+    "Çalışma Davranışı Ölçümü",    # 6 — Mevcut Durum Tespiti
+    "Akademik Analiz",             # 7
+    "Sınav Kaygısı Testi",         # 8
+    "P2 Dikkat Testi",             # 9
+]
+
+# Eşleştirme: veritabanında farklı isimle saklanmış olabilir
+TEST_NAME_MAP = {
+    "VARK Öğrenme Stilleri Testi": "Öğrenme Stilleri Testi",
+    "Vark Öğrenme Stilleri Testi": "Öğrenme Stilleri Testi",
+    "Öğrenme Stilleri Testi": "Öğrenme Stilleri Testi",
+    "Beyin Yatkınlıkları Testi": "Beyin Yatkınlıkları Testi",
+    "Sağ-Sol Beyin Testi": "Beyin Yatkınlıkları Testi",
+    "Çoklu Zeka Testi": "Çoklu Zeka Testi",
+    "Çoklu Zekâ Testi": "Çoklu Zeka Testi",
+    "Enneagram Kişilik Testi": "Enneagram Kişilik Testi",
+    "Enneagram Testi": "Enneagram Kişilik Testi",
+    "Holland Mesleki İlgi Testi": "Holland Mesleki İlgi Testi",
+    "Holland Mesleki İlgi Envanteri": "Holland Mesleki İlgi Testi",
+    "Çalışma Davranışı Ölçümü": "Çalışma Davranışı Ölçümü",
+    "Çalışma Davranışı Ölçme Envanteri": "Çalışma Davranışı Ölçümü",
+    "Akademik Analiz": "Akademik Analiz",
+    "Sınav Kaygısı Testi": "Sınav Kaygısı Testi",
+    "Sınav Kaygısı Değerlendirme Ölçeği": "Sınav Kaygısı Testi",
+    "P2 Dikkat Testi": "P2 Dikkat Testi",
+    "D2 Dikkat Testi": "P2 Dikkat Testi",
+}
+
+
+def _normalize_test_name(name):
+    """Veritabanındaki test adını standart sıralama adına çevir."""
+    return TEST_NAME_MAP.get(name, name)
+
+
+def _order_tests(tests_list):
+    """Testleri patronun istediği sıraya göre sıralar, bilinmeyenleri sona ekler."""
+    ordered = []
+    remaining = list(tests_list)
+    for canonical in INTEGRATED_TEST_ORDER:
+        for t in remaining[:]:
+            if _normalize_test_name(t["test_name"]) == canonical:
+                ordered.append(t)
+                remaining.remove(t)
+                break
+    ordered.extend(remaining)
+    return ordered
+
+
+def build_integrated_report_prompt(student_name, student_age, student_gender,
+                                    test_data_list, report_type="ogretmen",
+                                    student_grade=None):
+    """
+    Patronun istediği sıralı entegre rapor promptunu oluşturur.
+    report_type: 'ogretmen' | 'ogrenci' | 'ebeveyn'
+    """
+
+    audience_map = {
+        "ogretmen": {
+            "title": "ÖĞRETMEN / KOÇ",
+            "tavsiye_hedef": "öğretmene ve koça",
+            "hitap": "Öğretmene ve Koça Tavsiyeler",
+            "perspective": (
+                "Raporu okuyan kişi öğretmen veya eğitim koçudur. "
+                "Tavsiyeleri sınıf içi uygulamalar, ders planlama, bireysel rehberlik "
+                "ve akademik koçluk perspektifinden yaz."
+            )
+        },
+        "ogrenci": {
+            "title": "ÖĞRENCİ",
+            "tavsiye_hedef": "öğrenciye",
+            "hitap": "Öğrenciye Tavsiyeler",
+            "perspective": (
+                "Raporu okuyan kişi öğrencinin kendisidir. "
+                "Öğrencinin yaşına uygun, samimi ve motive edici bir dil kullan. "
+                "Tavsiyeleri öğrencinin kendi başına uygulayabileceği somut adımlar olarak yaz. "
+                "'Sen' diye hitap et."
+            )
+        },
+        "ebeveyn": {
+            "title": "EBEVEYN",
+            "tavsiye_hedef": "ebeveynlere",
+            "hitap": "Ebeveynlere Tavsiyeler",
+            "perspective": (
+                "Raporu okuyan kişi öğrencinin anne/babasıdır. "
+                "Bilimsel terimleri basit Türkçeyle açıkla. "
+                "Tavsiyeleri ebeveynin evde uygulayabileceği somut adımlar olarak yaz. "
+                "Çocuğun adını kullan, 'çocuğunuz' yerine ismini tercih et."
+            )
+        }
+    }
+
+    aud = audience_map.get(report_type, audience_map["ogretmen"])
+    grade_text = f", {student_grade}. sınıf öğrencisi" if student_grade else ""
+
+    # Test verilerini sıralı JSON olarak hazırla
+    tests_json = json.dumps(test_data_list, ensure_ascii=False, indent=2)
+
+    prompt = f"""Sen deneyimli bir eğitim psikoloğu ve psikometri uzmanısın. {student_name} ({student_age} yaşında, {student_gender}{grade_text}) adlı öğrencinin test sonuçlarını analiz edeceksin.
+
+# RAPOR TÜRÜ: {aud['title']} RAPORU
+{aud['perspective']}
+
+# KRİTİK RAPORLAMA KURALLARI
+
+## SIRALAMAYA UYMA ZORUNLULUĞU
+Testleri aşağıdaki KESIN sıra ile raporla. Öğrenci testleri karışık sırayla çözmüş olsa bile SEN bu sırayı takip et:
+
+**POTANSİYEL ANALİZ (İlk 5 Test):**
+1. Öğrenme Stilleri Testi (VARK)
+2. Sağ-Sol Beyin Yatkınlıkları Testi
+   → 1 ve 2'yi birleştirip KISA bir entegre yorum yaz
+3. Çoklu Zekâ Testi
+   → 1, 2 ve 3'ü birleştirip KISA bir entegre yorum yaz
+4. Enneagram Kişilik Testi
+   → 1, 2, 3 ve 4'ü birleştirip KISA bir entegre yorum yaz
+5. Holland Mesleki İlgi Envanteri
+   → 5 testin tamamını "POTANSİYEL ANALİZ ÖZETİ" başlığı altında birleştir
+
+**MEVCUT DURUM TESPİTİ (Son 4 Test):**
+6. Çalışma Davranışı Ölçümü
+7. Akademik Analiz
+8. Sınav Kaygısı Testi
+9. P2 Dikkat Testi
+   → 4 testin tamamını "MEVCUT DURUM ÖZETİ" başlığı altında birleştir
+
+**FİNAL: POTANSİYEL + MEVCUT DURUM SENTEZ**
+→ Potansiyel analiz ile mevcut durumu ilişkilendirerek kapsamlı bir ÖNERİ bölümü yaz
+→ Meslek yönelimi tavsiyeleri ekle
+
+## FORMAT KURALLARI
+- Her test için: Veri tablosu özeti → Kısa bilimsel yorum → {aud['hitap']}
+- Birleştirme yorumları: Önceki testlerle tutarlılık/çelişki analizi, maksimum 4-5 cümle
+- Potansiyel ile mevcut durumu ilişkilendirirken somut örnekler ver
+- ÇOK UZATMA! Her test analizi kısa ve öz olsun. Uzun paragraflardan kaçın.
+- Tavsiyeler somut, uygulanabilir ve küçük küçük olsun
+- Markdown formatında yaz (başlıklar, tablolar, madde işaretleri)
+- Rapor bir A4 dosya olarak düşünüldüğünde 12-15 sayfa civarında olsun
+
+## VAROLAN TEST VERİLERİ
+Aşağıdaki listede sadece öğrencinin ÇÖZMİŞ olduğu testler var. Eğer sıralamada belirtilen bir test listede yoksa o testi ATLA ve bir sonrakine geç. Atlanan test hakkında yorum yapma.
+
+```json
+{tests_json}
+```
+
+Şimdi {student_name} için {aud['title']} RAPORUNU yukarıdaki sıralama ve kurallara uygun olarak oluştur."""
+
+    return prompt
+
+
 def app():
     # --- CSS ---
     st.markdown("""
@@ -2222,10 +2383,23 @@ def app():
         </div>
     """, unsafe_allow_html=True)
 
-    tab_profil, tab_testler, tab_ai = st.tabs([
+    # Entegre rapor bilgilendirme
+    if tests and len(tests) >= 2:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 10px 16px; border-radius: 8px; margin-bottom: 10px;">
+            <span style="color: white !important; font-size: 14px;">
+                🆕 <b>Yeni:</b> "📊 Entegre Rapor (3'lü)" sekmesinden Öğretmen, Öğrenci ve Ebeveyn için
+                ayrı ayrı sıralı profesyonel raporlar oluşturabilirsiniz.
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    tab_profil, tab_testler, tab_ai, tab_entegre = st.tabs([
         "📋 Kişisel Bilgiler",
         "📝 Test Sonuçları",
-        "🤖 AI Analiz Raporları"
+        "🤖 AI Analiz Raporları",
+        "📊 Entegre Rapor (3'lü)"
     ])
 
     # Öğrenci dosyası indirme butonları (tab'ların üstünde)
@@ -2666,6 +2840,181 @@ def app():
                         st.success(f"✅ {total_ops} test başarıyla analiz edildi ve Arşiv'e eklendi.")
                         time.sleep(2)
                         st.rerun()
+
+    # ============================================================
+    # TAB 4: ENTEGRE RAPOR (3'LÜ) — Öğretmen / Öğrenci / Ebeveyn
+    # ============================================================
+    with tab_entegre:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: white !important; margin: 0;">📊 Entegre Rapor Sistemi</h3>
+            <p style="color: rgba(255,255,255,0.9) !important; margin: 5px 0 0 0;">
+                Tüm testleri belirli bir sıra ile analiz edip <b>Öğretmen</b>, <b>Öğrenci</b> ve <b>Ebeveyn</b>
+                için ayrı ayrı profesyonel raporlar oluşturur.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if not tests:
+            st.warning("⚠️ Bu öğrenci henüz hiç test çözmemiş. Entegre rapor oluşturulamaz.")
+        else:
+            # Testleri patronun istediği sıraya göre sırala
+            ordered_tests = _order_tests(tests)
+            completed_names = [t["test_name"] for t in ordered_tests]
+            canonical_completed = [_normalize_test_name(n) for n in completed_names]
+
+            # Hangi testler mevcut, hangileri eksik göster
+            st.markdown("#### 📋 Test Durumu (Sıralı)")
+            col_pot, col_mev = st.columns(2)
+
+            with col_pot:
+                st.markdown("**🔬 Potansiyel Analiz Testleri:**")
+                for t_name in INTEGRATED_TEST_ORDER[:5]:
+                    if t_name in canonical_completed:
+                        st.markdown(f"✅ {t_name}")
+                    else:
+                        st.markdown(f"⬜ {t_name} *(çözülmemiş)*")
+
+            with col_mev:
+                st.markdown("**📈 Mevcut Durum Testleri:**")
+                for t_name in INTEGRATED_TEST_ORDER[5:]:
+                    if t_name in canonical_completed:
+                        st.markdown(f"✅ {t_name}")
+                    else:
+                        st.markdown(f"⬜ {t_name} *(çözülmemiş)*")
+
+            available_count = sum(1 for t in INTEGRATED_TEST_ORDER if t in canonical_completed)
+            st.info(f"📊 **{available_count}/{len(INTEGRATED_TEST_ORDER)}** test çözülmüş. Çözülmemiş testler raporda atlanacaktır.")
+
+            st.markdown("---")
+
+            # Rapor türü seçimi
+            st.markdown("#### 🎯 Rapor Oluştur")
+            report_type_selection = st.radio(
+                "Hangi raporları oluşturmak istiyorsunuz?",
+                options=[
+                    "📚 Üçünü Birden (Öğretmen + Öğrenci + Ebeveyn)",
+                    "👨‍🏫 Sadece Öğretmen/Koç Raporu",
+                    "🎓 Sadece Öğrenci Raporu",
+                    "👨‍👩‍👦 Sadece Ebeveyn Raporu"
+                ],
+                index=0,
+                key="entegre_rapor_tipi"
+            )
+
+            # Mevcut entegre raporları kontrol et
+            entegre_history = get_student_analysis_history(info.id)
+            existing_entegre = [
+                r for r in entegre_history
+                if r['combination'].startswith("ENTEGRE_")
+            ] if entegre_history else []
+
+            if existing_entegre:
+                st.markdown("---")
+                st.markdown("#### 📂 Mevcut Entegre Raporlar")
+                for idx, rec in enumerate(existing_entegre):
+                    rapor_label = rec['combination'].replace("ENTEGRE_", "").replace("_", " ").title()
+                    with st.expander(f"📄 {rapor_label} Raporu ({rec['date']})"):
+                        st.markdown(rec['report'])
+
+                        col_d1, col_d2 = st.columns(2)
+                        with col_d1:
+                            st.download_button(
+                                label="📥 İndir (TXT)",
+                                data=rec['report'],
+                                file_name=f"{info.name}_{rapor_label}_Entegre_Rapor.txt",
+                                mime="text/plain",
+                                key=f"dl_entegre_{idx}"
+                            )
+                        with col_d2:
+                            try:
+                                from docx import Document
+                                from io import BytesIO
+                                doc = Document()
+                                doc.add_heading(f"{info.name} — {rapor_label} Entegre Raporu", level=1)
+                                doc.add_paragraph(f"Tarih: {rec['date']}")
+                                doc.add_paragraph("")
+                                for para in rec['report'].split('\n'):
+                                    if para.strip():
+                                        clean = para.replace('**', '').replace('###', '').replace('##', '').replace('#', '').strip()
+                                        if clean:
+                                            doc.add_paragraph(clean)
+                                buf = BytesIO()
+                                doc.save(buf)
+                                buf.seek(0)
+                                st.download_button(
+                                    label="📝 İndir (Word)",
+                                    data=buf,
+                                    file_name=f"{info.name}_{rapor_label}_Entegre_Rapor.docx",
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    key=f"dl_entegre_docx_{idx}"
+                                )
+                            except ImportError:
+                                pass
+
+                st.markdown("---")
+
+            # Oluştur butonu
+            if available_count < 2:
+                st.warning("En az 2 test çözülmüş olmalıdır. Lütfen öğrencinin daha fazla test çözmesini bekleyin.")
+            else:
+                if st.button("🚀 ENTEGRE RAPOR OLUŞTUR", type="primary", key="btn_entegre_rapor"):
+                    # Test verilerini hazırla (sıralı)
+                    ai_input = []
+                    for t in ordered_tests:
+                        raw = t.get("raw_answers", "")
+                        if isinstance(raw, str):
+                            try:
+                                raw = json.loads(raw)
+                            except (json.JSONDecodeError, ValueError):
+                                raw = raw
+                        ai_input.append({
+                            "TEST_ADI": t["test_name"],
+                            "TARİH": str(t["date"]),
+                            "SONUÇLAR": t["scores"] if t["scores"] else raw
+                        })
+
+                    # Hangi raporlar oluşturulacak
+                    type_map = {
+                        "📚 Üçünü Birden (Öğretmen + Öğrenci + Ebeveyn)": [
+                            ("ogretmen", "Öğretmen/Koç"),
+                            ("ogrenci", "Öğrenci"),
+                            ("ebeveyn", "Ebeveyn")
+                        ],
+                        "👨‍🏫 Sadece Öğretmen/Koç Raporu": [("ogretmen", "Öğretmen/Koç")],
+                        "🎓 Sadece Öğrenci Raporu": [("ogrenci", "Öğrenci")],
+                        "👨‍👩‍👦 Sadece Ebeveyn Raporu": [("ebeveyn", "Ebeveyn")]
+                    }
+                    selected_types = type_map[report_type_selection]
+
+                    total_reports = len(selected_types)
+                    progress_bar = st.progress(0, text="Raporlar hazırlanıyor...")
+
+                    for i, (rtype, rlabel) in enumerate(selected_types):
+                        progress_bar.progress(
+                            (i) / total_reports,
+                            text=f"📝 **{rlabel}** raporu oluşturuluyor... ({i+1}/{total_reports})"
+                        )
+
+                        prompt = build_integrated_report_prompt(
+                            student_name=info.name,
+                            student_age=info.age,
+                            student_gender=info.gender,
+                            test_data_list=ai_input,
+                            report_type=rtype,
+                            student_grade=getattr(info, 'grade', None)
+                        )
+
+                        report_text = get_ai_analysis(prompt)
+                        combination_key = f"ENTEGRE_{rlabel.upper().replace('/', '_')}"
+                        save_holistic_analysis(info.id, [combination_key], report_text)
+
+                    progress_bar.progress(1.0, text="✅ Tüm raporlar tamamlandı!")
+                    time.sleep(1)
+                    st.success(f"✅ {total_reports} adet entegre rapor oluşturuldu ve arşive kaydedildi!")
+                    time.sleep(1.5)
+                    st.rerun()
 
     # 6. HAM VERİ LİSTESİ
     st.divider()
