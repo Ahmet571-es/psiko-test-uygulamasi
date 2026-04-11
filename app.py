@@ -3,7 +3,7 @@ import time
 import os
 import base64
 
-from db_utils import init_db, login_student, register_student, reset_student_password, repair_database
+from db_utils import init_db, login_student, register_student, reset_student_password, repair_database, get_all_teachers, authenticate_teacher
 
 st.set_page_config(
     page_title="EĞİTİM CHECK UP",
@@ -525,6 +525,7 @@ for key, default in [('role', None), ('student_id', None), ('student_name', None
 def go_to_login(): st.session_state.auth_mode = 'login'
 def go_to_register(): st.session_state.auth_mode = 'register'
 def go_to_teacher(): st.session_state.auth_mode = 'teacher'
+def go_to_teacher_login(): st.session_state.auth_mode = 'teacher_login'
 def go_to_forgot_password(): st.session_state.auth_mode = 'forgot_password'
 
 def get_teacher_password():
@@ -596,7 +597,7 @@ def main_auth_flow():
 
                 c1, c2, c3 = st.columns(3)
                 age = c1.number_input("🎂 Yaş", min_value=5, max_value=99, step=1, value=15)
-                grade = c2.selectbox("🎓 Sınıf", options=[5, 6, 7, 8, 9, 10, 11, 12], index=3)
+                grade = c2.selectbox("🎓 Sınıf", options=["5", "6", "7", "8", "9", "10", "11", "12", "Mezun"], index=3)
                 gender = c3.selectbox("⚧ Cinsiyet", ["Kız", "Erkek"])
 
                 st.markdown('<div class="sep-line">Hesap Bilgileri</div>', unsafe_allow_html=True)
@@ -628,9 +629,10 @@ def main_auth_flow():
 
             st.markdown('</div></div>', unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
-            lc1, lc2 = st.columns(2)
+            lc1, lc2, lc3 = st.columns(3)
             lc1.button("🔑 Zaten hesabın var mı? Giriş Yap", on_click=go_to_login)
-            lc2.button("👨‍🏫 Öğretmen / Yönetici Girişi", on_click=go_to_teacher)
+            lc2.button("👨‍🏫 Öğretmen Girişi", on_click=go_to_teacher_login)
+            lc3.button("🛡️ Yönetici Girişi", on_click=go_to_teacher)
 
         # ── GİRİŞ ──
         elif mode == 'login':
@@ -666,9 +668,10 @@ def main_auth_flow():
 
             st.markdown('</div></div>', unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
-            lc1, lc2 = st.columns(2)
+            lc1, lc2, lc3 = st.columns(3)
             lc1.button("📝 Hesabın yok mu? Kayıt Ol", on_click=go_to_register)
             lc2.button("❓ Şifremi Unuttum", on_click=go_to_forgot_password)
+            lc3.button("👨‍🏫 Öğretmen / Yönetici", on_click=go_to_teacher_login)
 
         # ── ŞİFRE SIFIRLAMA ──
         elif mode == 'forgot_password':
@@ -703,12 +706,52 @@ def main_auth_flow():
             st.markdown("<br>", unsafe_allow_html=True)
             st.button("⬅️ Giriş Ekranına Dön", on_click=go_to_login)
 
-        # ── ÖĞRETMEN ──
+        # ── ÖĞRETMEN GİRİŞİ ──
+        elif mode == 'teacher_login':
+            st.markdown('<div class="auth-card"><div class="auth-card-body">', unsafe_allow_html=True)
+            st.markdown("""
+                <div class="section-title"><div class="icon blue">👨‍🏫</div>Öğretmen / Koç Girişi</div>
+                <div class="section-desc">Kendi panelinize erişmek için adınızı seçin ve şifrenizi girin.</div>
+            """, unsafe_allow_html=True)
+
+            teachers = get_all_teachers()
+            if not teachers:
+                st.warning("⚠️ Henüz sistemde kayıtlı öğretmen bulunmamaktadır. Lütfen yöneticiye başvurun.")
+            else:
+                with st.form("teacher_login_form"):
+                    teacher_options = {t["name"]: t["id"] for t in teachers}
+                    selected_teacher = st.selectbox("👤 Öğretmen Seçiniz", options=list(teacher_options.keys()), index=None, placeholder="Listeden seçin...")
+                    pw = st.text_input("🔒 Şifre", type="password", placeholder="Şifrenizi girin...")
+                    st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
+                    submit = st.form_submit_button("Giriş Yap  ➡️", type="primary")
+                    if submit:
+                        if not selected_teacher or not pw:
+                            st.warning("⚠️ Lütfen öğretmen seçin ve şifrenizi girin.")
+                        else:
+                            tid = teacher_options[selected_teacher]
+                            success, teacher_info = authenticate_teacher(tid, pw)
+                            if success:
+                                st.success(f"🎉 Hoşgeldiniz {teacher_info['name']}!")
+                                st.session_state.role = "teacher_panel"
+                                st.session_state.teacher_id = teacher_info["id"]
+                                st.session_state.teacher_name = teacher_info["name"]
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("❌ Hatalı şifre.")
+
+            st.markdown('</div></div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            lc1, lc2 = st.columns(2)
+            lc1.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register)
+            lc2.button("🛡️ Yönetici Girişi", on_click=go_to_teacher)
+
+        # ── YÖNETİCİ ──
         elif mode == 'teacher':
             st.markdown('<div class="auth-card"><div class="auth-card-body">', unsafe_allow_html=True)
             st.markdown("""
-                <div class="section-title"><div class="icon blue">👨‍🏫</div>Yönetici Paneli</div>
-                <div class="section-desc">Bu alan yalnızca yetkili öğretmen ve yöneticiler içindir.</div>
+                <div class="section-title"><div class="icon blue">🛡️</div>Yönetici Paneli</div>
+                <div class="section-desc">Bu alan yalnızca yetkili yöneticiler içindir.</div>
             """, unsafe_allow_html=True)
 
             with st.form("teacher_form"):
@@ -720,14 +763,16 @@ def main_auth_flow():
                     if secret_pass is None:
                         st.error("⚠️ Yönetici şifresi yapılandırılmamış.")
                     elif pw == secret_pass:
-                        st.session_state.role = "teacher"
+                        st.session_state.role = "admin"
                         st.rerun()
                     else:
                         st.error("❌ Hatalı şifre.")
 
             st.markdown('</div></div>', unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
-            st.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register)
+            lc1, lc2 = st.columns(2)
+            lc1.button("⬅️ Öğrenci Ekranına Dön", on_click=go_to_register)
+            lc2.button("👨‍🏫 Öğretmen Girişi", on_click=go_to_teacher_login)
 
         # Feature chips
         st.markdown("""
@@ -753,26 +798,39 @@ if st.session_state.role is None:
 elif st.session_state.role == "student":
     import student_view
     student_view.app()
-elif st.session_state.role == "teacher":
+elif st.session_state.role == "admin":
     import teacher_view
     teacher_view.app()
+elif st.session_state.role == "teacher_panel":
+    import teacher_view
+    teacher_view.teacher_panel_app()
 
 # =========================================================
 # SIDEBAR
 # =========================================================
 if st.session_state.role:
     with st.sidebar:
-        role_label = "👨‍🏫 Yönetici" if st.session_state.role == "teacher" else "🎓 Öğrenci"
-        user_name = st.session_state.get('student_name', 'Yönetici')
+        if st.session_state.role == "admin":
+            role_label = "🛡️ Yönetici"
+            role_icon = "🛡️"
+            user_name = "Yönetici"
+        elif st.session_state.role == "teacher_panel":
+            role_label = "👨‍🏫 Öğretmen"
+            role_icon = "👨‍🏫"
+            user_name = st.session_state.get('teacher_name', 'Öğretmen')
+        else:
+            role_label = "🎓 Öğrenci"
+            role_icon = "🎓"
+            user_name = st.session_state.get('student_name', 'Öğrenci')
         st.markdown(f"""
             <div style="text-align:center; padding: 14px 0;">
-                <div style="font-size: 2.2rem;">{'👨‍🏫' if st.session_state.role == 'teacher' else '🎓'}</div>
+                <div style="font-size: 2.2rem;">{role_icon}</div>
                 <div style="font-family:'Outfit',sans-serif; font-size: 1.15rem; font-weight: 700; color: #FFFFFF; margin-top: 6px;">{user_name}</div>
                 <div style="font-family:'Outfit',sans-serif; font-size: 0.78rem; color: rgba(255,255,255,0.6); margin-top: 3px; letter-spacing: 1px;">{role_label}</div>
             </div>
         """, unsafe_allow_html=True)
         st.markdown("---")
-        if st.session_state.role == "teacher":
+        if st.session_state.role == "admin":
             if st.button("🔧 Veritabanını Onar", help="Veritabanı hatası alırsanız buna basın"):
                 if repair_database():
                     st.success("✅ Veritabanı onarıldı!")

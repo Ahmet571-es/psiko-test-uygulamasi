@@ -214,6 +214,14 @@ def init_db():
     try:
         if engine == "postgresql":
             # --- PostgreSQL Tabloları ---
+            c.execute('''CREATE TABLE IF NOT EXISTS teachers (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                password TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )''')
+
             c.execute('''CREATE TABLE IF NOT EXISTS students (
                 id SERIAL PRIMARY KEY,
                 name TEXT,
@@ -221,16 +229,21 @@ def init_db():
                 password TEXT,
                 age INTEGER,
                 gender TEXT,
-                grade INTEGER,
+                grade TEXT,
                 login_count INTEGER DEFAULT 0,
-                secret_word TEXT
+                secret_word TEXT,
+                teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL
             )''')
 
-            # Mevcut tablo varsa grade sütunu ekle (migration)
-            try:
-                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
-            except Exception:
-                pass
+            # Migration: mevcut tablolara yeni sütunlar
+            for migration_sql in [
+                "ALTER TABLE students ADD COLUMN grade TEXT",
+                "ALTER TABLE students ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL",
+            ]:
+                try:
+                    c.execute(migration_sql)
+                except Exception:
+                    pass
 
             c.execute('''CREATE TABLE IF NOT EXISTS results (
                 id SERIAL PRIMARY KEY,
@@ -255,22 +268,30 @@ def init_db():
 
         else:
             # --- SQLite Tabloları ---
+            c.execute('''CREATE TABLE IF NOT EXISTS teachers
+                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          name TEXT NOT NULL,
+                          password TEXT NOT NULL,
+                          is_active INTEGER DEFAULT 1,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+
             c.execute('''CREATE TABLE IF NOT EXISTS students
                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
                           name TEXT, username TEXT, password TEXT,
-                          age INTEGER, gender TEXT, grade INTEGER,
+                          age INTEGER, gender TEXT, grade TEXT,
                           login_count INTEGER DEFAULT 0,
-                          secret_word TEXT)''')
+                          secret_word TEXT,
+                          teacher_id INTEGER)''')
 
-            try:
-                c.execute("ALTER TABLE students ADD COLUMN secret_word TEXT")
-            except Exception:
-                pass
-
-            try:
-                c.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
-            except Exception:
-                pass
+            for mig in [
+                "ALTER TABLE students ADD COLUMN secret_word TEXT",
+                "ALTER TABLE students ADD COLUMN grade TEXT",
+                "ALTER TABLE students ADD COLUMN teacher_id INTEGER",
+            ]:
+                try:
+                    c.execute(mig)
+                except Exception:
+                    pass
 
             c.execute('''CREATE TABLE IF NOT EXISTS results
                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -667,3 +688,188 @@ def repair_database():
         return True
     except Exception:
         return False
+
+
+# ============================================================
+# GRADE (SINIF) YARDIMCI FONKSİYONU
+# ============================================================
+
+def format_grade(grade_val):
+    """Grade değerini görüntüleme metnine çevirir."""
+    if grade_val is None:
+        return "Belirtilmemiş"
+    g = str(grade_val).strip()
+    if g.lower() == "mezun" or g == "0":
+        return "Mezun"
+    try:
+        return f"{int(g)}. Sınıf"
+    except (ValueError, TypeError):
+        return g if g else "Belirtilmemiş"
+
+
+# ============================================================
+# ÖĞRETMEN YÖNETİM FONKSİYONLARI
+# ============================================================
+
+def create_teacher(name, password):
+    """Yeni öğretmen oluşturur."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        hashed_pw = hash_password(password)
+        c.execute(f"INSERT INTO teachers (name, password) VALUES ({ph}, {ph})", (name, hashed_pw))
+        conn.commit()
+        return True, "Öğretmen başarıyla oluşturuldu."
+    except Exception as e:
+        conn.rollback()
+        return False, f"Hata: {e}"
+    finally:
+        conn.close()
+
+
+def authenticate_teacher(teacher_id, password):
+    """Öğretmen şifresini doğrular."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        hashed_pw = hash_password(password)
+        active_val = True if engine == "postgresql" else 1
+        c.execute(
+            f"SELECT id, name FROM teachers WHERE id={ph} AND password={ph} AND is_active={ph}",
+            (teacher_id, hashed_pw, active_val)
+        )
+        row = c.fetchone()
+        if row:
+            return True, {"id": row[0], "name": row[1]}
+        return False, None
+    except Exception:
+        return False, None
+    finally:
+        conn.close()
+
+
+def get_all_teachers():
+    """Tüm aktif öğretmenleri döndürür."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    try:
+        active_val = True if engine == "postgresql" else 1
+        ph = get_placeholder(engine)
+        c.execute(f"SELECT id, name, created_at FROM teachers WHERE is_active={ph} ORDER BY name", (active_val,))
+        rows = c.fetchall()
+        return [{"id": r[0], "name": r[1], "created_at": str(r[2]) if r[2] else ""} for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def update_teacher_password(teacher_id, new_password):
+    """Öğretmen şifresini günceller."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        hashed_pw = hash_password(new_password)
+        c.execute(f"UPDATE teachers SET password={ph} WHERE id={ph}", (hashed_pw, teacher_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def delete_teacher(teacher_id):
+    """Öğretmeni pasif yapar (soft delete)."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        inactive_val = False if engine == "postgresql" else 0
+        c.execute(f"UPDATE teachers SET is_active={ph} WHERE id={ph}", (inactive_val, teacher_id))
+        # Öğretmene bağlı öğrencilerin teacher_id'sini temizle
+        c.execute(f"UPDATE students SET teacher_id=NULL WHERE teacher_id={ph}", (teacher_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def assign_student_to_teacher(student_id, teacher_id):
+    """Öğrenciyi bir öğretmene atar."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        c.execute(f"UPDATE students SET teacher_id={ph} WHERE id={ph}", (teacher_id, student_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def get_students_by_teacher(teacher_id):
+    """Belirli bir öğretmene atanmış öğrencileri ve test sonuçlarını döndürür."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    ph = get_placeholder(engine)
+    try:
+        c.execute(
+            f"SELECT id, name, username, password, age, gender, grade, login_count FROM students WHERE teacher_id={ph} ORDER BY name",
+            (teacher_id,)
+        )
+        students_raw = c.fetchall()
+
+        all_data = []
+        for s in students_raw:
+            c.execute(
+                f"SELECT test_name, scores, raw_answers, date, report FROM results WHERE student_id={ph} ORDER BY date DESC",
+                (s[0],)
+            )
+            tests_raw = c.fetchall()
+            tests_list = []
+            for t in tests_raw:
+                try:
+                    score_json = json.loads(t[1]) if t[1] else {}
+                except (json.JSONDecodeError, TypeError):
+                    score_json = {}
+                tests_list.append({
+                    "test_name": t[0],
+                    "scores": score_json,
+                    "raw_answers": t[2],
+                    "date": str(t[3]) if t[3] else "",
+                    "report": t[4]
+                })
+            all_data.append({
+                "info": StudentInfo(s),
+                "tests": tests_list
+            })
+        return all_data
+    except Exception as e:
+        print(f"get_students_by_teacher hatası: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def get_unassigned_students():
+    """Herhangi bir öğretmene atanmamış öğrencileri döndürür."""
+    conn, engine = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT id, name FROM students WHERE teacher_id IS NULL ORDER BY name")
+        return [{"id": r[0], "name": r[1]} for r in c.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()

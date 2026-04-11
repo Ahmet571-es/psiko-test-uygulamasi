@@ -11,7 +11,10 @@ from dotenv import load_dotenv
 from db_utils import (
     get_all_students_with_results, reset_database,
     delete_specific_students, save_holistic_analysis,
-    get_student_analysis_history, is_using_sqlite
+    get_student_analysis_history, is_using_sqlite,
+    get_all_teachers, create_teacher, update_teacher_password,
+    delete_teacher, assign_student_to_teacher,
+    get_students_by_teacher, get_unassigned_students, format_grade
 )
 
 # --- API AYARLARI ---
@@ -150,7 +153,7 @@ def generate_full_system_excel(all_data):
 
     for i, d in enumerate(all_data, 1):
         info = d["info"]
-        grade_text = f"{info.grade}. Sınıf" if info.grade else "—"
+        grade_text = format_grade(info.grade)
         ws1.append([
             i, info.name, info.username, info.age, info.gender,
             grade_text, info.login_count, len(d["tests"])
@@ -280,7 +283,7 @@ def generate_student_excel(student_data, analysis_history):
         ("E-posta", info.username),
         ("Yaş", info.age),
         ("Cinsiyet", info.gender),
-        ("Sınıf", f"{info.grade}. Sınıf" if info.grade else "Belirtilmemiş"),
+        ("Sınıf", format_grade(info.grade)),
         ("Toplam Giriş", info.login_count),
         ("Çözülen Test", len(tests)),
         ("Rapor Tarihi", datetime.now().strftime("%d.%m.%Y %H:%M")),
@@ -441,7 +444,7 @@ def plot_scores(data_dict, title):
 
 def build_holistic_prompt(student_name, student_age, student_gender, test_data_list, student_grade=None):
     """Bütüncül (harmanlanmış) analiz için ticari kalite prompt."""
-    grade_text = f"{student_grade}. Sınıf" if student_grade else "Belirtilmemiş"
+    grade_text = format_grade(student_grade)
     return f"""# ROL ve KİMLİK
 
 Sen, Türkiye'nin önde gelen eğitim psikolojisi merkezlerinde 20 yıl deneyim kazanmış, psikometrik değerlendirme, kariyer danışmanlığı ve gelişim psikolojisi alanlarında uzmanlaşmış bir Klinik Eğitim Psikoloğusun. 
@@ -1748,7 +1751,7 @@ def build_single_test_prompt(student_name, student_age, student_gender, test_nam
     """Tekil test analizi için ticari kalite prompt — her teste özel uzman protokolü içerir."""
 
     test_guidance = _get_test_specific_guidance(test_name)
-    grade_text = f"{student_grade}. Sınıf" if student_grade else "Belirtilmemiş"
+    grade_text = format_grade(student_grade)
 
     return f"""# ROL ve KİMLİK
 
@@ -2064,7 +2067,7 @@ def build_integrated_report_prompt(student_name, student_age, student_gender,
     }
 
     aud = audience_map.get(report_type, audience_map["ogretmen"])
-    grade_text = f", {student_grade}. sınıf öğrencisi" if student_grade else ""
+    grade_text = f", {format_grade(student_grade)}" if student_grade else ""
 
     # Test verilerini sıralı JSON olarak hazırla
     tests_json = json.dumps(test_data_list, ensure_ascii=False, indent=2)
@@ -2339,6 +2342,124 @@ def app():
             else:
                 st.info("Devam etmek için onay kutucuğunu işaretleyin.")
 
+    # --- ÖĞRETMEN YÖNETİMİ (Yönetici panelinin ana içeriğinde) ---
+    st.markdown("---")
+    st.markdown("## 👨‍🏫 Öğretmen / Koç Yönetimi")
+
+    teachers = get_all_teachers()
+
+    tab_ogretmen_listesi, tab_ogretmen_ekle, tab_ogrenci_ata = st.tabs([
+        "📋 Öğretmen Listesi",
+        "➕ Yeni Öğretmen Ekle",
+        "🔗 Öğrenci Ata"
+    ])
+
+    with tab_ogretmen_ekle:
+        st.markdown("#### Yeni Öğretmen / Koç Ekle")
+        with st.form("add_teacher_form"):
+            new_t_name = st.text_input("👤 Ad Soyad", placeholder="Öğretmenin tam adı...")
+            new_t_pw = st.text_input("🔒 Şifre", type="password", placeholder="Giriş şifresi belirleyin...")
+            new_t_pw2 = st.text_input("🔒 Şifre Tekrar", type="password", placeholder="Şifreyi tekrar girin...")
+            submit_teacher = st.form_submit_button("Öğretmen Ekle ➕", type="primary")
+            if submit_teacher:
+                if not new_t_name or not new_t_pw:
+                    st.warning("⚠️ Ad ve şifre boş bırakılamaz.")
+                elif len(new_t_pw) < 4:
+                    st.warning("⚠️ Şifre en az 4 karakter olmalıdır.")
+                elif new_t_pw != new_t_pw2:
+                    st.warning("⚠️ Şifreler eşleşmiyor.")
+                else:
+                    success, msg = create_teacher(new_t_name.strip().title(), new_t_pw)
+                    if success:
+                        st.success(f"✅ {new_t_name.strip().title()} başarıyla eklendi!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(msg)
+
+    with tab_ogretmen_listesi:
+        if not teachers:
+            st.info("📂 Henüz kayıtlı öğretmen bulunmamaktadır.")
+        else:
+            for t in teachers:
+                col_name, col_date, col_pw, col_del = st.columns([3, 2, 2, 1])
+                col_name.markdown(f"**👨‍🏫 {t['name']}**")
+                col_date.caption(f"Eklenme: {t['created_at'][:10] if t['created_at'] else '—'}")
+                with col_pw:
+                    new_pw_key = f"pw_{t['id']}"
+                    if st.button("🔑 Şifre Değiştir", key=f"btn_pw_{t['id']}"):
+                        st.session_state[f"show_pw_{t['id']}"] = True
+                with col_del:
+                    if st.button("🗑️", key=f"btn_del_{t['id']}", help="Öğretmeni sil"):
+                        if delete_teacher(t['id']):
+                            st.success(f"✅ {t['name']} silindi.")
+                            time.sleep(1)
+                            st.rerun()
+
+                # Şifre değiştirme formu (toggle)
+                if st.session_state.get(f"show_pw_{t['id']}"):
+                    with st.form(f"change_pw_form_{t['id']}"):
+                        pw_new = st.text_input("Yeni Şifre", type="password", key=f"input_pw_{t['id']}")
+                        if st.form_submit_button("Güncelle"):
+                            if pw_new and len(pw_new) >= 4:
+                                if update_teacher_password(t['id'], pw_new):
+                                    st.success("✅ Şifre güncellendi.")
+                                    st.session_state[f"show_pw_{t['id']}"] = False
+                                    time.sleep(1)
+                                    st.rerun()
+                            else:
+                                st.warning("⚠️ Şifre en az 4 karakter olmalıdır.")
+                st.markdown("---")
+
+    with tab_ogrenci_ata:
+        if not teachers:
+            st.warning("⚠️ Önce öğretmen eklemeniz gerekiyor.")
+        else:
+            st.markdown("#### Öğrencileri Öğretmenlere Atayın")
+            teacher_options = {t["name"]: t["id"] for t in teachers}
+            selected_teacher_name = st.selectbox(
+                "Öğretmen Seçin:",
+                options=list(teacher_options.keys()),
+                index=None,
+                placeholder="Öğretmen seçin...",
+                key="assign_teacher_select"
+            )
+
+            if selected_teacher_name:
+                unassigned = get_unassigned_students()
+                if not unassigned:
+                    st.info("✅ Tüm öğrenciler bir öğretmene atanmış durumda.")
+                else:
+                    student_options = {s["name"]: s["id"] for s in unassigned}
+                    selected_students = st.multiselect(
+                        "Atanacak Öğrenciler:",
+                        options=list(student_options.keys()),
+                        key="assign_students_multi"
+                    )
+                    if selected_students:
+                        if st.button("✅ Seçilenleri Ata", type="primary", key="btn_assign"):
+                            tid = teacher_options[selected_teacher_name]
+                            success_count = 0
+                            for sname in selected_students:
+                                sid = student_options[sname]
+                                if assign_student_to_teacher(sid, tid):
+                                    success_count += 1
+                            st.success(f"✅ {success_count} öğrenci {selected_teacher_name}'e atandı.")
+                            time.sleep(1)
+                            st.rerun()
+
+            # Mevcut atamalar
+            st.markdown("---")
+            st.markdown("#### 📊 Mevcut Öğretmen-Öğrenci Eşleşmeleri")
+            for t in teachers:
+                t_students = get_students_by_teacher(t["id"])
+                student_names = [s["info"].name for s in t_students] if t_students else []
+                count = len(student_names)
+                names_text = ", ".join(student_names[:5])
+                if count > 5:
+                    names_text += f" ... (+{count - 5})"
+                st.markdown(f"**{t['name']}** ({count} öğrenci): {names_text if names_text else '—'}")
+
     # --- ANA EKRAN ---
     if not data:
         st.info("📂 Henüz kayıtlı öğrenci verisi bulunmamaktadır.")
@@ -2451,7 +2572,7 @@ def app():
         st.markdown("#### 👤 Öğrenci Profili")
 
         grade_val = getattr(info, 'grade', None)
-        grade_text = f"{grade_val}. Sınıf" if grade_val else "Belirtilmemiş"
+        grade_text = format_grade(grade_val)
 
         col_left, col_right = st.columns(2)
         with col_left:
@@ -3024,3 +3145,179 @@ def app():
             df_tests = pd.DataFrame(tests)
             df_tests['date'] = pd.to_datetime(df_tests['date'], errors='coerce').dt.strftime('%d.%m.%Y')
             st.dataframe(df_tests[["test_name", "date"]], use_container_width=True)
+
+
+# ============================================================
+# ÖĞRETMEN PANELİ (Bireysel Öğretmen Girişi)
+# ============================================================
+
+def teacher_panel_app():
+    """Bireysel öğretmen girişi sonrası gösterilen panel."""
+
+    # --- CSS (admin panelden aynı) ---
+    st.markdown("""
+    <style>
+        .stApp p, .stApp span, .stApp label,
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp li,
+        .stApp [data-testid="stMarkdownContainer"] p,
+        .stApp [data-testid="stWidgetLabel"] p {
+            color: #0F172A !important;
+        }
+        [data-testid="stSidebar"] p, [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+            color: #FFFFFF !important;
+        }
+        .stApp button[kind="primary"] { color: white !important; }
+        .stApp .stAlert p { color: inherit !important; }
+        .id-card { background: #ffffff; border: 1px solid #E0E4EA; border-radius: 16px; padding: 25px; border-top: 4px solid #2563EB; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .id-card-name { font-size: 1.5rem; font-weight: 800; color: #1B2A4A; margin-bottom: 15px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    teacher_name = st.session_state.get("teacher_name", "Öğretmen")
+    teacher_id = st.session_state.get("teacher_id")
+
+    st.markdown(f"## 👨‍🏫 {teacher_name} — Öğretmen Paneli")
+    st.caption("EĞİTİM CHECK UP — Kişisel Eğitim & Kariyer Analiz Merkezi")
+
+    # Giriş ekranına dön
+    if st.button("🚪 Giriş Ekranına Dön", key="teacher_panel_logout"):
+        st.session_state.clear()
+        st.rerun()
+
+    st.markdown("---")
+
+    # Öğretmene atanmış öğrencileri çek
+    data = get_students_by_teacher(teacher_id)
+
+    if not data:
+        st.info("📂 Size henüz atanmış öğrenci bulunmamaktadır. Lütfen yöneticinize başvurun.")
+        return
+
+    # İstatistikler
+    total_students = len(data)
+    total_tests = sum(len(d["tests"]) for d in data)
+
+    mc1, mc2, mc3 = st.columns(3)
+    mc1.metric("👥 Öğrenci Sayısı", total_students)
+    mc2.metric("📝 Toplam Test", total_tests)
+    mc3.metric("📊 Ort. Test/Öğrenci", round(total_tests / total_students, 1) if total_students > 0 else 0)
+
+    st.markdown("---")
+
+    # Öğrenci sekmeli görünüm
+    student_names = [d["info"].name for d in data]
+    student_tabs = st.tabs(student_names)
+
+    for idx, tab in enumerate(student_tabs):
+        with tab:
+            student_data = data[idx]
+            info = student_data["info"]
+            tests = student_data["tests"]
+
+            # Öğrenci profil kartı
+            grade_val = getattr(info, 'grade', None)
+            grade_text = format_grade(grade_val)
+
+            st.markdown(f"""
+                <div class="id-card">
+                    <div class="id-card-name">📁 {info.name}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            col_left, col_right = st.columns(2)
+            with col_left:
+                st.markdown(f"""
+                | | |
+                |---|---|
+                | **🎂 Yaş** | {info.age} |
+                | **⚧ Cinsiyet** | {info.gender} |
+                | **🎓 Sınıf** | {grade_text} |
+                | **📧 E-posta** | {info.username} |
+                """)
+            with col_right:
+                st.metric("🔑 Toplam Giriş", info.login_count)
+                st.metric("📊 Çözülen Test", len(tests))
+
+            if not tests:
+                st.info("Bu öğrenci henüz test çözmemiştir.")
+                continue
+
+            # Test sonuçları
+            st.markdown("#### 📝 Test Sonuçları")
+            for t in tests:
+                with st.expander(f"📋 {t['test_name']} — {t['date'][:10] if t['date'] else ''}"):
+                    if t.get("scores"):
+                        import pandas as pd
+                        scores_df = pd.DataFrame(
+                            list(t["scores"].items()),
+                            columns=["Kategori", "Puan"]
+                        )
+                        st.dataframe(scores_df, use_container_width=True, hide_index=True)
+
+                    if t.get("report"):
+                        st.markdown("**📄 Rapor:**")
+                        st.markdown(t["report"][:2000])
+
+            # AI Analiz butonu (ortak rapor motoru)
+            st.markdown("#### 🤖 AI Analiz")
+            completed_test_names = list(set(t["test_name"] for t in tests))
+
+            if len(completed_test_names) < 1:
+                st.info("AI analiz için en az 1 test gereklidir.")
+            else:
+                selected_tests = st.multiselect(
+                    "Analiz edilecek testleri seçin:",
+                    options=completed_test_names,
+                    default=completed_test_names,
+                    key=f"tp_ai_tests_{info.id}"
+                )
+
+                if selected_tests and st.button("🤖 AI Analiz Oluştur", type="primary", key=f"tp_ai_btn_{info.id}"):
+                    # Ortak rapor motoru
+                    test_data_for_ai = []
+                    for t in tests:
+                        if t["test_name"] in selected_tests:
+                            test_data_for_ai.append({
+                                "test_name": t["test_name"],
+                                "scores": t["scores"],
+                                "raw_answers": t["raw_answers"]
+                            })
+
+                    with st.spinner("🧠 AI analiz hazırlanıyor..."):
+                        if len(selected_tests) == 1:
+                            prompt = build_single_test_prompt(
+                                student_name=info.name,
+                                student_age=info.age,
+                                student_gender=info.gender,
+                                test_name=test_data_for_ai[0]["test_name"],
+                                test_data=test_data_for_ai[0],
+                                student_grade=grade_val
+                            )
+                        else:
+                            prompt = build_holistic_prompt(
+                                student_name=info.name,
+                                student_age=info.age,
+                                student_gender=info.gender,
+                                test_data_list=test_data_for_ai,
+                                student_grade=grade_val
+                            )
+
+                        report = get_ai_analysis(prompt)
+
+                    st.markdown("---")
+                    st.markdown(report)
+
+                    # Arşive kaydet
+                    combo_label = " + ".join(selected_tests)
+                    save_holistic_analysis(info.id, combo_label, report)
+                    st.success("✅ Rapor arşive kaydedildi.")
+
+            # Arşiv
+            history = get_student_analysis_history(info.id)
+            if history:
+                st.markdown("#### 📚 Rapor Arşivi")
+                for h in history:
+                    with st.expander(f"📄 {h['combination']} — {h['date'][:10] if h['date'] else ''}"):
+                        st.markdown(h["report"][:3000])
