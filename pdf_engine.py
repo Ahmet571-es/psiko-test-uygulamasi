@@ -605,7 +605,8 @@ def generate_student_pdf(student_data, analysis_history, include_charts=True):
     story.append(Spacer(1, 8))
 
     grade_val = getattr(info, 'grade', None)
-    grade_text = f"{grade_val}. S\u0131n\u0131f" if grade_val else "Belirtilmemi\u015f"
+    from db_utils import format_grade
+    grade_text = format_grade(grade_val)
 
     profile_rows = [
         ["Ad Soyad", str(info.name)],

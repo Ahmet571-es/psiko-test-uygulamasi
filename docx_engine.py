@@ -305,7 +305,8 @@ def generate_student_docx(student_data, analysis_history, include_charts=True):
     doc.add_paragraph()
 
     grade_val = getattr(info, 'grade', None)
-    grade_text = f"{grade_val}. Sınıf" if grade_val else "Belirtilmemiş"
+    from db_utils import format_grade
+    grade_text = format_grade(grade_val)
 
     profile_rows = [
         ("Ad Soyad", str(info.name)),
