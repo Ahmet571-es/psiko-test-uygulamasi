@@ -854,7 +854,16 @@ def _render_test_questions():
             KADEME_LABELS = {5: "5-6. Sınıf", 6: "5-6. Sınıf", 7: "7-8. Sınıf", 8: "7-8. Sınıf",
                              9: "9-10. Sınıf", 10: "9-10. Sınıf", 11: "11-12. Sınıf", 12: "11-12. Sınıf"}
             if akd_grade:
-                ver_label = KADEME_LABELS.get(akd_grade, f"{akd_grade}. Sınıf")
+                try:
+                    akd_grade_int = int(akd_grade)
+                except (ValueError, TypeError):
+                    akd_grade_int = None
+                if akd_grade_int:
+                    ver_label = KADEME_LABELS.get(akd_grade_int, f"{akd_grade}. Sınıf")
+                elif str(akd_grade).strip().lower() in ("mezun", "0"):
+                    ver_label = "Mezun"
+                else:
+                    ver_label = f"{akd_grade}. Sınıf"
             else:
                 ver_label = "İlköğretim" if akd_version == "ilkogretim" else "Lise"
 
@@ -1281,7 +1290,12 @@ def app():
                         elif "Çoklu Zeka" in test:
                             student_grade = st.session_state.get('student_grade')
                             student_age = st.session_state.get('student_age', 15)
-                            is_ilkogretim = (student_grade and student_grade <= 8) or (not student_grade and student_age and student_age <= 13)
+                            # Grade TEXT olabilir, güvenli int dönüşümü
+                            try:
+                                grade_num = int(student_grade) if student_grade and str(student_grade).strip().lower() not in ("mezun", "0", "") else None
+                            except (ValueError, TypeError):
+                                grade_num = None
+                            is_ilkogretim = (grade_num is not None and grade_num <= 8) or (grade_num is None and student_age and student_age <= 13)
                             if is_ilkogretim:
                                 qs = []
                                 for zk in ZEKA_SIRA:

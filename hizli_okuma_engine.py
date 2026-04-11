@@ -56,7 +56,15 @@ WPM_NORMS = {
 }
 
 def grade_to_kademe(grade):
-    return KADEME_MAP.get(grade, "kademe_2")
+    if grade is None:
+        return "kademe_2"
+    g = str(grade).strip().lower()
+    if g in ("mezun", "0"):
+        return "kademe_4"
+    try:
+        return KADEME_MAP.get(int(g), "kademe_2")
+    except (ValueError, TypeError):
+        return "kademe_2"
 
 
 # ============================================================
